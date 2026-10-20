@@ -58,10 +58,19 @@
   // Optional secrets: YOUTUBE_API_KEY; APPLE_TEAM_ID + APPLE_KEY_ID + APPLE_PRIVATE_KEY (Apple Music,
   // hidden until all three are set; docs/APPLE-SETUP.md).
   // public/ is built from web/ by `npm run build` (npm run deploy does it first).
+  // The Worker runs ONLY for the API and the pages (their CSP, the www/https redirects, noindex off
+  // roomdj.com). Everything else (built JS/CSS, images, robots.txt, the 404 page for the old spam
+  // links crawlers keep asking for) is served free without it, with web/public/_headers (Dalton,
+  // 2026-10-20: cost; DotBot was 95% of all requests, each running the Worker twice).
   "assets": {
     "directory": "./public/",
     "binding": "ASSETS",
-    "run_worker_first": true,
+    "run_worker_first": [
+      "/api/*",
+      "/", "/index.html",
+      "/about", "/about.html", "/legal", "/legal.html", "/setup", "/setup.html",
+      "/host", "/host/*", "/board", "/board/*", "/admin", "/admin/*"
+    ],
     "not_found_handling": "404-page"
   },
   "observability": { "enabled": true, "head_sampling_rate": 1 }

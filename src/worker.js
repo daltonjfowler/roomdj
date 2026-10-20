@@ -1,4 +1,5 @@
-// RoomDJ (roomdj.com). Every request comes through here first (`run_worker_first`), like uploadmycut:
+// RoomDJ (roomdj.com). The API and the pages come through here first (wrangler.jsonc `run_worker_first`;
+// the built JS/CSS, images and unknown paths are served without the Worker, web/public/_headers):
 //   1. http → https (301), and www.roomdj.com → roomdj.com.
 //   2. /api/* is answered here (routes in shared/protocol.js). Room routes go to that room's
 //      Durable Object (src/room.js). Everything else is the built pages in public/.
@@ -24,6 +25,7 @@ import { validateSettings } from '../shared/settings.js';
 import { normalizeCode, validateCode, validateUntil } from '../shared/code.js';
 import { shiftTimes, validateTimes } from '../shared/classtime.js';
 import { sha256Hex } from './room.js';
+import { BOARD_CSP, BOARD_PERMISSIONS, COMMON_HEADERS, CONTENT_SECURITY_POLICY, PAGE_CSP } from './headers.js';
 import { codeHash, codeInUse, putCodeRoute, readCodeRoute } from './codes.js';
 import { addressOf, lockout } from './lockout.js';
 import { readBanned } from './search.js';
@@ -51,62 +53,6 @@ const MAX_TEACHER_BYTES = 32 * 1024;
 const MAX_JOIN_BYTES = 1024;
 const TEACHER_REJECT_DELAY_MS = 300;
 const WRONG_CODE = { error: 'code', message: 'That class code is not right. Check the board and type it again.' };
-
-const CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  // Spotify Web Playback SDK (host page): its script, and the iframe it plays from.
-  // Apple Music (host page): MusicKit JS v3 and the chunks it loads, from js-cdn.music.apple.com.
-  "script-src 'self' https://sdk.scdn.co https://www.youtube.com https://js-cdn.music.apple.com",
-  // YouTube (host page): iframe_api and the widget script it loads come from www.youtube.com; the
-  // player itself is a youtube-nocookie.com iframe.
-  "frame-src https://sdk.scdn.co https://www.youtube-nocookie.com https://www.youtube.com",
-  "style-src 'self' 'unsafe-inline'",
-  // Album art: Apple's image CDN (iTunes), Spotify's (i.scdn.co), YouTube thumbnails.
-  "img-src 'self' data: https://*.mzstatic.com https://i.scdn.co https://i.ytimg.com",
-  // iTunes 30-second previews.
-  // MusicKit plays full songs through Media Source Extensions (blob: URLs).
-  'media-src https://*.itunes.apple.com https://*.mzstatic.com https://*.apple.com blob:',
-  // 'self' covers the same-origin wss:// room socket.
-  // Spotify: login token swaps (accounts) and search / start a track (api), straight from the
-  // host page. Spotify tokens never go to this server.
-  // Apple Music: the catalog API (api.music.apple.com) and playback, licences and play reports
-  // (*.itunes.apple.com), straight from the host page with the teacher's Apple login.
-  // iTunes Search (itunes.apple.com): the room's song searches run from the host page (src/host-relay.js).
-  "connect-src 'self' https://itunes.apple.com https://accounts.spotify.com https://api.spotify.com https://api.music.apple.com https://*.itunes.apple.com",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  'upgrade-insecure-requests',
-].join('; ');
-
-// Every other page (the student page, legal, 404) loads only this site's own scripts and talks
-// only to this server and iTunes Search (browsing before joining searches iTunes from the
-// student's browser): no music players there, so an injected script could not lean on YouTube's
-// or Spotify's script hosts either.
-const PAGE_CSP = CONTENT_SECURITY_POLICY
-  .replace(/script-src [^;]+/, "script-src 'self'")
-  .replace(/frame-src [^;]+/, "frame-src 'none'")
-  .replace(/connect-src [^;]+/, "connect-src 'self' https://itunes.apple.com");
-
-// The board (/board/, protocol.js BOARD + REMOTE): the projector page. Like the student page, and
-// stricter: it plays NOTHING (media-src 'none', no autoplay or DRM), talks only to this server (its
-// room socket), and sends no Referer at all (its link's fragment holds the board token).
-const BOARD_CSP = PAGE_CSP
-  .replace(/media-src [^;]+/, "media-src 'none'")
-  .replace(/connect-src [^;]+/, "connect-src 'self'");
-const BOARD_PERMISSIONS = 'serial=(), usb=(), camera=(), microphone=(), geolocation=(), payment=(), encrypted-media=(), autoplay=()';
-
-const COMMON_HEADERS = [
-  ['strict-transport-security', 'max-age=31536000; includeSubDomains'],
-  ['x-content-type-options', 'nosniff'],
-  ['x-frame-options', 'DENY'],
-  ['referrer-policy', 'strict-origin-when-cross-origin'],
-  // encrypted-media + autoplay: Spotify's player iframe plays DRM audio.
-  ['permissions-policy', 'serial=(), usb=(), camera=(), microphone=(), geolocation=(), payment=(), encrypted-media=(self "https://sdk.scdn.co" "https://www.youtube-nocookie.com"), autoplay=(self "https://sdk.scdn.co" "https://www.youtube-nocookie.com")'],
-  ['cross-origin-opener-policy', 'same-origin'],
-];
-
 
 function isLocal(host) {
   return host === 'localhost' || host.endsWith('.localhost') || host === '127.0.0.1' || host === '[::1]';

@@ -6,4 +6,15 @@ Disallow: /board/
 Disallow: /admin/
 Disallow: /api/
 
+# SEO-tool crawlers (not search engines): they only chase old links from before RoomDJ, and every
+# request costs. Search engines stay welcome above.
+User-agent: dotbot
+User-agent: AhrefsBot
+User-agent: SemrushBot
+User-agent: MJ12bot
+User-agent: BLEXBot
+User-agent: DataForSeoBot
+User-agent: barkrowler
+Disallow: /
+
 Sitemap: https://roomdj.com/sitemap.xml

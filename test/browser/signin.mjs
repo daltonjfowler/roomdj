@@ -214,15 +214,19 @@ try {
   await other.context.close();
   await dalton.page.goto(`${BASE}/host/`);
   await waitFor(dalton.page, '#keyForm');
-  await openRoom(dalton.page);
+  // One room per Spotify account (Dalton, 2026-10-16 and 2026-10-20): a second one is refused.
+  await dalton.page.click('#openBtn');
+  for (let i = 0; i < 100 && !/one room at a time/.test(await dalton.page.textContent('#keyMsg')); i++) await new Promise((r) => setTimeout(r, 100));
+  check('one room per Spotify account: a second room is refused', /one room at a time/.test(await dalton.page.textContent('#keyMsg')) && !(await visible(dalton.page, '#hostScreen')), await dalton.page.textContent('#keyMsg'));
   const closedAll = await dalton.page.evaluate(async () => {
     const s = JSON.parse(sessionStorage.getItem('cq.session'));
     const r = await fetch('/api/teacher/rooms/close-all', { method: 'POST', headers: { authorization: `Bearer ${s.session}` } });
     return r.json();
   });
-  check('close my open rooms: closes both of this teacher\'s rooms (the moved one and the new one)', closedAll.closed === 2, JSON.stringify(closedAll));
-  for (let i = 0; i < 100 && !(await visible(dalton.page, '#closedScreen')); i++) await new Promise((r) => setTimeout(r, 100));
-  check('the host page sees its room closed', await visible(dalton.page, '#closedScreen'));
+  check('close my open rooms: closes this teacher\'s one room (the moved one)', closedAll.closed === 1, JSON.stringify(closedAll));
+  await dalton.page.goto(`${BASE}/host/`); // the moved room's host page was closed with the other computer
+  await waitFor(dalton.page, '#keyForm');
+  check('closed: no open rooms left to list', !(await visible(dalton.page, '#openRooms')));
   check('another teacher\'s room was not touched (Ms Rivera still runs hers)', await visible(rivera.page, '#hostScreen') || (await rivera.page.url()).includes('/board'));
   await dalton.page.goto(`${BASE}/host/`);
   await waitFor(dalton.page, '#keyForm');
