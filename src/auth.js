@@ -11,7 +11,7 @@
 // Local tests only: SPOTIFY_AUTH_TEST_BASE=http://127.0.0.1:<port> (a `wrangler dev --var`) sends
 // the token swap and /v1/me to a fake Spotify. Only a loopback http address is taken.
 
-import { FREE_SIGNUPS_PER_DAY, FREE_USE_TTL_S, OWN_PROFILE_PREFIX, PROFILE_ID_PATTERN, SESSION_PATTERN, SESSION_TTL_S } from '../shared/protocol.js';
+import { DISCLAIMER_VERSION, FREE_SIGNUPS_PER_DAY, FREE_USE_TTL_S, OWN_PROFILE_PREFIX, PROFILE_ID_PATTERN, SESSION_PATTERN, SESSION_TTL_S } from '../shared/protocol.js';
 import { SPOTIFY_TOKEN_URL, randomToken, tokenRequestBody, tokensFromReply } from '../shared/spotify.js';
 import { accountView, appOf, cleanClientId, newOwnProfileId, startName } from '../shared/accounts.js';
 import { addProfile, findProfile } from '../shared/profiles.js';
@@ -184,6 +184,14 @@ async function signIn(request, env, url) {
   return json(200, { ...(await newSession(env, { acct, profile, clientId, app })), tokens });
 }
 
+const disclaimerKey = (profileId) => `ack:v1:${profileId}`;
+
+/** True when this teacher said OK to the current disclaimer (protocol.js DISCLAIMER). */
+async function disclaimerOk(env, profileId) {
+  const ack = await env.CLASS_KV.get(disclaimerKey(profileId), 'json').catch(() => null);
+  return Number.isInteger(ack?.v) && ack.v >= DISCLAIMER_VERSION;
+}
+
 /** /api/auth/* */
 export async function handleAuth(request, env, url) {
   if (!env.CLASS_KV) return json(503, { error: 'storage', message: 'Storage is not set up on this server.' });
@@ -194,9 +202,20 @@ export async function handleAuth(request, env, url) {
     if (t instanceof Response) return t;
     // admin: this teacher may open /admin/ (src/admin.js checks again on every call).
     const admins = String(env.ADMIN_PROFILES ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-    return json(200, { account: accountView(t.profile, t.app, t.clientId), admin: admins.includes(t.profile.id) });
+    return json(200, { account: accountView(t.profile, t.app, t.clientId), admin: admins.includes(t.profile.id), disclaimerOk: await disclaimerOk(env, t.profile.id) });
   }
   if (request.method !== 'POST') return json(405, { error: 'method', message: 'Use POST.' });
+  if (url.pathname === '/api/auth/disclaimer') {
+    // "OK" on the first-sign-in disclaimer (protocol.js DISCLAIMER): kept for this teacher.
+    const t = await teacherSession(request, env);
+    if (!t) return json(401, SESSION_GONE);
+    if (t instanceof Response) return t;
+    if (!(await disclaimerOk(env, t.profile.id))) {
+      await env.CLASS_KV.put(disclaimerKey(t.profile.id), JSON.stringify({ v: DISCLAIMER_VERSION, at: Date.now() }));
+      console.log(JSON.stringify({ message: 'disclaimer accepted', profile: t.profile.id, v: DISCLAIMER_VERSION }));
+    }
+    return json(200, { ok: true });
+  }
   if (url.pathname === '/api/auth/logout') {
     const t = await teacherSession(request, env);
     if (t && !(t instanceof Response)) await env.CLASS_KV.delete(t.key);

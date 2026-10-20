@@ -448,3 +448,9 @@ body.layout-edit .cleanup-banner, body.layout-edit .top5-board { padding-bottom:
 .open-rooms-list b { font-size: 1.05rem; }
 .open-rooms-list small { color: var(--muted); }
 .open-rooms-list button { flex: none; }
+
+/* The first-sign-in disclaimer (protocol.js DISCLAIMER) */
+.disclaimer-body { padding: 20px 22px 18px; }
+.disclaimer-body h2 { margin: 0 0 10px; }
+.disclaimer-body p { line-height: 1.5; margin: 0 0 10px; }
+#disclaimerOk { min-width: 170px; }

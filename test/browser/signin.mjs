@@ -117,10 +117,33 @@ async function signIn(page, app, clientId = OWN) {
   await page.goto(`${BASE}/host/`);
   await waitFor(page, '#signinStep');
   await page.waitForFunction(() => !document.querySelector('#signinSetup').hidden || !document.querySelector('#signinReady').hidden);
-  if (app === 'shared') return page.click('#sharedBtn'); // "Invited? Sign in with no setup"
-  if (await visible(page, '#otherApp')) await page.click('#otherApp'); // back on this computer: one button
-  await page.fill('#clientId', clientId);
-  await page.click('#signinBtn');
+  if (app === 'shared') await page.click('#sharedBtn'); // "Invited? Sign in with no setup"
+  else {
+    if (await visible(page, '#otherApp')) await page.click('#otherApp'); // back on this computer: one button
+    await page.fill('#clientId', clientId);
+    await page.click('#signinBtn');
+  }
+  return passDisclaimer(page);
+}
+
+/**
+ * The first-sign-in disclaimer (protocol.js DISCLAIMER): once per teacher. When it shows, OK is
+ * locked for 5 seconds, then closes it. → { shown, locked } (locked: OK started disabled with "(5)").
+ */
+async function passDisclaimer(page) {
+  await waitFor(page, '#keyForm');
+  const shown = await page.locator('#disclaimerDlg[open]').waitFor({ timeout: 4000 }).then(() => true, () => false);
+  if (!shown) return { shown: false };
+  const locked = await page.evaluate(() => {
+    const ok = document.querySelector('#disclaimerOk');
+    return ok.disabled && /\(5\)|\(4\)/.test(ok.textContent);
+  });
+  const started = Date.now();
+  await page.locator('#disclaimerOk:not([disabled])').waitFor({ timeout: 8000 });
+  const waited = Date.now() - started;
+  await page.click('#disclaimerOk');
+  await page.locator('#disclaimerDlg:not([open])').waitFor({ state: 'attached', timeout: 5000 });
+  return { shown: true, locked: locked && waited > 3000 };
 }
 
 async function openRoom(page) {
@@ -134,8 +157,11 @@ async function openRoom(page) {
 try {
   // ---- 1. Own app ----
   const rivera = await teacher('rivera', 'Ms Rivera');
-  await signIn(rivera.page, 'own');
+  const riveraFirst = await signIn(rivera.page, 'own');
   await waitFor(rivera.page, '#keyForm');
+  check('first sign-in: the disclaimer shows, OK locked for 5 seconds', riveraFirst.shown && riveraFirst.locked, JSON.stringify(riveraFirst));
+  await rivera.page.reload();
+  check('after OK: not again on this computer', !(await passDisclaimer(rivera.page)).shown);
   check('own app: the login used the typed Client ID', rivera.page.clientIdUsed === OWN, rivera.page.clientIdUsed);
   check('own app: signed in as the Spotify name', (await rivera.page.textContent('#teachingName')) === 'Ms Rivera');
   check('own app: Sign out shown, Switch teacher hidden', (await visible(rivera.page, '#signOutBtn')) && !(await visible(rivera.page, '#switchTeacher')));
@@ -201,7 +227,8 @@ try {
   const daltonCode = await openRoom(dalton.page);
   // Another computer, same Spotify account: "Your open rooms" shows it; Open here moves it.
   const other = await teacher('dalton', 'Peter Robinson');
-  await signIn(other.page, 'shared');
+  const otherFirst = await signIn(other.page, 'shared');
+  check('the same teacher on another computer: no disclaimer (the OK is kept on the server)', !otherFirst.shown);
   await waitFor(other.page, '#keyForm');
   await waitFor(other.page, '#openRooms');
   const listed = await other.page.textContent('#openRoomsList');

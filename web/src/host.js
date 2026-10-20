@@ -23,7 +23,7 @@ import { initShortcuts } from './shortcuts.js';
 import { initFiller } from './filler.js';
 import { NOTE_MAX, REASONS, ROOM_ID_PATTERN, SETTINGS_LIMITS, TEACHER_REASONS, whyText } from '../../shared/protocol.js';
 import { screenNote } from '../../shared/reasons.js';
-import { CREDITS_MAX, CREDIT_GRANT_MAX } from '../../shared/protocol.js';
+import { CREDITS_MAX, CREDIT_GRANT_MAX, DISCLAIMER_SECONDS } from '../../shared/protocol.js';
 import { SPOTIFY, catalogOf } from '../../shared/catalog.js';
 import { displayCode, generateCode, normalizeCode, validateCode } from '../../shared/code.js';
 import { fillSongSettings, initClassTime, readSongSettings } from './classtime.js';
@@ -36,7 +36,7 @@ import { noteServerTime } from './server-clock.js';
 import { initRepeats } from './repeats-host.js';
 import { initBoardHost } from './board-host.js';
 import { forgetTeacherKey, KEY_ALLOWED, rememberedKey, saveTeacherKey, teacherKey } from './teacher-key.js';
-import { checkSignin, finish, forgetSignin, login, sessionHeaders, signOut, signedInAs, signinReturn, staysSignedIn, updateAccount } from './account.js';
+import { acceptDisclaimer, checkSignin, finish, forgetSignin, login, sessionHeaders, signOut, signedInAs, signinReturn, staysSignedIn, updateAccount } from './account.js';
 import { cleanClientId } from '../../shared/accounts.js';
 import { isFreeTeacher } from '../../shared/protocol.js';
 import { initTeacherSuggest } from './teacher-suggest.js';
@@ -260,6 +260,7 @@ async function checkProfile() {
       chooseProfile(account.profile);
       $('#teachingName').textContent = account.profile.name;
       $('#adminLink').hidden = !account.admin;
+      if (!account.disclaimerOk) showDisclaimer();
     }
     return;
   }
@@ -354,6 +355,40 @@ $('#signinStep').addEventListener('submit', async (e) => {
   $('#sharedBtn').disabled = true;
   const then = ['board', 'admin'].includes(new URLSearchParams(location.search).get('then')) ? new URLSearchParams(location.search).get('then') : null;
   await login({ clientId, remember: $('#signinRemember').checked, then }); // the page goes to Spotify
+});
+
+// ---- The first-sign-in disclaimer (protocol.js DISCLAIMER) ----
+// Once per teacher (the server keeps the OK): the checker cannot catch everything. OK unlocks after
+// DISCLAIMER_SECONDS; Esc does not close it.
+let disclaimerTimer = 0;
+function showDisclaimer() {
+  const dlg = $('#disclaimerDlg');
+  if (dlg.open) return;
+  const ok = $('#disclaimerOk');
+  let left = DISCLAIMER_SECONDS;
+  const draw = () => {
+    ok.disabled = left > 0;
+    ok.textContent = left > 0 ? `OK (${left})` : 'OK, I understand';
+  };
+  draw();
+  dlg.showModal();
+  clearInterval(disclaimerTimer);
+  disclaimerTimer = setInterval(() => {
+    left--;
+    draw();
+    if (left <= 0) {
+      clearInterval(disclaimerTimer);
+      ok.focus();
+    }
+  }, 1000);
+}
+$('#disclaimerDlg').addEventListener('cancel', (e) => e.preventDefault());
+$('#disclaimerOk').addEventListener('click', async () => {
+  const ok = $('#disclaimerOk');
+  if (ok.disabled) return;
+  ok.disabled = true;
+  await acceptDisclaimer(); // not kept (offline): it shows again next time, nothing else changes
+  $('#disclaimerDlg').close();
 });
 
 /** Signed in: on to the board (it asked), else reload as that teacher (their preferences, their Spotify). */

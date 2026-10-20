@@ -106,6 +106,17 @@ export async function finish({ redirect, pending }) {
   return { ok: true, account: r.data.account, then: pending.then };
 }
 
+/** "OK" on the first-sign-in disclaimer (protocol.js DISCLAIMER). → true when the server kept it. */
+export async function acceptDisclaimer() {
+  const h = sessionHeaders();
+  if (!h) return false;
+  try {
+    return (await fetch('/api/auth/disclaimer', { method: 'POST', headers: h })).ok;
+  } catch {
+    return false;
+  }
+}
+
 /** Ask the server who is signed in (renamed elsewhere, hidden, signed out). → account | null (gone) | undefined (offline) */
 export async function checkSignin() {
   const h = sessionHeaders();
@@ -117,10 +128,10 @@ export async function checkSignin() {
       return null;
     }
     if (!r.ok) return undefined;
-    const { account, admin } = await r.json();
+    const { account, admin, disclaimerOk } = await r.json();
     const kept = { ...account, admin: admin === true }; // admin: only shows the link; the server decides
     updateAccount(kept);
-    return kept;
+    return { ...kept, disclaimerOk: disclaimerOk !== false }; // the first-sign-in disclaimer (protocol.js DISCLAIMER)
   } catch {
     return undefined;
   }

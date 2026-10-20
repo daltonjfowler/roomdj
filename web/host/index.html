@@ -562,6 +562,20 @@
   </dialog>
 
   <!-- Add or rename a teacher (Who's teaching?) -->
+  <!-- The first-sign-in disclaimer (protocol.js DISCLAIMER): once per teacher; OK unlocks after 5 seconds -->
+  <dialog id="disclaimerDlg" class="dialog disclaimer-dialog" aria-labelledby="disclaimerTitle" aria-describedby="disclaimerText">
+    <div class="disclaimer-body">
+      <h2 id="disclaimerTitle">🎧 Before your first class</h2>
+      <div id="disclaimerText">
+        <p>RoomDJ checks every song before it plays: blocked words, explicit tags, and an AI review of the song's themes and lyrics. It catches a lot. <b>It cannot catch everything.</b></p>
+        <p>A song can still slip through: a clean title over rough lyrics, a brand new release, a remix the checker has not heard yet. Always do your own due diligence. You know your students and your school's rules best, so keep an ear on what plays and use Veto or Ban the moment something gets by.</p>
+        <p class="note">You are in charge of what plays in your room. RoomDJ is a helper, not a guarantee.</p>
+      </div>
+      <div class="dialog-actions">
+        <button id="disclaimerOk" class="primary" type="button" disabled>OK (5)</button>
+      </div>
+    </div>
+  </dialog>
   <dialog id="teacherDlg" class="dialog" aria-labelledby="teacherTitle">
     <form id="teacherForm" method="dialog">
       <h2 id="teacherTitle">Add a teacher</h2>

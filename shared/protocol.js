@@ -523,6 +523,14 @@ export const REST_WRITE_MS = 30_000;
 export const SUGGEST_COST = 1;
 export const JUMP_COST = 2;
 export const CREDITS_MAX = 999;
+
+// DISCLAIMER (Dalton, 2026-10-20): the first time a teacher signs in with Spotify, the host page
+// shows "the checker cannot catch everything, always do your own due diligence" with an OK button
+// that unlocks after DISCLAIMER_SECONDS. Kept per teacher on the server (KV ack:v1:<profile> =
+// { v, at }, src/auth.js), so it shows once per account, not once per computer. Raise
+// DISCLAIMER_VERSION when the text changes enough that everyone should read it again.
+export const DISCLAIMER_VERSION = 1;
+export const DISCLAIMER_SECONDS = 5;
 export const CREDIT_GRANT_MAX = 100;
 
 /**
