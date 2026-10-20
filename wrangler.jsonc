@@ -12,10 +12,19 @@
   "workers_dev": true,
   // One Durable Object per open room, named by a random room id. It holds the queue, votes and
   // connected sockets (WebSocket hibernation API) and deletes itself after the room closes.
+  // COUPON_LEDGER: one tiny object per coupon id, so a coupon is good once everywhere (src/coupons.js).
+  // Coupons stay off until the vars COUPONS = "on" and COUPON_PUBLIC_KEYS (the issuers' Ed25519
+  // public keys, base64url, comma separated) are set; neither is set yet (built dark, 2026-10-20).
   "durable_objects": {
-    "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
+    "bindings": [
+      { "name": "ROOMS", "class_name": "Room" },
+      { "name": "COUPON_LEDGER", "class_name": "CouponLedger" }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Room"] },
+    { "tag": "v2", "new_sqlite_classes": ["CouponLedger"] }
+  ],
   // This app's own namespace (title classqueue-CLASS_KV): teacher settings, ban list, filter
   // verdict cache, search cache. Never reuse a sibling site's namespace.
   // Created as `wrangler kv namespace create classqueue-CLASS_KV`: a bare `CLASS_KV` name is

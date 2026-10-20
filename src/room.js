@@ -59,6 +59,8 @@
 // teacherResume and 'times', and takes itself out when it closes.
 
 import { DurableObject } from 'cloudflare:workers';
+import { couponsOn, redeemCoupon } from './coupons.js';
+import { COUPON_MESSAGES } from '../shared/coupon.js';
 import { ADMITTED_MAX, DEVICE_ID_PATTERN, FILTER_REASONS, NICK_MAX, QUERY_MAX } from '../shared/protocol.js';
 import { TEACHER_DEVICE, TEACHER_SEARCH_RATE, TEACHER_SUGGEST_RATE } from '../shared/protocol.js';
 import {
@@ -67,7 +69,7 @@ import {
 } from '../shared/queue.js';
 import { PUSH_MESSAGES, nextGhostAt, playNowSong, pushSong, sortQueue } from '../shared/queue.js';
 import {
-  JUMP_MESSAGES, creditsOf, jumpSong, refundCredits, refundItem, settleCredits, spendCredits, teacherCredits,
+  JUMP_MESSAGES, couponCredits, creditsOf, jumpSong, refundCredits, refundItem, settleCredits, spendCredits, teacherCredits,
 } from '../shared/queue.js';
 import { ART_RATE, JUMP_COST, SUGGEST_COST } from '../shared/protocol.js';
 import { ART_WAIT_MS, artFields, artJson, artKey, validArtKey } from '../shared/art.js';
@@ -139,6 +141,7 @@ const LIMITS = {
   teacherSuggest: [TEACHER_SUGGEST_RATE, 60_000], // the host's own picks (protocol.js TEACHER PICKS)
   teacherSearch: [TEACHER_SEARCH_RATE, 60_000], // the host's own searches (roomSearch counts them too)
   jump: [6, 60_000],
+  coupon: [5, 60_000], // coupons tried per device (shared/coupon.js; a bad one costs a signature check)
   message: [120, 60_000],
   connect: [20, 60_000], // student sockets opened per device (a refresh is one)
   nickAi: [2, 60_000], // AI nickname checks per device (cached verdicts do not count)
@@ -1356,7 +1359,29 @@ export class Room extends DurableObject {
     // `trackId` (a number): a student page from before catalog ids.
     if (msg.t === 'suggest') return this.suggest(ws, a, msg.song ?? msg.trackId);
     if (msg.t === 'jump') return this.jump(ws, a, String(msg.id ?? ''));
+    if (msg.t === 'coupon') return this.coupon(ws, a, msg.code);
     this.send(ws, { t: 'error', error: 'bad_message', message: 'The page sent something the server does not know.' });
+  }
+
+  // 🎟 A coupon from another class tool (shared/coupon.js COUPONS, src/coupons.js): its credits go to
+  // this student. Refused, and NOT used up, while the server or the teacher has coupons off or the
+  // room has credits off. → couponResult { ok, amount, credits } | { ok: false, reason, message }.
+  async coupon(ws, a, code) {
+    const no = (reason) => this.send(ws, { t: 'couponResult', ok: false, reason, message: COUPON_MESSAGES[reason] });
+    if (!couponsOn(this.env) || this.room.settings.coupons === false) return no('off');
+    if (creditsOf(this.room, a.device) === null) return no('credits_off'); // null: credits are off
+    if (!this.allow('coupon', a.device)) return no('rate');
+    const done = await redeemCoupon(this.env, code);
+    if (!done.ok) return no(done.reason);
+    const credits = couponCredits(this.room, a.device, done.credits);
+    if (credits === null) {
+      // Credits went off (or the student was removed) while the coupon was checked: it is used up.
+      console.log(JSON.stringify({ message: 'coupon used, no credits given', issuer: done.issuer }));
+      return no('credits_off');
+    }
+    console.log(JSON.stringify({ message: 'coupon used', issuer: done.issuer, credits: done.credits }));
+    this.send(ws, { t: 'couponResult', ok: true, amount: done.credits, credits });
+    return this.commit();
   }
 
   // Spend JUMP_COST credits so a waiting song plays next (shared/queue.js jumpSong). Refusals

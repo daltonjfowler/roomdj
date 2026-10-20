@@ -179,6 +179,7 @@ export function validateSettings(input, { testAiOff = false } = {}) {
     bellSchedule: cleanBellSchedule(errors, pick('bellSchedule')),
     startingCredits: startingCredits(errors, pick('startingCredits')),
     allowJump: bool(errors, 'Priority jump', pick('allowJump')),
+    coupons: bool(errors, 'Coupons', pick('coupons')),
     periodMinutes: intInRange(errors, 'Class period length (minutes)', pick('periodMinutes'), SETTINGS_LIMITS.periodMinutes),
     showFavorites: bool(errors, 'Class favorites', pick('showFavorites')),
     noBackToBackArtist: bool(errors, 'No back-to-back artist', pick('noBackToBackArtist')),

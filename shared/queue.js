@@ -899,6 +899,15 @@ export function teacherCredits(state, msg) {
   return { ok: true, why: 'grant', changed };
 }
 
+/**
+ * A coupon's credits (shared/coupon.js COUPONS) for one student: only while credits are on. Never
+ * above CREDITS_MAX. → the new balance, or null (credits off, or not a student here).
+ */
+export function couponCredits(state, device, amount) {
+  if (!creditsOn(state) || !isStudent(state, device) || !Number.isInteger(amount) || amount < 1) return null;
+  return setBalance(state, device, creditsOf(state, device) + amount);
+}
+
 export const JUMP_MESSAGES = Object.freeze({
   credits: `You need ${JUMP_COST} credits to jump a song. Ask your teacher for more.`,
   off: 'Your teacher turned off jumping.',

@@ -280,6 +280,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   //                   open-room form offers them as chips and picks the next one to end.
   startingCredits: null, // credits each student starts with; null = credits off (the host's
   //                        Credits switch; suggesting is free, nobody can jump a song). See CREDITS.
+  coupons: true, // 🎟 coupons (COUPONS in shared/coupon.js): students may spend a coupon from another class tool
+  //                for song credits. Only while credits are on, and only once the server takes coupons
+  //                (the COUPONS var, src/coupons.js; built dark). Saved settings without it read as true.
   allowJump: false, // Priority jump: may students spend JUMP_COST to make a song play next? Only
   //                   counts while credits are on. Saved settings without it read as false.
   periodMinutes: 70, // the teacher's class period length (Settings, Teacher preferences); the open-room

@@ -47,6 +47,7 @@ import { readOpenRooms, removeOpenRoom, updateOpenRooms } from './open-rooms.js'
 import { roomProfile } from '../shared/profiles.js';
 
 export { Room } from './room.js';
+export { CouponLedger } from './coupons.js';
 
 const KV_SETTINGS = 'settings';
 const MAX_TEACHER_BYTES = 32 * 1024;
