@@ -35,7 +35,7 @@ import { showTimes } from './times.js';
 import { noteServerTime } from './server-clock.js';
 import { initRepeats } from './repeats-host.js';
 import { initBoardHost } from './board-host.js';
-import { forgetTeacherKey, rememberedKey, saveTeacherKey, teacherKey } from './teacher-key.js';
+import { forgetTeacherKey, KEY_ALLOWED, rememberedKey, saveTeacherKey, teacherKey } from './teacher-key.js';
 import { checkSignin, finish, forgetSignin, login, sessionHeaders, signOut, signedInAs, signinReturn, staysSignedIn, updateAccount } from './account.js';
 import { cleanClientId } from '../../shared/accounts.js';
 import { isFreeTeacher } from '../../shared/protocol.js';
@@ -149,10 +149,10 @@ function showStep(step) {
   for (const id of ['signinStep', 'keyStep', 'whoStep', 'keyForm']) $(`#${id}`).hidden = id !== step;
 }
 
-// "Use the teacher key instead" (only while the server has one: local tests), remembered on this
-// computer until a Spotify sign-in.
+// The old teacher key: local test servers only (teacher-key.js KEY_ALLOWED; no button, the tests set
+// localStorage cq.useKey), kept on this computer until a Spotify sign-in.
 const USE_KEY = 'cq.useKey';
-let usingKey = (() => { try { return localStorage.getItem(USE_KEY) === '1'; } catch { return false; } })();
+let usingKey = KEY_ALLOWED && (() => { try { return localStorage.getItem(USE_KEY) === '1'; } catch { return false; } })();
 
 /**
  * The start screen: signed in with Spotify → the open-room form as that teacher. Otherwise the
@@ -160,7 +160,7 @@ let usingKey = (() => { try { return localStorage.getItem(USE_KEY) === '1'; } ca
  */
 function showStart(message = '') {
   show('startScreen');
-  for (const id of ['#openBtn', '#keyNext', '#signinBtn']) $(id).disabled = false;
+  for (const id of ['#openBtn', '#keyNext', '#signinBtn', '#sharedBtn']) $(id).disabled = false;
   const signed = signedInAs();
   if (signed) {
     const then = new URLSearchParams(location.search).get('then');
@@ -280,19 +280,26 @@ async function checkProfile() {
 let sharedClientId = null; // RoomDJ's own Spotify app (GET /api/config), null: none
 const configReady = fetch('/api/config').then((r) => r.json()).then((c) => {
   sharedClientId = c?.services?.spotify?.clientId ?? null;
-  $('#sharedAppRow').hidden = !sharedClientId;
-  $('#useKey').hidden = !c?.teacherKey;
   testAiOff = c?.testAiOff === true;
   $('#testAiSwitches').hidden = !testAiOff;
 }).catch(() => {});
 let testAiOff = false; // local browser tests only (TEST_AI_OFF=on): the old AI switches show
 const OWN_ID = 'cq.ownClientId'; // the Client ID typed last time on this computer (public, not a secret)
+const LAST_APP = 'cq.signinApp'; // 'own' | 'shared': the Spotify app this computer signed in with last
+let signinMode = 'own'; // what the big button signs in with: 'own' (the Client ID box) or 'shared' (RoomDJ's app)
 
-function signinApp() {
-  return $('#signinStep').querySelector('input[name="signinApp"]:checked')?.value ?? 'own';
-}
-function showOwnBox() {
-  $('#ownAppBox').hidden = signinApp() !== 'own';
+/**
+ * The sign-in step's view: 'setup' (first time: make your own Spotify app, most teachers; invited
+ * teachers take the small "no setup" link), 'ready' (back on this computer: one button) or 'busy'
+ * (back from Spotify, signing in).
+ */
+function signinView(view) {
+  $('#signinSetup').hidden = view !== 'setup';
+  $('#signinReady').hidden = view !== 'ready';
+  $('#otherApp').hidden = view !== 'ready';
+  $('#sharedRow').hidden = view !== 'setup' || !sharedClientId;
+  $('#signinStep').querySelector('.remember-row').hidden = view === 'busy';
+  $('#signinBtn').hidden = view === 'busy';
 }
 
 async function showSignin(message = '') {
@@ -301,16 +308,26 @@ async function showSignin(message = '') {
   $('#signinMsg').textContent = message;
   $('#redirectUri').textContent = `${location.origin}/host/`;
   await configReady;
-  let own = null;
-  try { own = localStorage.getItem(OWN_ID); } catch { /* blocked */ }
+  let own = null, last = null;
+  try { own = localStorage.getItem(OWN_ID); last = localStorage.getItem(LAST_APP); } catch { /* blocked */ }
   if (own && !$('#clientId').value) $('#clientId').value = own;
-  if (sharedClientId && !own) $('#signinStep').querySelector('input[value="shared"]').checked = true;
-  if (!sharedClientId) $('#signinStep').querySelector('input[value="own"]').checked = true;
-  showOwnBox();
+  signinMode = last === 'shared' && sharedClientId ? 'shared' : 'own';
+  // A failed sign-in shows the setup steps again: they are what fixes most of them.
+  const ready = !message && (signinMode === 'shared' || Boolean(own));
+  signinView(ready ? 'ready' : 'setup');
   $('#signinBtn').focus({ preventScroll: true }); // keep the top (Student / Teacher) in view
 }
 
-$('#signinStep').addEventListener('change', showOwnBox);
+$('#otherApp').addEventListener('click', () => {
+  signinMode = 'own';
+  $('#signinMsg').textContent = '';
+  signinView('setup');
+  $('#clientId').focus();
+});
+$('#sharedBtn').addEventListener('click', () => {
+  signinMode = 'shared';
+  $('#signinStep').requestSubmit();
+});
 $('#copyRedirect').addEventListener('click', async () => {
   const uri = $('#redirectUri').textContent;
   try {
@@ -323,23 +340,20 @@ $('#copyRedirect').addEventListener('click', async () => {
 $('#signinStep').addEventListener('submit', async (e) => {
   e.preventDefault();
   let clientId = sharedClientId;
-  if (signinApp() === 'own') {
+  if (signinMode === 'own') {
     clientId = cleanClientId($('#clientId').value);
     if (!clientId) {
-      $('#signinMsg').textContent = 'Paste the Client ID from your Spotify app: 32 letters and numbers.';
+      $('#signinMsg').textContent = 'Paste the Client ID from your Spotify app (step 4): 32 letters and numbers.';
       return $('#clientId').focus();
     }
     try { localStorage.setItem(OWN_ID, clientId); } catch { /* blocked */ }
   }
   if (!clientId) return;
+  try { localStorage.setItem(LAST_APP, signinMode); } catch { /* blocked */ }
   $('#signinBtn').disabled = true;
+  $('#sharedBtn').disabled = true;
   const then = ['board', 'admin'].includes(new URLSearchParams(location.search).get('then')) ? new URLSearchParams(location.search).get('then') : null;
   await login({ clientId, remember: $('#signinRemember').checked, then }); // the page goes to Spotify
-});
-$('#useKey').addEventListener('click', () => {
-  usingKey = true;
-  try { localStorage.setItem(USE_KEY, '1'); } catch { /* blocked */ }
-  showStart();
 });
 
 /** Signed in: on to the board (it asked), else reload as that teacher (their preferences, their Spotify). */
@@ -2113,6 +2127,7 @@ if (signinReturn) {
   // Back from Spotify's login page (account.js took the answer out of the address bar).
   show('startScreen');
   showStep('signinStep');
+  signinView('busy');
   $('#signinMsg').textContent = 'Signing in…';
   finish(signinReturn).then((done) => {
     if (done.ok) return afterSignin(done);

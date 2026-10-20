@@ -80,23 +80,20 @@
         <p class="note">Students join with today's class code on their Chromebooks, suggest songs and vote. This computer plays the songs.</p>
         <!-- Sign in with Spotify (protocol.js SPOTIFY SIGN-IN; account.js) -->
         <form id="signinStep" hidden>
-          <h2>Sign in with Spotify</h2>
-          <p class="note">Your Spotify account is your RoomDJ account, and it plays the music. It needs Spotify Premium.</p>
-          <fieldset class="field app-pick">
-            <legend>Which Spotify app?</legend>
-            <label id="sharedAppRow" class="pick"><input type="radio" name="signinApp" value="shared"> <span>RoomDJ's app <small>For teachers who were invited.</small></span></label>
-            <label class="pick"><input type="radio" name="signinApp" value="own" checked> <span>My own Spotify app <small>Free, about 5 minutes to set up.</small></span></label>
-          </fieldset>
-          <div id="ownAppBox">
-            <label class="field">Client ID <small>From your app's page in the Spotify developer dashboard.</small>
-              <input id="clientId" class="text" autocomplete="off" spellcheck="false" maxlength="40">
-            </label>
-            <details class="own-steps">
-              <summary>How to make your own Spotify app <small>About 5 minutes, once</small></summary>
+          <!-- Back on this computer: one button, the same Spotify app as last time (host.js showSignin) -->
+          <div id="signinReady" hidden>
+            <h2>Welcome back</h2>
+            <p class="note">Sign in with the same Spotify account as last time.</p>
+          </div>
+          <!-- First time: most teachers make their own free Spotify app; invited teachers skip it (#sharedRow) -->
+          <div id="signinSetup">
+            <h2>First time here?</h2>
+            <p class="note">RoomDJ plays music from your Spotify Premium account. Spotify asks each teacher to make a free "app" first: about 5 minutes, only once. Made one already? Skip to step 4.</p>
+            <div class="own-steps">
               <ol class="steps">
                 <li>
                   <b>Open the Spotify dashboard</b>
-                  <span>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> and log in with your Premium account.</span>
+                  <span>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> and log in with your Spotify account.</span>
                 </li>
                 <li>
                   <b>Create an app</b>
@@ -106,15 +103,16 @@
                 </li>
                 <li>
                   <b>Add yourself</b>
-                  <span>In your app: <b>Settings</b> → <b>User Management</b>. Add your name and your Spotify email.</span>
+                  <span>In your app: <b>Settings</b>, then <b>User Management</b>. Add your name and your Spotify email.</span>
                 </li>
                 <li>
-                  <b>Copy the Client ID</b>
-                  <span>Paste it in the box above. Never the Client secret.</span>
+                  <label for="clientId"><b>Paste your Client ID</b></label>
+                  <span>It is on your app's <b>Settings</b> page. Never the Client secret.</span>
+                  <input id="clientId" class="text" autocomplete="off" spellcheck="false" maxlength="40" placeholder="32 letters and numbers">
                 </li>
               </ol>
-              <a class="steps-more" href="/setup" target="_blank" rel="noopener">Full guide, with fixes for common problems →</a>
-            </details>
+              <a class="steps-more" href="/setup" target="_blank" rel="noopener">Stuck? Full guide, with fixes for common problems</a>
+            </div>
           </div>
           <p class="remember-row">
             <label class="check"><input id="signinRemember" type="checkbox" aria-describedby="signinRememberWarn"> <span>Stay signed in on this computer</span></label>
@@ -122,7 +120,8 @@
           </p>
           <p id="signinMsg" class="form-msg" role="alert"></p>
           <button id="signinBtn" class="primary big wide" type="submit">Sign in with Spotify</button>
-          <button id="useKey" class="linkbtn" type="button" hidden>Use the teacher key instead</button>
+          <button id="otherApp" class="linkbtn" type="button" hidden>Use a different Spotify app</button>
+          <p id="sharedRow" class="shared-row note" hidden>Invited to RoomDJ's shared app? <button id="sharedBtn" class="linkbtn" type="button">Sign in with no setup</button></p>
         </form>
         <!-- Step 1: the teacher key (skipped while this tab or computer has it) -->
         <form id="keyStep" hidden>
@@ -186,7 +185,7 @@
             <button id="bellEditBtn" type="button" class="linkbtn" aria-haspopup="dialog">🔔 Edit bell schedule</button>
           </fieldset>
           <p id="keyMsg" class="form-msg" role="alert"></p>
-          <button id="openBtn" class="primary big wide" type="submit">Open today's room</button>
+          <button id="openBtn" class="primary big wide" type="submit">Open today's room</button>
           <button id="closeAllBtn" class="linkbtn" type="button" title="Close every room you have open, on this computer or any other">Close my open rooms</button>
           <!-- a new tab: this page keeps playing the music -->
           <a id="boardOpenLink" class="linkbtn" href="/board/" target="_blank" rel="noopener" title="Show your room on a projector or second screen. It plays no music.">📺 Open the board (projector)</a>

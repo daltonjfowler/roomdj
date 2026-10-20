@@ -217,18 +217,15 @@
 .who-hidden { margin: 8px 0; }
 /* Sign in with Spotify (account.js) */
 #signinStep h2 { margin: 8px 0 4px; }
-.app-pick { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin: 12px 0; display: grid; gap: 8px; }
-.app-pick legend { padding: 0 4px; }
-.app-pick .pick { display: flex; gap: 8px; align-items: baseline; }
-.app-pick small { display: block; color: var(--muted); }
-/* How to make your own Spotify app: a tinted box, numbered steps, the Redirect URI with Copy */
-.own-steps { margin: 6px 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card2); }
-.own-steps > summary { cursor: pointer; padding: 12px 14px; font-weight: 650; list-style: none; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.own-steps > summary::-webkit-details-marker { display: none; }
-.own-steps > summary::before { content: '▸'; color: var(--accent); transition: transform .15s; }
-.own-steps[open] > summary::before { transform: rotate(90deg); }
-.own-steps > summary small { font-weight: 400; color: var(--muted); }
-.steps { list-style: none; counter-reset: step; margin: 0; padding: 0 14px 4px; display: grid; gap: 14px; }
+/* First time: your own Spotify app in a tinted box, numbered steps, the Redirect URI with Copy, the Client ID last */
+.own-steps { margin: 10px 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card2); text-align: left; }
+.steps { list-style: none; counter-reset: step; margin: 0; padding: 14px 14px 4px; display: grid; gap: 14px; }
+.steps li .text { width: 100%; margin-top: 2px; }
+#otherApp { display: block; margin: 8px auto 0; }
+#otherApp[hidden] { display: none; }
+.shared-row { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.shared-row .linkbtn { color: var(--accent); font-size: inherit; }
+.remember-row[hidden] { display: none; }
 .steps li { counter-increment: step; position: relative; padding-left: 38px; display: grid; gap: 4px; }
 .steps li::before { content: counter(step); position: absolute; left: 0; top: -2px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
   background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--accent); font-weight: 700; font-size: .9rem; }
@@ -239,7 +236,6 @@
   color: var(--ink); overflow-wrap: anywhere; font-size: .9rem; }
 .copy-row button { flex: none; }
 .steps-more { display: block; padding: 10px 14px 14px; font-weight: 600; }
-@media (prefers-reduced-motion: reduce) { .own-steps > summary::before { transition: none; } }
 .who-hidden summary { cursor: pointer; color: var(--muted); }
 .teaching-as { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 12px; }
 .teacher-pill b, .teaching-as b { font-weight: 700; }

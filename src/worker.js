@@ -178,9 +178,15 @@ async function constantTimeEquals(a, b) {
 // A wrong key waits a moment (slows guessing). No secret uploaded means no teacher endpoint at
 // all: never fall open. No lockout: a school shares one IP, and a lockout would let one student
 // lock out the teacher.
+// FULLY OFF on the real site (Dalton, 2026-10-20): the key works only on a local test server
+// (127.0.0.1 / localhost), even if a TEACHER_KEY secret is ever uploaded again.
+function keyAllowed(request) {
+  return ['127.0.0.1', 'localhost'].includes(new URL(request.url).hostname);
+}
+
 async function teacherOk(request, env) {
   // TEACHER_KEY_2: an optional second teacher (a student teacher); delete that secret to remove them.
-  const keys = [env.TEACHER_KEY, env.TEACHER_KEY_2].filter(Boolean);
+  const keys = keyAllowed(request) ? [env.TEACHER_KEY, env.TEACHER_KEY_2].filter(Boolean) : [];
   if (!keys.length) {
     console.error(JSON.stringify({ message: 'TEACHER_KEY is not set; teacher endpoint refused' }));
   } else if (await anyKeyEquals(request.headers.get('x-teacher-key') ?? '', keys)) {
@@ -557,7 +563,7 @@ async function handleRoom(request, env, url, match) {
 // Which music services this server has set up (public: no secrets in it). The host page shows
 // only these in its "Music from" picker. A Spotify Client ID is public by design; its secret
 // (SPOTIFY_CLIENT_SECRET, for the server's own catalog search) never leaves the Worker.
-export function serviceConfig(env) {
+export function serviceConfig(env, request) {
   const spotifyId = String(env.SPOTIFY_CLIENT_ID ?? '').trim();
   return {
     services: {
@@ -568,9 +574,8 @@ export function serviceConfig(env) {
       // Apple Music: all three secrets set (docs/APPLE-SETUP.md). The token itself is host-only.
       apple: appleConfigured(env),
     },
-    // The old shared teacher key works only while its secret is set (local tests); the start
-    // screen offers it only then.
-    teacherKey: Boolean(env.TEACHER_KEY || env.TEACHER_KEY_2),
+    // The old shared teacher key: local test servers with its secret only (keyAllowed).
+    teacherKey: keyAllowed(request) && Boolean(env.TEACHER_KEY || env.TEACHER_KEY_2),
     // Student nicknames are made ("Brave Otter", shared/nickgen.js); typed ones only for local tests.
     typedNicknames: env.TYPED_NICKNAMES === 'on',
     testAiOff: env.TEST_AI_OFF === 'on', // local browser tests only: the host shows the old AI switches
@@ -603,7 +608,7 @@ async function handleApi(request, env, url) {
   if (url.pathname === '/api/health') return json(200, { ok: true });
   if (url.pathname === '/api/config') {
     if (request.method !== 'GET') return json(405, { error: 'method', message: 'Use GET.' });
-    return json(200, serviceConfig(env));
+    return json(200, serviceConfig(env, request));
   }
   if (url.pathname.startsWith('/api/auth/')) return handleAuth(request, env, url);
   if (url.pathname.startsWith('/api/admin/')) return handleAdmin(request, env, url);

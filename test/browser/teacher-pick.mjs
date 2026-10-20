@@ -25,7 +25,7 @@ export async function closeOpenRooms(base, key, profile = T1) {
 export function startStep(page) {
   return page.evaluate(() => {
     const shown = (sel) => { const el = document.querySelector(sel); return Boolean(el && !el.hidden && el.offsetParent !== null); };
-    if (shown('#signinStep') && !document.querySelector('#useKey').hidden) return 'signin';
+    if (shown('#signinStep')) return 'signin';
     if (shown('#keyStep')) return 'key';
     if (shown('#whoStep') && document.querySelector('#whoList .who-pick')) return 'who';
     if (shown('#keyForm')) return 'open';
@@ -50,8 +50,9 @@ async function waitStep(page, want, timeout = 15_000) {
 export async function pickTeacher(page, key, name = T1_NAME) {
   let step = await waitStep(page);
   if (step === 'signin') {
-    // Spotify sign-in is the default; the tests use the teacher key (the local server has one).
-    await page.click('#useKey');
+    // Spotify sign-in is the default; the tests use the teacher key (local servers only, no button).
+    await page.evaluate(() => localStorage.setItem('cq.useKey', '1'));
+    await page.reload();
     step = await waitStep(page, ['key', 'who', 'open']);
   }
   if (step === 'key') {

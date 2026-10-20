@@ -4,6 +4,10 @@
 
 const KEY = 'cq.teacherKey';
 
+// FULLY OFF on the real site (Dalton, 2026-10-20): only a local test server (127.0.0.1 / localhost)
+// uses the teacher key. Anywhere else a saved key is wiped and never sent; the server refuses it too.
+export const KEY_ALLOWED = ['127.0.0.1', 'localhost'].includes(location.hostname);
+
 function sessionGet() { try { return JSON.parse(sessionStorage.getItem(KEY)); } catch { return null; } }
 
 /** The key this computer remembers (ticked "Remember"), or null. */
@@ -13,7 +17,7 @@ export function rememberedKey() {
 
 /** The key for this tab: this tab's own, else the remembered one. */
 export function teacherKey() {
-  return sessionGet() || rememberedKey();
+  return KEY_ALLOWED ? sessionGet() || rememberedKey() : null;
 }
 
 /** Keep the key for this tab; on this computer only when `remember`. */
@@ -42,4 +46,9 @@ export async function fetchProfiles(key) {
   } catch {
     return { ok: false, status: 0, data: {} };
   }
+}
+
+if (!KEY_ALLOWED) {
+  forgetTeacherKey();
+  try { localStorage.removeItem('cq.useKey'); } catch { /* blocked */ }
 }

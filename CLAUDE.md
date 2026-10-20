@@ -516,7 +516,7 @@ Claude account).
    (theme + lyrics), cover checks, rooms opened; plus new sign-ups a day for everyone. A used-up AI
    check NEVER lets a song through: it waits in Needs a look (source 'limit'). No YouTube or Apple
    Music for them (server refuses: room /youtube, /api/apple/token). Any new AI call must spend
-   from these caps too. Teacher guide for making a Spotify app: web/public/setup.html (/setup).
+   from these caps too. Teacher guide for making a Spotify app: web/public/setup.html (/setup). The host sign-in (Dalton, 2026-10-20: "NO ONE understands the login"): first time = the own-app setup steps, Client ID box in step 4; invited teachers take the small "Sign in with no setup" link (RoomDJ's app); back on a computer (localStorage cq.signinApp + cq.ownClientId) = one button; a failed sign-in shows the steps again.
    GET /api/teacher/usage: what a free teacher has left today; the host shows it (start screen, Settings).
    THEME_MODEL stays llama-3.3-70b (2026-10-14 comparison, 69 songs: 70b 2 misses; 8b and Scout 9
    misses each, letting drinking/drug songs through; Qwen3 30B answers nothing usable). Cost falls

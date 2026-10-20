@@ -23,7 +23,7 @@ import { connectRoom, roomSocketUrl } from './room-socket.js';
 import { showTimes } from './times.js';
 import { parseBoardFragment } from '../../shared/board.js';
 import { BOARD_POLL_MS, BOARD_POLL_SLOW_AFTER_MS, BOARD_POLL_SLOW_MS, BOARD_TOKEN_PATTERN, PROFILE_ID_PATTERN, PUSH_TAG, ROOM_ID_PATTERN, byLabel } from '../../shared/protocol.js';
-import { fetchProfiles, forgetTeacherKey, rememberedKey, saveTeacherKey, teacherKey } from './teacher-key.js';
+import { fetchProfiles, forgetTeacherKey, KEY_ALLOWED, rememberedKey, saveTeacherKey, teacherKey } from './teacher-key.js';
 import { forgetSignin, sessionHeaders, signOut, signedInAs } from './account.js';
 import { displayCode } from '../../shared/code.js';
 import { countdownText } from '../../shared/classtime.js';
@@ -480,17 +480,11 @@ function teacherHeaders() {
   return sessionHeaders() ?? { 'x-teacher-key': teacherKey() ?? '', 'x-teacher-profile': boardTeacher.get()?.id ?? '' };
 }
 
-// "Use the teacher key instead" (only while the server has one: local tests), remembered on this
-// computer until a Spotify sign-in (host.js USE_KEY).
-let usingKey = (() => { try { return localStorage.getItem('cq.useKey') === '1'; } catch { return false; } })();
-fetch('/api/config').then((r) => r.json()).then((c) => { $('#boardUseKey').hidden = !c?.teacherKey; }).catch(() => {});
+// The old teacher key: local test servers only (teacher-key.js KEY_ALLOWED; the tests set
+// localStorage cq.useKey), kept on this computer until a Spotify sign-in (host.js USE_KEY).
+const usingKey = KEY_ALLOWED && (() => { try { return localStorage.getItem('cq.useKey') === '1'; } catch { return false; } })();
 // The sign-in happens on the host page (Spotify comes back there), which sends this tab back here.
 $('#boardSignin').addEventListener('click', () => location.assign('/host/?then=board'));
-$('#boardUseKey').addEventListener('click', () => {
-  usingKey = true;
-  try { localStorage.setItem('cq.useKey', '1'); } catch { /* blocked */ }
-  showSignin('key');
-});
 
 /** Signed in with Spotify on this computer, or holding the teacher key. */
 const canSignIn = () => Boolean(signedInAs() || teacherKey());

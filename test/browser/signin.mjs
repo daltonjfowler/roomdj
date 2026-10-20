@@ -116,8 +116,10 @@ async function waitFor(page, sel, timeout = 15_000) {
 async function signIn(page, app, clientId = OWN) {
   await page.goto(`${BASE}/host/`);
   await waitFor(page, '#signinStep');
-  await page.check(`input[name="signinApp"][value="${app}"]`);
-  if (app === 'own') await page.fill('#clientId', clientId);
+  await page.waitForFunction(() => !document.querySelector('#signinSetup').hidden || !document.querySelector('#signinReady').hidden);
+  if (app === 'shared') return page.click('#sharedBtn'); // "Invited? Sign in with no setup"
+  if (await visible(page, '#otherApp')) await page.click('#otherApp'); // back on this computer: one button
+  await page.fill('#clientId', clientId);
   await page.click('#signinBtn');
 }
 
