@@ -1,0 +1,199 @@
+/* Student page: join card + song browsing, then two columns on a Chromebook (now playing + search |
+   queue) and one column on a phone. Tap targets are at least 44 px. */
+
+.code-input { font-size: 1.25rem; font-weight: 700; }
+.join-card { align-content: start; }
+.join-card h1 { margin: 0; font-size: 1.5rem; }
+.join-card form { display: grid; gap: 12px; }
+.browse .result { grid-template-columns: minmax(0, 1fr) auto; }
+
+.room {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px;
+  padding: 12px; max-width: 1200px; width: 100%; margin: 0 auto; align-items: start;
+}
+.col { display: grid; gap: 12px; min-width: 0; }
+.room > .card, .col > .card { padding: 12px 14px; display: grid; gap: 8px; }
+.queue-card { align-content: start; min-width: 0; }
+
+/* 📚 Back to work (protocol.js BACK TO WORK): one calm card instead of search, queue and votes.
+   The page is a 3-row grid (title bar / main 1fr / footer, min-height 100dvh), so <main> always
+   fills the screen. With the room hidden, a small card at the top of <main> left all that height as
+   a giant empty band between the card and the footer. While resting, <main> and the room stretch,
+   and the card fills the space from just under the title bar to the footer, its words centred. */
+#main:has(> #roomScreen.resting) { display: grid; }
+.room.resting { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+.room.resting > .col, .room.resting > .queue-card { display: none; }
+.room > .rest-card {
+  grid-column: 1 / -1; justify-items: center; text-align: center; gap: 12px;
+  width: 100%; max-width: 560px; margin: 24px auto; padding: 32px 20px;
+}
+.room.resting > .rest-card { margin: 0 auto; max-width: 720px; align-content: center; }
+.rest-title { margin: 0; font-size: 2rem; }
+.rest-title:focus { outline: none; }
+.rest-text { margin: 0; font-size: 1.15rem; }
+.rest-clock { margin: 0; }
+#restClock { font-size: 3.2rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--accent); }
+.rest-now { margin: 0; overflow-wrap: anywhere; }
+
+/* Now playing */
+.now-body { display: grid; gap: 6px; }
+.now-song .art { width: 84px; height: 84px; border-radius: 10px; }
+.now-song .song-title { font-size: 1.2rem; white-space: normal; }
+.now-body .song-by { margin: 0; }
+/* The song playing takes a 👍 only (protocol.js VOTES): its count and my vote, by who suggested it. */
+.now-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+/* Keep the same height whether a song plays or not, so the queue below does not jump. */
+.now-body { min-height: 112px; align-content: center; }
+#searchMsg { min-height: 1.45em; }
+/* Credits and my songs waiting share one line (it wraps on a phone). */
+.status-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; min-height: 30px; }
+.status-row .waiting { margin: 0; }
+.status-row .waiting:empty { display: none; }
+#waiting.full { color: var(--warn); font-weight: 600; }
+
+/* Credits (only while the teacher has them on): a pill with the balance, and what things cost. */
+.credits { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.credits-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 99px; min-height: 30px;
+  background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.credits.empty .credits-pill { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.credits small { font-size: .8rem; }
+
+/* 🔎 Search | ⭐ Class favorites: one segmented control */
+.segmented { display: flex; padding: 3px; gap: 3px; border-radius: 12px; background: var(--card2); border: 1px solid var(--line); }
+.segmented[hidden] { display: none; }
+.segmented button { flex: 1 1 0; min-height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 650; }
+.segmented button:hover:not(:disabled) { background: var(--card); color: var(--ink); }
+.segmented button[aria-pressed="true"] { background: var(--card); color: var(--accent); box-shadow: 0 1px 2px rgba(16, 24, 40, .12), inset 0 0 0 1px var(--accent-line); }
+/* Jump: the same width whatever it says, so the row never shifts. */
+.jump { min-width: 7.2em; min-height: 44px; border-radius: 99px; font-weight: 700; white-space: nowrap; }
+.jump[aria-disabled="true"] { opacity: .6; cursor: default; }
+/* 👎 left this class (protocol.js DOWNVOTE LIMIT): small, next to the voting hint. */
+.down-left { display: inline-block; margin-left: 4px; padding: 0 8px; border: 1px solid var(--line); border-radius: 99px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.down-left[hidden] { display: none; }
+.down-left.empty { color: var(--warn); border-color: var(--warn); }
+.vote.down[aria-disabled="true"] { opacity: .5; cursor: default; }
+.vote[hidden] { display: none; } /* 👎 off (protocol.js DOWNVOTE MODE) */
+.vote .n:empty { display: none; } /* 👎 on, counts hidden: the thumb alone */
+.jump.done { opacity: 1; background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.jtag, .ptag { color: var(--accent); font-weight: 650; }
+.qitem.pushed { border-color: var(--accent-line); }
+.qitem.jumped { border-color: var(--accent-line); }
+
+/* Now playing: little dancing bars while a song plays; a short cheer when it is your song. */
+.eq { display: inline-flex; align-items: flex-end; gap: 2px; height: .8em; margin-right: 6px; vertical-align: -1px; }
+.eq i { width: 3px; height: 30%; background: currentColor; border-radius: 1px; }
+.now:not(.playing) .eq { display: none; }
+.now.playing .eq i { animation: eq 1s ease-in-out infinite; }
+.now.playing .eq i:nth-child(2) { animation-delay: -.4s; }
+.now.playing .eq i:nth-child(3) { animation-delay: -.7s; }
+@keyframes eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+.now.mine { border-color: var(--accent-line); background: linear-gradient(var(--accent-soft), var(--card) 70%); }
+.now.mine .song-by { color: var(--accent); font-weight: 650; }
+.now.cheer { animation: cheer .9s ease-out 2; }
+@keyframes cheer { 0% { box-shadow: 0 0 0 0 var(--accent-line); } 100% { box-shadow: 0 0 0 16px transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .now.playing .eq i, .now.cheer { animation: none; }
+  .now.playing .eq i:nth-child(2) { height: 100%; } .now.playing .eq i:nth-child(3) { height: 60%; }
+}
+
+/* Searching: a small spinner before the message; the old results fade until the new ones come. */
+.search-msg.busy { display: flex; align-items: center; gap: 8px; }
+.search-msg.busy::before { content: ""; width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .search-msg.busy::before { animation-duration: 3s; } }
+.results.stale { opacity: .5; transition: opacity .2s; }
+.results:empty { display: none; }
+.pill .dot { flex: none; }
+/* 🔔 The bell countdown (bell-pill.js): quiet, the same pill as "In class as"; digits do not jiggle. */
+.bell-pill { flex: none; white-space: nowrap; font-weight: 600; }
+.bell-pill b { font-variant-numeric: tabular-nums; font-weight: 750; }
+.bell-pill.cleanup { border-color: var(--accent); background: var(--accent-soft); }
+
+/* Search */
+.search-row { display: flex; gap: 8px; }
+.results, .queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.result, .qitem {
+  display: grid; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;
+  background: var(--card2); border: 1px solid var(--line); min-width: 0;
+}
+.result { grid-template-columns: minmax(0, 1fr) auto auto; }
+.suggest { min-width: 96px; min-height: 44px; }
+/* A result that cannot be suggested says why, as plain text in the button's place (not a faded
+   pink button that looks broken). */
+.suggest.status:disabled { opacity: 1; background: transparent; border-color: transparent; color: var(--muted); font-weight: 650; cursor: default; }
+.suggest.status { min-width: 0; max-width: 8.5em; padding-inline: 4px; text-align: right; }
+.tag { font-size: .75rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: var(--ok-soft); color: var(--ok); }
+
+/* Queue */
+.count { color: var(--muted); font-weight: 600; letter-spacing: 0; }
+.qitem { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "rank song votes" "rank by votes"; row-gap: 2px; }
+.qitem .rank { grid-area: rank; width: 1.6em; text-align: center; font-weight: 750; font-size: 1.1rem; color: var(--muted); }
+.qitem .song { grid-area: song; }
+.qitem .qby { grid-area: by; color: var(--muted); font-size: .82rem; padding-left: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qitem.mine { border-color: var(--accent-line); background: var(--accent-soft); }
+.qitem.mine .qby { color: var(--accent); font-weight: 600; }
+.qitem.next .rank { color: var(--accent); }
+.votes { grid-area: votes; display: flex; gap: 6px; }
+.vote { min-width: 64px; min-height: 44px; font-weight: 700; font-variant-numeric: tabular-nums; border-radius: 99px; }
+.vote.up[aria-pressed="true"] { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); }
+.vote.down[aria-pressed="true"] { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); box-shadow: inset 0 0 0 1px var(--bad); }
+.empty-note { padding: 12px 0; text-align: center; }
+
+/* Lost connection: fixed just under the title bar, so the page below does not move. */
+.net-banner {
+  position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 15; width: max-content; max-width: calc(100% - 24px);
+  padding: 8px 14px; border-radius: 99px; background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn);
+  font-weight: 650; font-size: .9rem; box-shadow: var(--shadow); text-align: center;
+}
+/* Toasts are news, not buttons: taps go through to the Suggest and vote buttons under them. */
+.toast { pointer-events: none; }
+.toast.party { border-left-color: var(--accent); background: var(--accent-soft); font-weight: 650; }
+
+@media (max-width: 760px) {
+  .room { grid-template-columns: 1fr; padding: 10px; }
+  /* One column in the page's own order: now playing, search, then the queue (with 40 songs in the
+     queue, a search at the bottom is a long way down). */
+  .room > .col { display: contents; }
+  .titlebar { gap: 6px; padding: 6px 10px; }
+  /* In a room the bar keeps to one row: logo, who you are, Leave, theme. */
+  .in-room .titlebar { flex-wrap: nowrap; min-width: 0; }
+  .in-room .brand-name { display: none; }
+  .in-room .pill { min-width: 0; flex: 0 1 auto; }
+  .in-room #roomPillText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Phone: "🔔 12:34" (the words stay for screen readers). */
+  .in-room .bell-pill { flex: none; }
+  .in-room .bell-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .in-room .toplink, .in-room .themebtn { white-space: nowrap; flex: none; }
+  .net-banner { top: 62px; }
+  .brand img { width: 40px; height: 40px; }
+  .qitem .qby { padding-left: 0; }
+  .qitem { grid-template-areas: "rank song song" "rank by votes"; grid-template-columns: auto minmax(0, 1fr) auto; }
+  .qitem .art { width: 44px; height: 44px; }
+  .vote { min-width: 60px; min-height: 48px; }
+  .jump { min-width: 6.4em; min-height: 48px; padding-inline: 8px; }
+  .suggest { min-height: 48px; }
+}
+
+/* A song the student was told no to: the label and a "Why?" that says the reason again. */
+.refused { display: inline-flex; align-items: center; gap: 2px; }
+button.why { min-height: 44px; min-width: 44px; padding: 4px 8px; border: 0; background: none; color: var(--accent); text-decoration: underline; font-weight: 650; }
+button.why:hover { background: var(--accent-soft); }
+
+/* Cleanup time (protocol.js CLEANUP) */
+.cleanup-note { font-size: 1.1rem; }
+
+/* The room's teacher (teacher profiles): "Ms Rivera's class" */
+.class-of { margin: 0 0 8px; font-weight: 650; color: var(--muted); }
+.class-of::before { content: "🎓 "; }
+
+/* Made nicknames (shared/nickgen.js): the name, and 🎲 for another */
+#nickGen .code-row { display: flex; gap: 8px; }
+.nick-shown { flex: 1; min-width: 0; display: flex; align-items: center; font-weight: 700; }
+#nickRoll { flex: none; }
+
+/* What RoomDJ is (index.html #intro): one line for anyone new; gone once in a room */
+.intro { max-width: 1180px; margin: 12px auto 0; padding: 10px 16px; box-sizing: border-box; color: var(--muted); font-size: .92rem; text-align: center; }
+.intro b { color: var(--ink); }
+.intro a { white-space: nowrap; }
+.in-room .intro { display: none; }

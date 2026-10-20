@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The board link's fragment holds the board token: never send a Referer from here. -->
+  <meta name="referrer" content="no-referrer">
+  <title>RoomDJ board</title>
+  <meta name="description" content="The RoomDJ board for the projector: the class code, now playing and the queue, with a small remote.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#831843">
+  <script src="/theme-boot.js"></script>
+  <script src="/logo-alive.js" defer></script>
+</head>
+<body class="host big board">
+  <header class="titlebar">
+    <a class="brand" href="/" aria-label="RoomDJ home"><img src="/icon.svg" data-logo alt="" width="54" height="54">RoomDJ</a>
+    <span id="connPill" class="pill" hidden><span class="dot" aria-hidden="true"></span><span id="connText">Connected</span></span>
+    <span id="reviewPill" class="pill review-pill" hidden title="Songs waiting for the teacher's look (on the teacher computer)">👀 Needs a look <b id="reviewPillCount" class="badge-count"></b></span>
+    <span class="grow"></span>
+    <button id="fullBtn" type="button" aria-pressed="false" title="Full screen (F)">⛶ Full screen</button>
+    <button id="theme" class="themebtn" type="button">🖥️ System</button>
+  </header>
+
+  <main id="main">
+    <!-- The room, for the projector: the host's big screen layout (host.css .big) -->
+    <section id="boardScreen" class="stage" hidden>
+      <h1 class="sr-only">Today's room</h1>
+      <section class="card join-panel" aria-label="How to join" data-panel="join" data-col="join">
+        <p class="label">Join at</p>
+        <p id="joinHost" class="join-host"></p>
+        <p class="label">Class code</p>
+        <p id="bigCode" class="big-code"></p>
+        <p id="codeWait" class="note" hidden>The class code shows when the teacher computer is connected.</p>
+        <p class="note">On your Chromebook, go to the site above and type the class code.</p>
+        <p id="untilNote" class="times" aria-live="off"></p>
+      </section>
+
+      <section class="card now-panel" aria-labelledby="nowLabel" data-panel="now" data-col="now">
+        <div id="cleanupBanner" class="cleanup-banner" data-panel="cleanup" hidden>
+          <p class="cleanup-title">🧹 Cleanup time!</p>
+          <p class="cleanup-count">The bell rings in <b id="cleanupCount"></b></p>
+        </div>
+        <div id="top5Board" class="top5-board" data-panel="top5" hidden>
+          <h3 class="top5-board-title">🏆 Top 5 of the period</h3>
+          <ol id="top5BoardList" class="top5-list"></ol>
+        </div>
+        <h2 id="nowLabel" class="label">Now playing</h2>
+        <div id="nowPlaying" class="now-body"></div>
+        <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+        <p id="pausedNote" class="note board-paused" hidden>⏸ Paused</p>
+      </section>
+
+      <div class="side" data-col="queue">
+        <section class="card queue-panel" aria-labelledby="queueLabel" data-panel="queue">
+          <h2 id="queueLabel" class="label">Up next <span id="queueCount" class="count"></span></h2>
+          <p id="boardLocked" class="banner warn" hidden>🔒 Suggestions are locked. You can still vote.</p>
+          <ol id="queue" class="queue"></ol>
+          <p id="queueEmpty" class="note empty-note" hidden>No songs yet. Join with the code and suggest one!</p>
+        </section>
+      </div>
+    </section>
+
+    <!-- A link that stopped working, or the room closed -->
+    <section id="msgScreen" class="center" hidden>
+      <div class="center-card card">
+        <img src="/icon.svg" alt="" width="64" height="64">
+        <h1 id="msgTitle">RoomDJ board</h1>
+        <p id="msgText" class="note"></p>
+        <button id="msgRetry" class="primary" type="button" hidden>Connect again</button>
+        <button id="msgSignin" class="linkbtn" type="button" hidden>Sign in instead, so this board finds your room every period</button>
+      </div>
+    </section>
+
+    <!-- The board's sign-in (protocol.js BOARD SIGN-IN): the teacher key, then who's teaching -->
+    <section id="signinScreen" class="center" hidden>
+      <div class="center-card card">
+        <img src="/icon.svg" alt="" width="64" height="64">
+        <h1>RoomDJ board</h1>
+        <p class="note">Sign in once on this projector computer. Then the board finds your room by itself, every period.</p>
+        <!-- Spotify sign-in (protocol.js SPOTIFY SIGN-IN): done on the host page, which comes back here -->
+        <section id="spotifyStep" hidden>
+          <p class="note">Tick "Stay signed in on this computer" there so this board signs in by itself tomorrow too. Only on a school computer that students do not use.</p>
+          <p id="spotifyMsg" class="form-msg" role="alert"></p>
+          <button id="boardSignin" class="primary big wide" type="button">Sign in with Spotify</button>
+          <button id="boardUseKey" class="linkbtn" type="button" hidden>Use the teacher key instead</button>
+        </section>
+        <form id="keyStep" hidden>
+          <!-- a fixed user name, so the browser's password manager can save and fill the key -->
+          <input type="text" name="username" autocomplete="username" value="teacher" hidden>
+          <label class="field" id="keyField">Teacher key <small>The same teacher password as the other class sites.</small>
+            <input id="key" name="password" class="text" type="password" autocomplete="current-password" required>
+          </label>
+          <p id="rememberRow" class="remember-row">
+            <label class="check"><input id="remember" type="checkbox" aria-describedby="rememberWarn"> <span>Remember on this computer</span></label>
+            <small id="rememberWarn" class="note">Tick it so this board signs in by itself tomorrow too. Only on a school computer that students do not use.</small>
+          </p>
+          <p id="keyStepMsg" class="form-msg" role="alert"></p>
+          <button id="keyNext" class="primary big wide" type="submit">Next</button>
+        </form>
+        <section id="whoStep" class="who-step" aria-labelledby="whoTitle" hidden>
+          <h2 id="whoTitle">Who's teaching?</h2>
+          <p class="note">The board shows this teacher's room whenever one is open.</p>
+          <ul id="whoList" class="who-list"></ul>
+          <p id="whoMsg" class="form-msg" role="alert"></p>
+          <button id="otherKey" class="linkbtn" type="button">Use a different teacher key (forgets the saved one)</button>
+        </section>
+      </div>
+    </section>
+
+    <!-- Signed in, no room open yet: calm, full screen, with a clock -->
+    <section id="waitScreen" class="wait-screen" hidden>
+      <p id="waitClock" class="wait-clock" aria-hidden="true"></p>
+      <h1 id="waitTitle" class="wait-title">Waiting for the teacher to open a room…</h1>
+      <p class="wait-brand">RoomDJ</p>
+      <p class="note">This board connects by itself when the room opens.</p>
+      <p id="waitMsg" class="note" role="status"></p>
+      <p class="wait-actions">
+        <button id="waitSwitch" type="button">👤 Switch teacher</button>
+        <button id="waitForget" class="linkbtn" type="button">Forget this computer</button>
+      </p>
+    </section>
+  </main>
+
+  <!-- The remote (protocol.js BOARD + REMOTE): hides after a few seconds without the mouse; any key brings it back -->
+  <section id="remote" class="remote" aria-label="Remote" hidden>
+    <button id="rPlay" type="button" title="Play or pause on the teacher computer (Space)">⏯ Play</button>
+    <button id="rSkip" type="button" title="Skip this song (S)">⏭ Skip</button>
+    <button id="rVeto" type="button" class="danger" aria-haspopup="dialog" title="Stop this song; its student is told (V)">🚫 Veto</button>
+    <button id="rLock" type="button" aria-pressed="false" title="Stop or allow new suggestions (L)">🔓 Lock suggestions</button>
+    <button id="rRecap" type="button" title="Play the class recap here (R)">▶ Play recap</button>
+    <button id="rVolDown" type="button" aria-label="Volume down" title="Volume down on the teacher computer (-)">🔉</button>
+    <button id="rVolUp" type="button" aria-label="Volume up" title="Volume up on the teacher computer (+)">🔊</button>
+    <button id="rMenu" type="button" aria-haspopup="dialog" aria-label="Board menu" title="Edit layout, switch teacher or forget this computer">⋯</button>
+    <span id="rNote" class="remote-note" role="status"></span>
+  </section>
+
+  <!-- "▶ Play recap" (recap-show.js): the full-screen awards show -->
+  <dialog id="showDlg" class="recap-show" aria-label="Period recap">
+    <div id="showStage" class="show-stage"></div>
+    <div class="show-controls">
+      <button id="showPrev" type="button" aria-label="Previous slide">◀ Back</button>
+      <button id="showPause" type="button" aria-pressed="false">⏸ Pause</button>
+      <button id="showNext" type="button" aria-label="Next slide">Next ▶</button>
+      <span id="showCount" class="show-count"></span>
+      <span id="showNote" class="show-note" role="status"></span>
+      <button id="showClose" type="button">✕ Close (Esc)</button>
+    </div>
+    <p id="showSay" class="sr-only" aria-live="polite"></p>
+  </dialog>
+
+  <!-- The remote's ⋯ menu (signed-in boards) -->
+  <dialog id="menuDlg" class="dialog" aria-labelledby="menuTitle">
+    <form method="dialog">
+      <h2 id="menuTitle">Board</h2>
+      <p id="menuFollow" class="note">Showing <b id="menuTeacher"></b>'s room. The board follows this teacher to their next room.</p>
+      <p class="note">✏️ Edit layout: move, resize, scale or hide the panels on this board (E; Esc leaves). Kept on this computer.</p>
+      <div class="dialog-actions menu-actions">
+        <button id="menuLayout" type="button">✏️ Edit layout</button>
+        <button id="menuSwitch" type="button">👤 Switch teacher</button>
+        <button id="menuForget" type="button">Forget this computer</button>
+        <button class="primary" value="done">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm" class="dialog" aria-labelledby="confirmQ">
+    <form method="dialog">
+      <h2 id="confirmQ" data-q></h2>
+      <p class="note" data-detail></p>
+      <div class="dialog-actions">
+        <button value="cancel">Cancel</button>
+        <button class="primary" value="ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <script type="module" src="/src/board.js"></script>
+</body>
+</html>

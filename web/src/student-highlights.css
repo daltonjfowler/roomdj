@@ -1,0 +1,16 @@
+/* Student page: the Search / ⭐ Class favorites switch and the 🏆 Top 5 so far card (student.js). */
+.find-by { display: flex; gap: 6px; }
+.find-by button { flex: 1 1 0; min-height: 44px; font-weight: 650; }
+.find-by button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); box-shadow: inset 0 0 0 1px var(--accent); }
+.fav-pane { display: grid; gap: 8px; }
+.fav-pane .note { margin: 0; }
+.fav-pane .results { max-height: 60vh; overflow: auto; }
+.fav-tag { background: var(--accent-soft); color: var(--accent); }
+
+.top5 { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.top5-row { display: grid; grid-template-columns: 1.8em minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 8px; border-radius: 8px; }
+.top5-row.crown { background: var(--accent-soft); border: 1px solid var(--accent-line); }
+.top5-rank { text-align: center; font-weight: 750; color: var(--muted); }
+.top5-row.crown .top5-rank { font-size: 1.2rem; }
+.top5-net { font-variant-numeric: tabular-nums; }
+.top5-row .song-title { font-size: .95rem; }

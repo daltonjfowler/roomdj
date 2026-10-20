@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Set Up Your Spotify App for RoomDJ (5 Minutes, Free)</title>
+  <meta name="description" content="Step-by-step: make your own free Spotify developer app so RoomDJ can play music in your classroom. About five minutes, once.">
+  <link rel="canonical" href="https://roomdj.com/setup">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="RoomDJ">
+  <meta property="og:title" content="Set Up Your Spotify App for RoomDJ (5 Minutes, Free)">
+  <meta property="og:description" content="Step-by-step: make your own free Spotify developer app so RoomDJ can play music in your classroom. About five minutes, once.">
+  <meta property="og:url" content="https://roomdj.com/setup">
+  <meta property="og:image" content="https://roomdj.com/social.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="RoomDJ: class song voting, minus the bad words. The projector board with the class code and the voted queue.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <!-- Dark unless the visitor picked Light (src/theme.js): blocking, before the first paint -->
+  <script src="/theme-boot.js"></script>
+  <style>
+    :root { --bg: #ffffff; --ink: #14181d; --muted: #5b6570; --line: #d5dae0; --accent: #be185d; --soft: #fdf2f8; color-scheme: light; }
+    :root[data-theme="dark"] { --bg: #121314; --ink: #ecedee; --muted: #a0a3a8; --line: #343639; --accent: #f472b6; --soft: #2a1520; color-scheme: dark; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding-inline: 16px; padding-block: 24px 48px; }
+    main { max-width: 68ch; margin: 0 auto; }
+    h1 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 4px; }
+    h2 { font-size: 1.15rem; margin: 28px 0 6px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .muted { color: var(--muted); }
+    a { color: var(--accent); }
+    ul, ol { padding-left: 22px; }
+    li { margin: 6px 0; }
+    code { font: 0.95em ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; }
+    .box { background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+    dt { font-weight: 650; margin-top: 12px; }
+    dd { margin: 4px 0 0; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="muted"><a href="/">← Back to RoomDJ</a></p>
+  <h1>Set up your Spotify app</h1>
+  <p class="muted">About 5 minutes, once. Free.</p>
+
+  <p>RoomDJ plays music through your own Spotify account. Spotify only lets a small app like this have 5 users, so instead of everyone squeezing into mine, each teacher makes their own free "Spotify app". It sounds technical. It is mostly copy and paste.</p>
+
+  <div class="box">
+    <p><b>You need:</b></p>
+    <ul>
+      <li>Spotify Premium (Spotify's rule for playing music in an app like this).</li>
+      <li>The computer that plays music in your classroom.</li>
+      <li>This address, to paste in step 2: <code>https://roomdj.com/host/</code></li>
+    </ul>
+  </div>
+
+  <h2>1. Open the Spotify developer dashboard</h2>
+  <ol>
+    <li>Go to <a href="https://developer.spotify.com/dashboard" rel="noopener" target="_blank">developer.spotify.com/dashboard</a>.</li>
+    <li>Log in with the Spotify account that has Premium.</li>
+    <li>The first time, Spotify asks you to accept its developer terms (and may ask you to confirm your email). Do that and come back to the dashboard.</li>
+  </ol>
+
+  <h2>2. Create the app</h2>
+  <ol>
+    <li>Click <b>Create app</b>.</li>
+    <li><b>App name:</b> anything, like <i>RoomDJ for Room 12</i>. <b>App description:</b> anything, like <i>Music for my class</i>.</li>
+    <li><b>Redirect URI:</b> paste <code>https://roomdj.com/host/</code> exactly, with the slash at the end, then click <b>Add</b>.</li>
+    <li>Where it asks which APIs or SDKs you plan to use, tick <b>Web API</b> and <b>Web Playback SDK</b>.</li>
+    <li>Agree to the terms and click <b>Save</b>.</li>
+  </ol>
+
+  <h2>3. Put yourself on the guest list</h2>
+  <p>Spotify blocks everyone who is not on your app's list, you included.</p>
+  <ol>
+    <li>In your app, open <b>Settings</b>, then the <b>User Management</b> tab.</li>
+    <li>Add your name and the email address of your Spotify account (the one you log in to Spotify with).</li>
+  </ol>
+
+  <h2>4. Copy your Client ID</h2>
+  <ol>
+    <li>In your app's <b>Settings</b> (Basic Information), find <b>Client ID</b>: 32 letters and numbers.</li>
+    <li>Copy it. That's the only thing RoomDJ needs.</li>
+  </ol>
+  <p class="box">Never copy the <b>Client secret</b>. RoomDJ will never ask for it, and nobody else needs it either.</p>
+
+  <h2>5. Sign in to RoomDJ</h2>
+  <ol>
+    <li>On your classroom computer, go to <a href="/host/">roomdj.com/host</a>.</li>
+    <li>Pick <b>My own Spotify app</b> and paste your Client ID.</li>
+    <li>On your own computer, tick <b>Stay signed in on this computer</b>. Never on a shared Chromebook.</li>
+    <li>Click <b>Sign in with Spotify</b>, then <b>Agree</b> on Spotify's page.</li>
+  </ol>
+  <p>That's it. Open today's room, put the class code on the board, and your class can start suggesting songs. RoomDJ remembers your Client ID on that computer, so next time it's one click.</p>
+
+  <h2>If something goes wrong</h2>
+  <dl>
+    <dt>Spotify says "Invalid redirect URI"</dt>
+    <dd>The address in step 2 does not match. In your app's <b>Settings</b>, click <b>Edit</b> and make the Redirect URI exactly <code>https://roomdj.com/host/</code> (https, no www, slash at the end). Save, then try again.</dd>
+    <dt>RoomDJ says your account "is not added to that Spotify app"</dt>
+    <dd>Do step 3 again with the email of the Spotify account you are logging in with. A different email (school vs. personal) is the usual cause.</dd>
+    <dt>RoomDJ says the Client ID is not right</dt>
+    <dd>Copy it again from <b>Settings</b>: it is exactly 32 letters and numbers, no spaces.</dd>
+    <dt>The music will not start</dt>
+    <dd>Check that the account has Premium, then click <b>Start music</b> on the RoomDJ page once (browsers need one click before they play sound).</dd>
+  </dl>
+
+  <h2>Sharing with a coworker</h2>
+  <p>The easiest way: send them this page so they make their own app. Or add up to 4 coworkers to your app's <b>User Management</b> list (step 3, with their Spotify email) and give them your Client ID. Each of you still gets your own RoomDJ settings, bans and favorites.</p>
+
+  <h2>Your privacy</h2>
+  <ul>
+    <li>RoomDJ never sees your Spotify password. You log in on Spotify's own page.</li>
+    <li>Your Spotify login stays on your computer for playing music. RoomDJ's server does not keep it.</li>
+    <li>Students never touch Spotify. They search and vote on RoomDJ's own page, and only your computer plays.</li>
+    <li>To cut RoomDJ off any time: Sign out in RoomDJ, or remove it at <a href="https://www.spotify.com/account/apps/" rel="noopener" target="_blank">spotify.com/account/apps</a>.</li>
+  </ul>
+  <p class="muted">RoomDJ is free and is not made by or affiliated with Spotify. More in <a href="/legal">Privacy &amp; legal</a>.</p>
+</main>
+</body>
+</html>

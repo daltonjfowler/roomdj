@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Secret guard. Enable once per clone with:  git config core.hooksPath .githooks
+# Scans staged changes and blocks the commit if a credential is detected.
+exec bash "$(git rev-parse --show-toplevel)/scripts/secret-scan.sh" --staged

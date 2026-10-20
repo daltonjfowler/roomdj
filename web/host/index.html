@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoomDJ teacher panel</title>
+  <meta name="description" content="The teacher's RoomDJ page: open a room, show the code, and play the songs the class votes up.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#831843">
+  <script src="/theme-boot.js"></script>
+  <script src="/logo-alive.js" defer></script>
+</head>
+<body class="host">
+  <header class="titlebar">
+    <!-- A new tab, so the music on this page keeps playing. -->
+    <a id="brandHome" class="brand" href="/" aria-label="RoomDJ home"><img src="/icon.svg" data-logo alt="" width="54" height="54">RoomDJ</a>
+    <span class="pill panel-pill">Teacher panel</span>
+    <span id="connPill" class="pill" hidden><span class="dot" aria-hidden="true"></span><span id="connText">Connected</span></span>
+    <span id="teacherPill" class="pill teacher-pill" hidden title="Close the room to switch teachers">Teaching as <b id="teacherPillName"></b></span>
+    <span id="boardPill" class="pill board-pill" role="status" hidden title="A board page (📺 Board link) shows this room on another screen">📺 Board connected</span>
+    <span class="grow"></span>
+    <!-- The teacher's tools: three menus (menu.js) and three direct buttons -->
+    <span id="roomTools" class="tools" hidden>
+      <span id="screenMenu" class="menu">
+        <button id="screenMenuBtn" class="menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="screenMenuPop">📺 Screen <span class="caret" aria-hidden="true">▾</span></button>
+        <div id="screenMenuPop" class="menu-pop" role="menu" aria-labelledby="screenMenuBtn" hidden>
+          <button id="bigBtn" type="button" role="menuitemcheckbox" aria-checked="false" tabindex="-1" title="Show the class code, now playing and the queue in big type (Esc leaves)">📺 Big screen</button>
+          <button id="fullBtn" type="button" role="menuitemcheckbox" aria-checked="false" tabindex="-1" title="Full screen, with big screen (Esc leaves)">⛶ Full screen</button>
+          <button id="layoutBtn" type="button" role="menuitemcheckbox" aria-checked="false" tabindex="-1" title="Move, resize, scale or hide the panels on this screen (E; Esc leaves)">✏️ Edit layout</button>
+          <div role="separator"></div>
+          <button id="boardBtn" type="button" role="menuitem" tabindex="-1" title="Show this room on the projector from a second computer, with a small remote">🖥️ Board link…</button>
+        </div>
+      </span>
+      <span id="roomMenu" class="menu">
+        <button id="roomMenuBtn" class="menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="roomMenuPop">🏠 Room <span id="roomMenuLock" class="menu-flag" hidden>🔒</span> <span class="caret" aria-hidden="true">▾</span></button>
+        <div id="roomMenuPop" class="menu-pop" role="menu" aria-labelledby="roomMenuBtn" hidden>
+          <button id="changeCodeBtn" type="button" role="menuitem" tabindex="-1">🔑 Change code…</button>
+          <button id="timesBtn" type="button" role="menuitem" tabindex="-1">🕒 Change times…</button>
+          <button id="lockBtn" type="button" role="menuitemcheckbox" aria-checked="false" tabindex="-1">🔓 Suggestions open</button>
+          <button id="studentsBtn" type="button" role="menuitem" tabindex="-1">👥 Students <span id="studentCount" class="menu-count"></span></button>
+          <div role="separator"></div>
+          <button id="closeBtn" type="button" role="menuitem" tabindex="-1" class="danger">✕ Close room…</button>
+        </div>
+      </span>
+      <span id="listsMenu" class="menu">
+        <button id="listsMenuBtn" class="menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="listsMenuPop">📋 Lists <b id="listsBadge" class="badge-count" hidden></b> <span class="caret" aria-hidden="true">▾</span></button>
+        <div id="listsMenuPop" class="menu-pop" role="menu" aria-labelledby="listsMenuBtn" hidden>
+          <button id="reviewBadge" class="review-badge" type="button" role="menuitem" tabindex="-1" hidden>👀 Needs a look <b id="reviewBadgeCount" class="badge-count"></b></button>
+          <button id="blockedBtn" type="button" role="menuitem" tabindex="-1" title="Every song turned down in this room today, and why">🚫 Blocked today <span id="blockedCount" class="menu-count"></span></button>
+          <button id="top5Btn" type="button" role="menuitem" tabindex="-1" title="The five songs with the best votes this period, and the end-of-class recap">🏆 Top 5 <span id="top5Count" class="menu-count"></span></button>
+          <button id="favBtn" type="button" role="menuitem" tabindex="-1" title="Songs your classes loved, kept across days (songs only, no names)">⭐ Favorites</button>
+          <button id="restBtn" type="button" role="menuitem" tabindex="-1" title="Songs resting after they played (the repeat cooldown); wake one early">😴 Resting songs</button>
+          <div role="separator"></div>
+          <button id="playRecapMenu" type="button" role="menuitem" tabindex="-1" title="The end-of-class awards show">▶ Play recap</button>
+        </div>
+      </span>
+      <button id="projectorBtn" type="button" aria-haspopup="dialog" title="Show this room on the projector from a second computer, with a small remote">🖥️ Projector</button>
+      <button id="suggestBtn" type="button" aria-haspopup="dialog" title="Add a song yourself: it goes through the same song check as students' songs">🔎 Suggest a song</button>
+      <button id="settingsBtn" type="button" aria-haspopup="dialog">⚙️ Settings</button>
+    </span>
+    <a class="toplink" href="/" target="_blank" rel="noopener">Student page</a>
+    <button id="theme" class="themebtn" type="button">🖥️ System</button>
+  </header>
+
+  <main id="main">
+    <!-- Teacher key, then "Who's teaching?" (protocol.js TEACHER PROFILES), then open today's room -->
+    <section id="startScreen" class="center" hidden>
+      <div class="center-card card">
+        <!-- Who is this for: teachers stay here, students go to the student page -->
+        <nav class="who-row" aria-label="Student or teacher">
+          <a class="who-btn" href="/"><span aria-hidden="true">🎒</span> Student <small>Join your class</small></a>
+          <span class="who-btn who-on" aria-current="page"><span aria-hidden="true">🍎</span> Teacher <small>Start your room</small></span>
+        </nav>
+        <img src="/icon.svg" alt="" width="64" height="64">
+        <h1 id="startTitle">Open today's room</h1>
+        <p class="note">Students join with today's class code on their Chromebooks, suggest songs and vote. This computer plays the songs.</p>
+        <!-- Sign in with Spotify (protocol.js SPOTIFY SIGN-IN; account.js) -->
+        <form id="signinStep" hidden>
+          <h2>Sign in with Spotify</h2>
+          <p class="note">Your Spotify account is your RoomDJ account, and it plays the music. It needs Spotify Premium.</p>
+          <fieldset class="field app-pick">
+            <legend>Which Spotify app?</legend>
+            <label id="sharedAppRow" class="pick"><input type="radio" name="signinApp" value="shared"> <span>RoomDJ's app <small>For teachers who were invited.</small></span></label>
+            <label class="pick"><input type="radio" name="signinApp" value="own" checked> <span>My own Spotify app <small>Free, about 5 minutes to set up.</small></span></label>
+          </fieldset>
+          <div id="ownAppBox">
+            <label class="field">Client ID <small>From your app's page in the Spotify developer dashboard.</small>
+              <input id="clientId" class="text" autocomplete="off" spellcheck="false" maxlength="40">
+            </label>
+            <details class="own-steps">
+              <summary>How to make your own Spotify app <small>About 5 minutes, once</small></summary>
+              <ol class="steps">
+                <li>
+                  <b>Open the Spotify dashboard</b>
+                  <span>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> and log in with your Premium account.</span>
+                </li>
+                <li>
+                  <b>Create an app</b>
+                  <span>Click <b>Create app</b>. Any name works. Paste this as the <b>Redirect URI</b>:</span>
+                  <span class="copy-row"><code id="redirectUri"></code><button id="copyRedirect" type="button">Copy</button></span>
+                  <span>Tick <b>Web API</b> and <b>Web Playback SDK</b>, then <b>Save</b>.</span>
+                </li>
+                <li>
+                  <b>Add yourself</b>
+                  <span>In your app: <b>Settings</b> → <b>User Management</b>. Add your name and your Spotify email.</span>
+                </li>
+                <li>
+                  <b>Copy the Client ID</b>
+                  <span>Paste it in the box above. Never the Client secret.</span>
+                </li>
+              </ol>
+              <a class="steps-more" href="/setup" target="_blank" rel="noopener">Full guide, with fixes for common problems →</a>
+            </details>
+          </div>
+          <p class="remember-row">
+            <label class="check"><input id="signinRemember" type="checkbox" aria-describedby="signinRememberWarn"> <span>Stay signed in on this computer</span></label>
+            <small id="signinRememberWarn" class="note">Only on your own computer, never on a shared Chromebook.</small>
+          </p>
+          <p id="signinMsg" class="form-msg" role="alert"></p>
+          <button id="signinBtn" class="primary big wide" type="submit">Sign in with Spotify</button>
+          <button id="useKey" class="linkbtn" type="button" hidden>Use the teacher key instead</button>
+        </form>
+        <!-- Step 1: the teacher key (skipped while this tab or computer has it) -->
+        <form id="keyStep" hidden>
+          <!-- a fixed user name, so the browser's password manager can save and fill the key -->
+          <input type="text" name="username" autocomplete="username" value="teacher" hidden>
+          <label class="field" id="keyField">Teacher key <small>The same teacher password as the other class sites.</small>
+            <input id="key" name="password" class="text" type="password" autocomplete="current-password" required>
+          </label>
+          <p id="rememberRow" class="remember-row">
+            <label class="check"><input id="remember" type="checkbox" aria-describedby="rememberWarn"> <span>Remember on this computer</span></label>
+            <small id="rememberWarn" class="note">Only on your own computer, never on a shared Chromebook.</small>
+          </p>
+          <p id="keyStepMsg" class="form-msg" role="alert"></p>
+          <button id="keyNext" class="primary big wide" type="submit">Next</button>
+        </form>
+        <!-- Step 2: who's teaching (each teacher keeps their own settings, bans, approvals and favorites) -->
+        <section id="whoStep" class="who-step" aria-labelledby="whoTitle" hidden>
+          <h2 id="whoTitle">Who's teaching?</h2>
+          <p class="note">Each teacher keeps their own settings, bell schedule, banned and allowed songs, and favorites.</p>
+          <ul id="whoList" class="who-list"></ul>
+          <p id="whoMsg" class="form-msg" role="alert"></p>
+          <button id="addTeacherBtn" type="button" aria-haspopup="dialog">＋ Add teacher</button>
+          <details id="whoHidden" class="who-hidden" hidden>
+            <summary>Hidden teachers <span id="whoHiddenCount"></span></summary>
+            <ul id="whoHiddenList" class="who-list"></ul>
+          </details>
+          <button id="otherKey2" class="linkbtn" type="button">Use a different teacher key (forgets the saved one)</button>
+        </section>
+        <!-- Step 3: open the room -->
+        <form id="keyForm" hidden>
+          <!-- "Your open rooms" (GET /api/teacher/rooms): open one here with a click, no class code to type -->
+          <section id="openRooms" class="open-rooms" aria-labelledby="openRoomsTitle" hidden>
+            <h2 id="openRoomsTitle">Your open rooms</h2>
+            <ul id="openRoomsList" class="open-rooms-list"></ul>
+          </section>
+          <p class="teaching-as"><span id="teachingAs" class="pill">Teaching as <b id="teachingName"></b></span>
+            <button id="switchTeacher" class="linkbtn" type="button">Switch</button>
+            <button id="renameMe" class="linkbtn" type="button" aria-haspopup="dialog" hidden>Rename</button>
+            <button id="signOutBtn" class="linkbtn" type="button" hidden>Sign out</button>
+            <a id="adminLink" class="linkbtn" href="/admin/" hidden>Admin</a></p>
+          <!-- Free teachers: what is left today and when it resets (GET /api/teacher/usage) -->
+          <p id="usageNote" class="note usage-note" hidden></p>
+          <label class="field">Class code <small>Goes on the board. Keep the suggestion or type your own.</small>
+            <span class="code-row">
+              <input id="openCode" class="text" autocomplete="off" spellcheck="false" required>
+              <button id="newCode" type="button" title="Suggest another class code">🎲 New suggestion</button>
+            </span>
+          </label>
+          <!-- Class time (classtime.js): the bell schedule presets, a custom time or the end of today, and cleanup -->
+          <fieldset class="field class-times">
+            <legend id="openEndLegend">Class ends at <small>The room closes then.</small></legend>
+            <div id="openBells" class="end-picks" role="radiogroup" aria-labelledby="openEndLegend"></div>
+            <span class="end-custom">
+              <label class="pick"><input type="radio" name="openEnd" value="custom"> <span>Custom time</span></label>
+              <input id="openCustom" class="text" type="time" aria-label="Custom class end time">
+            </span>
+            <label class="pick"><input type="radio" name="openEnd" value="day"> <span>The end of today</span></label>
+            <label class="cleanup-at">Cleanup starts
+              <input id="openCleanup" class="text" type="time" aria-describedby="openCleanupHelp"></label>
+            <small id="openCleanupHelp" class="note">The music fades out and suggestions close. Leave it empty for no cleanup.</small>
+            <button id="bellEditBtn" type="button" class="linkbtn" aria-haspopup="dialog">🔔 Edit bell schedule</button>
+          </fieldset>
+          <p id="keyMsg" class="form-msg" role="alert"></p>
+          <button id="openBtn" class="primary big wide" type="submit">Open today's room</button>
+          <button id="closeAllBtn" class="linkbtn" type="button" title="Close every room you have open, on this computer or any other">Close my open rooms</button>
+          <!-- a new tab: this page keeps playing the music -->
+          <a id="boardOpenLink" class="linkbtn" href="/board/" target="_blank" rel="noopener" title="Show your room on a projector or second screen. It plays no music.">📺 Open the board (projector)</a>
+          <button id="otherKey" class="linkbtn" type="button" hidden>Use a different teacher key (forgets the saved one)</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- The room, for the projector -->
+    <section id="hostScreen" class="stage" hidden>
+      <h1 class="sr-only">Today's room</h1>
+      <p id="aiWarn" class="banner bad ai-warn" role="alert" hidden></p>
+
+      <section class="card join-panel" aria-label="How to join" data-panel="join" data-col="join">
+        <p class="label">Join at</p>
+        <p id="joinHost" class="join-host"></p>
+        <p class="label">Class code</p>
+        <p id="bigCode" class="big-code"></p>
+        <p class="note">On your Chromebook, go to the site above and type the class code.</p>
+        <button id="copyLink" type="button" title="A link that fills in the class code, for Google Classroom or email">📋 Copy join link</button>
+        <p id="untilNote" class="times" aria-live="off"></p>
+      </section>
+
+      <section class="card now-panel" aria-labelledby="nowLabel" data-panel="now" data-col="now">
+        <!-- Cleanup time (classtime.js): the music fades out; a countdown to the bell -->
+        <div id="cleanupBanner" class="cleanup-banner" data-panel="cleanup" hidden>
+          <p class="cleanup-title">🧹 Cleanup time!</p>
+          <p class="cleanup-count">The bell rings in <b id="cleanupCount"></b></p>
+          <button id="cleanupKeep" type="button">🎵 Keep the music going</button>
+          <button id="cleanupRecap" type="button" class="primary" aria-haspopup="dialog">▶ Play the class recap</button>
+        </div>
+        <!-- Top 5 of the period (highlights.js): under the cleanup banner, on the big screen too -->
+        <div id="top5Board" class="top5-board" data-panel="top5" hidden>
+          <h3 class="top5-board-title">🏆 Top 5 of the period</h3>
+          <ol id="top5BoardList" class="top5-list"></ol>
+        </div>
+        <h2 id="nowLabel" class="label">Now playing</h2>
+        <div id="nowPlaying" class="now-body"></div>
+        <!-- YouTube's player (players/youtube.js): it must stay visible while it plays -->
+        <div id="ytBox" class="yt-box layout-nozoom" hidden></div>
+        <p id="ytNote" class="note" hidden>Songs play as YouTube videos that RoomDJ matches to each song, so an ad may play first. Keep the video on screen. If the wrong video comes up, Skip it.</p>
+        <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+        <div class="controls">
+          <button id="startBtn" class="primary big" type="button">▶ Start music</button>
+          <button id="playBtn" class="big" type="button" hidden>⏸ Pause</button>
+          <button id="skipBtn" class="big" type="button">⏭ Skip</button>
+          <!-- The teacher's own 👍 on the song playing: one vote, like a student's (TEACHER PICKS) -->
+          <button id="nowUpBtn" class="big tvote" type="button" aria-pressed="false" aria-label="Give the song playing your thumbs up" title="Your vote (one vote, like a student's)">👍</button>
+          <!-- ⭐ RoomDJ Favs: the teacher's own private Spotify playlist (Spotify only) -->
+          <button id="favsBtn" class="big" type="button" hidden aria-label="Save the song playing to your RoomDJ Favs playlist on Spotify" title="Save to my RoomDJ Favs playlist">⭐</button>
+          <span id="nowMenu" class="menu">
+            <button id="nowMenuBtn" class="big menu-btn more-btn" type="button" data-act="menu" aria-haspopup="menu" aria-expanded="false" aria-controls="nowMenuPop" aria-label="More for the song playing" title="Ban">⋯</button>
+            <div id="nowMenuPop" class="menu-pop" role="menu" aria-labelledby="nowMenuBtn" hidden>
+              <button id="banNowBtn" class="danger" type="button" role="menuitem" tabindex="-1" title="Stop this song and never allow it again">⛔ Ban…</button>
+              <button id="banNowMore" type="button" role="menuitem" tabindex="-1" title="Ban with a reason the student sees">💬 Ban with a reason…</button>
+            </div>
+          </span>
+          <label class="volume"><span id="volIcon" aria-hidden="true">🔈</span><span class="sr-only">Volume</span>
+            <input id="volume" type="range" min="0" max="1" step="0.05" value="1"></label>
+        </div>
+        <p id="playerWarn" class="banner warn" role="alert" hidden></p>
+        <p id="playerNote" class="note"></p>
+        <!-- Background music (filler.js): plays while no student song does -->
+        <div id="filler" class="filler">
+          <div class="filler-row">
+            <button id="fillerBtn" type="button" aria-pressed="false">▶ Background music</button>
+            <button id="fillerEdit" type="button" class="linkbtn" aria-expanded="false" aria-controls="fillerForm">Background music link</button>
+          </div>
+          <p id="fillerNow" class="note"></p>
+          <form id="fillerForm" class="filler-form" hidden>
+            <label class="field">Background music link
+              <small id="fillerHelp">A YouTube video, live stream or playlist (a lofi or jazz stream works well), or a Spotify playlist or album (needs Music from: Spotify, connected). It plays while no student song does.</small>
+              <input id="fillerLink" class="text" autocomplete="off" spellcheck="false" aria-describedby="fillerHelp" placeholder="https://www.youtube.com/watch?v=...">
+            </label>
+            <label class="check"><input id="fillerResume" type="checkbox" checked> Resume background music when the queue is empty</label>
+            <p id="fillerMsg" class="form-msg" role="alert"></p>
+            <div class="filler-row">
+              <button id="fillerCancel" type="button">Cancel</button>
+              <button id="fillerClear" type="button">Remove link</button>
+              <button id="fillerSave" class="primary" type="submit">Save</button>
+            </div>
+          </form>
+          <!-- YouTube's player for background music: on screen while it plays -->
+          <div id="fillerBox" class="yt-box" hidden></div>
+        </div>
+        <button id="keysHint" class="linkbtn keys-hint" type="button" aria-haspopup="dialog">⌨ Press ? for shortcuts</button>
+        <div id="musicFrom" class="music-from" hidden>
+          <label for="service">Music from</label>
+          <select id="service" class="text"></select>
+          <button id="spotifyBtn" type="button" hidden>Connect Spotify</button>
+          <button id="appleBtn" type="button" hidden>Connect Apple Music</button>
+        </div>
+        <p id="musicNote" class="note" hidden></p>
+      </section>
+
+      <div class="side" data-col="queue">
+        <!-- Songs the AI checker did not know: the teacher decides (students never see this list) -->
+        <section id="reviewPanel" class="card review-panel" aria-labelledby="reviewLabel" data-panel="review" hidden>
+          <h2 id="reviewLabel" class="label">👀 Needs a look <span id="reviewCount" class="count"></span></h2>
+          <p class="note review-note">The song checker does not know these. Allow puts a song in the queue (and allows it in your future rooms too).</p>
+          <p id="reviewSpotify" class="note review-note" hidden>Songs found on Spotify never go to the AI checker (Spotify does not allow it), so they wait here until you allow them once.</p>
+          <ul id="review" class="queue review"></ul>
+        </section>
+
+        <section class="card queue-panel" aria-labelledby="queueLabel" data-panel="queue">
+          <div class="queue-head">
+            <h2 id="queueLabel" class="label">Up next <span id="queueCount" class="count"></span></h2>
+          </div>
+          <p id="lockedNote" class="banner warn" hidden>Suggestions are locked. Students can still vote.</p>
+          <ol id="queue" class="queue"></ol>
+          <p id="queueEmpty" class="note empty-note" hidden>No songs yet. Students: join with the code and suggest one!</p>
+        </section>
+      </div>
+    </section>
+
+    <!-- Closed -->
+    <section id="closedScreen" class="center" hidden>
+      <div class="center-card card">
+        <img src="/icon.svg" alt="" width="64" height="64">
+        <h1 id="closedTitle">The room is closed</h1>
+        <p id="closedText" class="note">All of the room's songs, votes and nicknames are deleted.</p>
+        <button id="closedRecap" class="big wide" type="button" aria-haspopup="dialog" hidden>🎬 Class recap</button>
+        <button id="newRoomBtn" class="primary big wide" type="button">Open a new room</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <!-- The two that matter most, big; the family sites small below -->
+    <div class="footer-big">
+      <a class="footer-card" href="https://teachchat.app" target="_blank" rel="noopener"><b><span aria-hidden="true">🌱</span> teachChat</b><small>Class chat built for school</small></a>
+      <a class="footer-card" href="https://daltonjfowler.com" target="_blank" rel="noopener"><b><span aria-hidden="true">👋</span> Made by Dalton Fowler</b><small>More classroom tools</small></a>
+    </div>
+    <div class="footer-small">
+      <!-- a new tab: leaving this page would stop the music -->
+      <a href="/" target="_blank" rel="noopener">Student page</a>
+      <a href="https://uploadmycode.com" target="_blank" rel="noopener">uploadmycode</a>
+      <a href="https://uploadmylaser.com" target="_blank" rel="noopener">uploadmylaser</a>
+      <a href="https://uploadmymodel.com" target="_blank" rel="noopener">uploadmymodel</a>
+      <a href="https://uploadmycut.com" target="_blank" rel="noopener">uploadmycut</a>
+      <a href="/about" target="_blank" rel="noopener">About</a>
+      <a href="/legal" target="_blank" rel="noopener">Privacy &amp; legal</a>
+      <a href="https://github.com/daltonjfowler/roomdj" target="_blank" rel="noopener">Source code</a>
+      <a href="mailto:dalton@teachchat.app?subject=RoomDJ%20bug%20report%20(teacher%20page)&amp;body=What%20happened%3F%0A%0A%0AWhat%20were%20you%20doing%20just%20before%3F%0A%0A%0AStudent%20page%20or%20teacher%20page%3F%20Spotify%2C%20YouTube%20or%20song%20previews%3F%0A%0A">🐞 Report a bug</a>
+    </div>
+    <details class="site-build"><summary>Site details</summary><p data-build></p></details>
+  </footer>
+
+  <dialog id="studentsDlg" class="dialog" aria-labelledby="studentsTitle">
+    <form method="dialog">
+      <h2 id="studentsTitle">Students in this room</h2>
+      <p class="note">Rename sends a student back to pick a different nickname. Kick removes a student from this room; they cannot join it again. 📚 shows a student in back-to-work time; Let back in ends it now.</p>
+      <!-- Credits: give buttons only while they are on (Settings, Starting credits) -->
+      <div id="creditsBar" class="credits-bar" hidden>
+        <label for="giveAllN">Give everyone</label>
+        <input id="giveAllN" class="text" type="number" min="1" max="100" value="1" inputmode="numeric">
+        <span>credits</span>
+        <button id="giveAllBtn" type="button" class="primary">🎟 Give everyone</button>
+      </div>
+      <p id="creditsOff" class="note" hidden>Credits are off. To use them, turn Credits on in Settings.</p>
+      <ul id="students" class="students"></ul>
+      <div class="dialog-actions"><button class="primary" value="done">Done</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDlg" class="dialog settings-dialog" aria-labelledby="settingsTitle">
+    <form id="settingsForm" method="dialog" novalidate>
+      <h2 id="settingsTitle">Settings</h2>
+      <p id="usageNote2" class="note usage-note" hidden></p>
+      <!-- Tabs (tabs.js); the last one is remembered on this computer -->
+      <div id="settingsTabs" class="tabs" role="tablist" aria-label="Settings sections">
+        <button id="tabSongs" type="button" role="tab" aria-selected="true" aria-controls="panelSongs">🎵 Songs</button>
+        <button id="tabCredits" type="button" role="tab" aria-selected="false" aria-controls="panelCredits" tabindex="-1">🎟 Credits</button>
+        <button id="tabClass" type="button" role="tab" aria-selected="false" aria-controls="panelClass" tabindex="-1">🕒 Class time</button>
+        <button id="tabDisplay" type="button" role="tab" aria-selected="false" aria-controls="panelDisplay" tabindex="-1">📺 Display &amp; sound</button>
+        <button id="tabKeys" type="button" role="tab" aria-selected="false" aria-controls="panelKeys" tabindex="-1">⌨ Shortcuts</button>
+        <button id="tabTeacher" type="button" role="tab" aria-selected="false" aria-controls="panelTeacher" tabindex="-1">🍎 Teacher</button>
+      </div>
+
+      <div id="panelSongs" class="tab-panel" role="tabpanel" aria-labelledby="tabSongs" tabindex="0">
+        <fieldset class="field set-group">
+          <legend>The queue</legend>
+          <label class="inline-row" for="setMax">Songs each student may have waiting
+            <input id="setMax" class="text num" type="number" inputmode="numeric" required></label>
+          <!-- 👎 votes (protocol.js DOWNVOTE MODE) -->
+          <label class="inline-row" for="setDownMode">👎 votes
+            <select id="setDownMode" class="text" aria-describedby="downModeHelp">
+              <option value="off">Off</option>
+              <option value="hidden">On, counts hidden</option>
+              <option value="shown">On, counts shown</option>
+            </select></label>
+          <small id="downModeHelp" class="switch-help">Off: students only 👍, so every song gets its turn. Counts hidden: students can 👎, but only you see how many.</small>
+          <label class="check switch-row"><input id="setScoreFloor" class="switch" type="checkbox" role="switch" aria-describedby="scoreFloorHelp">
+            <span>Scores never go below 0</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="scoreFloorHelp" class="switch-help">Votes never remove a song, so every student's song gets to play. 👎 can push a song down. Only you can veto.</small>
+          <label class="check switch-row"><input id="setHideCounts" class="switch" type="checkbox" role="switch" aria-describedby="hideCountsHelp">
+            <span>Hide vote counts from students</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="hideCountsHelp" class="switch-help">Students and the board see the order, not the numbers, so nobody piles on. You still see every vote.</small>
+          <label id="removeRow" class="inline-row" for="setRemove">Remove a song when its score falls to
+            <input id="setRemove" class="text num" type="number" required aria-describedby="removeHelp"></label>
+          <small id="removeHelp" class="switch-help"><span id="removeOffNote">Off while scores never go below 0. </span>Score is 👍 minus 👎. For example −3 removes a song with three more 👎 than 👍.</small>
+          <label id="maxDownRow" class="inline-row" for="setMaxDown">👎 per student per class
+            <select id="setMaxDown" class="text" aria-describedby="maxDownHelp"></select></label>
+          <small id="maxDownHelp" class="switch-help">Taking a 👎 back gives it back while the song is still waiting. Once the song plays or leaves the queue, that 👎 stays used. 👍 is never limited, and your own votes never count.</small>
+          <!-- 👻 Ghost 👍 (protocol.js GHOST VOTE) -->
+          <label class="check switch-row"><input id="setGhost" class="switch" type="checkbox" role="switch" aria-describedby="ghostHelp">
+            <span>👻 Ghost 👍</span><span class="switch-state" aria-hidden="true"></span></label>
+          <label id="ghostMinRow" class="inline-row" for="setGhostMin">Give a waiting song +1 after
+            <input id="setGhostMin" class="text num" type="number" inputmode="numeric" required aria-describedby="ghostHelp"> minutes</label>
+          <small id="ghostHelp" class="switch-help">Gives a waiting song a quiet +1 👍 after <span id="ghostHelpMin">3</span> minutes so every song gets some love. Students can't tell it apart.</small>
+        </fieldset>
+        <fieldset class="field set-group">
+          <legend>Song check</legend>
+          <p class="note">Every suggestion is checked by the AI song checker. Songs it does not know wait in "Needs a look" until you allow them.</p>
+          <!-- Local browser tests only (GET /api/config testAiOff, TEST_AI_OFF=on in .dev.vars): never shown on roomdj.com -->
+          <div id="testAiSwitches" hidden>
+            <label class="check switch-row"><input id="setAi" class="switch" type="checkbox" role="switch">
+              <span>Test only: AI song check</span><span class="switch-state" aria-hidden="true"></span></label>
+            <label class="check switch-row"><input id="setUnknown" class="switch" type="checkbox" role="switch">
+              <span>Test only: unknown songs wait for a look</span><span class="switch-state" aria-hidden="true"></span></label>
+          </div>
+          <label class="field" for="setWords">Blocked words
+            <textarea id="setWords" class="text" rows="3" spellcheck="false" aria-describedby="wordsHelp"></textarea></label>
+          <small id="wordsHelp" class="note">One word or phrase per line. Songs and nicknames with these words are blocked.</small>
+        </fieldset>
+        <fieldset class="field songs-field set-group">
+          <legend>Songs</legend>
+          <label class="check switch-row"><input id="setMaxLenOn" class="switch" type="checkbox" role="switch" aria-describedby="maxLenHelp">
+            <span>Max song length</span><span class="switch-state" aria-hidden="true"></span></label>
+          <label id="maxLenRow" class="max-len-row" for="setMaxLen">Songs up to
+            <input id="setMaxLen" class="text" type="number" inputmode="numeric"> minutes</label>
+          <small id="maxLenHelp" class="switch-help">Longer songs are turned down with "⏱ Too long" before they cost a credit. Off: any length.</small>
+          <label class="check switch-row"><input id="setInstrumental" class="switch" type="checkbox" role="switch" aria-describedby="instrumentalHelp">
+            <span>Instrumentals only</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="instrumentalHelp" class="switch-help">For focus time: songs with singing or rapping are turned down. Songs the checker is not sure about wait in Needs a look.</small>
+          <label class="max-len-row" for="setCooldown">😴 Repeat cooldown
+            <select id="setCooldown" class="text" aria-describedby="cooldownHelp"></select></label>
+          <small id="cooldownHelp" class="switch-help">A song that played in any of your rooms rests this long before students can pick it again (any version: remix, sped up, live). No credit is spent. A song never plays twice in one class either way. Wake a song early: 📋 Lists → 😴 Resting songs.</small>
+        </fieldset>
+        <!-- highlights.js: the artist rules -->
+        <fieldset class="field fav-field set-group">
+          <legend>Artists</legend>
+          <label class="check switch-row"><input id="setBackToBack" class="switch" type="checkbox" role="switch" aria-describedby="backToBackHelp">
+            <span>🎨 No back-to-back artist</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="backToBackHelp" class="switch-help">The next song is never by the artist who just played, unless every waiting song is.</small>
+          <label class="check switch-row"><input id="setOnePerArtist" class="switch" type="checkbox" role="switch" aria-describedby="onePerArtistHelp">
+            <span>🎨 One song per artist</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="onePerArtistHelp" class="switch-help">A suggestion is turned down while a song by the same artist is waiting. No credit is spent.</small>
+        </fieldset>
+      </div>
+
+      <div id="panelCredits" class="tab-panel" role="tabpanel" aria-labelledby="tabCredits" tabindex="0" hidden>
+        <fieldset class="field credits-field set-group">
+          <legend>Credits</legend>
+          <label class="check switch-row"><input id="setCreditsOn" class="switch" type="checkbox" role="switch" aria-describedby="creditsHelp">
+            <span>Credits</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="creditsHelp" class="switch-help">Off: suggesting is free. On: a song costs 1 credit, and you can give more in 🏠 Room → Students.</small>
+          <div id="creditsStartRow" class="credits-start-row">
+            <label class="credits-start" for="setCredits">Starting credits: each student starts with
+              <input id="setCredits" class="text" type="number" inputmode="numeric"> credits</label>
+            <small class="switch-help">A change here is for students who join later; Students → Give everyone gives credits to the rest.</small>
+          </div>
+          <label class="check switch-row"><input id="setJump" class="switch" type="checkbox" role="switch" aria-describedby="jumpHelp">
+            <span>Priority jump</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="jumpHelp" class="switch-help"><span id="jumpOffNote">Turn credits on first. </span>On: a student can spend 2 credits on ⚡ Jump to make a song play next. Turning it off later does not move songs already jumped; they keep their place.</small>
+        </fieldset>
+      </div>
+
+      <div id="panelClass" class="tab-panel" role="tabpanel" aria-labelledby="tabClass" tabindex="0" hidden>
+        <fieldset class="field prefs-field set-group">
+          <legend>Class period</legend>
+          <label class="prefs-period" for="setPeriod">My class period is
+            <input id="setPeriod" class="text" type="number" inputmode="numeric" aria-describedby="periodHelp"> minutes</label>
+          <small id="periodHelp" class="switch-help">Used for the class end time when you open a room. Save as my default keeps it.</small>
+          <button id="bellEditSettingsBtn" type="button" class="linkbtn" aria-haspopup="dialog">🔔 Bell schedule…</button>
+          <small class="switch-help">This room's end and cleanup time: 🏠 Room → Change times.</small>
+          <!-- 🔔 Bell offset (protocol.js BELL OFFSET) -->
+          <label class="prefs-period" for="setBellOffset">Bell offset
+            <input id="setBellOffset" class="text bell-offset" type="text" inputmode="text" maxlength="4" autocomplete="off" spellcheck="false" aria-describedby="bellOffsetHelp"> seconds</label>
+          <small id="bellOffsetHelp" class="switch-help">Your school's bell rings 3 seconds late? Set +3. Rings 5 seconds early? Set -5 (from -120 to +120). Class end, cleanup and every countdown move by this much; the times you type and see stay your bell schedule's times. Save as my default keeps it.</small>
+        </fieldset>
+        <!-- 📚 Back to work (protocol.js BACK TO WORK) -->
+        <fieldset class="field focus-field set-group">
+          <legend>Focus</legend>
+          <label class="max-len-row" for="setBackToWork">📚 Back to work
+            <select id="setBackToWork" class="text" aria-describedby="backToWorkHelp"></select></label>
+          <small id="backToWorkHelp" class="switch-help">After a student suggests a song, their screen says "📚 Back to work!" with a countdown, and their next suggestion waits until it ends. Voting never starts it. Reloading does not skip it. Students → Let back in ends it early. Your own picks and votes never wait.</small>
+        </fieldset>
+      </div>
+
+      <div id="panelDisplay" class="tab-panel" role="tabpanel" aria-labelledby="tabDisplay" tabindex="0" hidden>
+        <!-- 🎵 Recap music (protocol.js RECAP MUSIC) -->
+        <fieldset class="field set-group">
+          <legend>The recap</legend>
+          <label class="check switch-row"><input id="setRecapMusic" class="switch" type="checkbox" role="switch" aria-describedby="recapMusicHelp">
+            <span>🎵 Recap music and sounds</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="recapMusicHelp" class="switch-help">While ▶ Play recap runs (here or on the board), this computer pauses the room music, plays the period's #1 song (its 30-second preview) with a ta-da on each award, then the room music comes back as it was. Off: the room music only turns down.</small>
+          <label id="recapVolumeRow" class="max-len-row" for="setRecapVolume">Recap volume
+            <input id="setRecapVolume" type="range" step="10" aria-describedby="recapVolumeHelp">
+            <output id="recapVolumeOut" for="setRecapVolume">50%</output></label>
+          <small id="recapVolumeHelp" class="switch-help">Of the room's volume. 50% sits nicely under the voices of a class.</small>
+        </fieldset>
+        <!-- 🖼 Album art (protocol.js ALBUM ART) -->
+        <fieldset class="field set-group">
+          <legend>Album art</legend>
+          <label class="check switch-row"><input id="setArtCheck" class="switch" type="checkbox" role="switch" aria-describedby="artCheckHelp">
+            <span>🖼 Check album covers</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="artCheckHelp" class="switch-help">An AI model looks at each suggested song's cover. A cover that is not right for class (for example a suggestive photo) shows as a plain 🎵 tile everywhere; the song still plays. Covers not checked yet show as 🎵 too (blurred in search results). You can show a hidden cover with Show anyway. Off: covers show without a check.</small>
+          <label class="check switch-row"><input id="setHideAllArt" class="switch" type="checkbox" role="switch" aria-describedby="hideAllArtHelp">
+            <span>🎵 Hide all album covers</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="hideAllArtHelp" class="switch-help">No covers at all: plain 🎵 tiles on every screen. Spotify, YouTube and Apple Music players may still show their own artwork or video.</small>
+        </fieldset>
+        <fieldset class="field set-group">
+          <legend>Students' page</legend>
+          <label class="check switch-row"><input id="setShowFav" class="switch" type="checkbox" role="switch" aria-describedby="showFavHelp">
+            <span>⭐ Class favorites for students</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="showFavHelp" class="switch-help">Students see the songs your classes loved most (songs only, no names) and can suggest one with a tap. It still goes through the song check.</small>
+        </fieldset>
+        <fieldset class="field prefs-field set-group">
+          <legend>Big screen <small>(this computer, changes right away)</small></legend>
+          <label class="prefs-size" for="prefSize">Big screen text
+            <select id="prefSize" class="text">
+              <option value="s">Smaller</option>
+              <option value="m">Normal</option>
+              <option value="l">Larger</option>
+            </select></label>
+          <label class="check"><input id="prefWho" type="checkbox"> Show who suggested each song</label>
+          <label class="check"><input id="prefArt" type="checkbox"> Show album art</label>
+          <label class="check"><input id="prefStartBig" type="checkbox"> Start in big screen</label>
+        </fieldset>
+      </div>
+
+      <div id="panelKeys" class="tab-panel" role="tabpanel" aria-labelledby="tabKeys" tabindex="0" hidden>
+        <fieldset class="field prefs-field set-group">
+          <legend>Keyboard shortcuts</legend>
+          <p class="note">Play, pause, skip, big screen, lock and more from the keyboard while you are not typing in a box. The keys are kept on this computer, for each teacher.</p>
+          <button id="prefKeys" type="button" aria-haspopup="dialog">⌨ See and change the keys…</button>
+        </fieldset>
+      </div>
+
+      <div id="panelTeacher" class="tab-panel" role="tabpanel" aria-labelledby="tabTeacher" tabindex="0" hidden>
+        <fieldset class="field prefs-field set-group">
+          <legend>Teaching as <b id="setTeacherName"></b></legend>
+          <p class="note"><b>Use in this room</b> changes this room only. <b>Save as my default</b> also keeps every setting for your next rooms, on any computer: the song check, credits, class time and the recap.</p>
+          <p class="note">Kept on this computer only: the big screen choices, the keyboard shortcuts and the background music link.</p>
+          <p class="note">To switch teachers, close the room first.</p>
+        </fieldset>
+      </div>
+
+      <p id="settingsMsg" class="form-msg" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="cancelSettings" type="button">Cancel</button>
+        <button id="saveDefault" type="button" title="Use these in this room and keep them for your next rooms">💾 Save as my default</button>
+        <button id="applySettings" class="primary" type="submit">Use in this room</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="creditDlg" class="dialog" aria-labelledby="creditTitle">
+    <form id="creditForm" method="dialog">
+      <h2 id="creditTitle">Credits</h2>
+      <p id="creditNow" class="note"></p>
+      <label class="field">Credits
+        <input id="creditN" class="text" type="number" min="0" max="999" inputmode="numeric" required>
+        <small>Give adds this many (1 to 100). Set to makes this their balance (0 to 999).</small>
+      </label>
+      <p id="creditMsg" class="form-msg" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="creditCancel" type="button">Cancel</button>
+        <button id="creditSet" type="button">Set to this</button>
+        <button id="creditGive" class="primary" type="submit">Give</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Add or rename a teacher (Who's teaching?) -->
+  <dialog id="teacherDlg" class="dialog" aria-labelledby="teacherTitle">
+    <form id="teacherForm" method="dialog">
+      <h2 id="teacherTitle">Add a teacher</h2>
+      <label class="field">Name <small>Students see it in the room ("Ms Lee's class").</small>
+        <input id="teacherName" class="text" autocomplete="off" maxlength="32" required>
+      </label>
+      <p id="teacherMsg" class="form-msg" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="teacherCancel" type="button">Cancel</button>
+        <button id="teacherSave" class="primary" type="submit">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="codeDlg" class="dialog" aria-labelledby="codeTitle">
+    <form id="codeForm" method="dialog">
+      <h2 id="codeTitle">Change the class code</h2>
+      <p class="note">Students already in the room stay in. New students need the new code; the old one stops working.</p>
+      <label class="field">New class code
+        <span class="code-row">
+          <input id="codeInput" class="text" autocomplete="off" spellcheck="false" required>
+          <button id="codeNew" type="button" title="Suggest another class code">🎲 New suggestion</button>
+        </span>
+      </label>
+      <p id="codeMsg" class="form-msg" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="codeCancel" type="button">Cancel</button>
+        <button id="codeSave" class="primary" type="submit">Use this code</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- The quick-pick: an optional reason + note for Veto / Remove / Ban (one tap on the button itself skips it) -->
+  <dialog id="reasonDlg" class="dialog" aria-labelledby="reasonTitle">
+    <form id="reasonForm" method="dialog">
+      <h2 id="reasonTitle">Why?</h2>
+      <p class="note">Optional. The student sees the reason and your note. One tap on Veto, Remove or Ban skips this.</p>
+      <fieldset class="field reason-picks">
+        <legend>Reason</legend>
+        <div id="reasonPicks" class="picks"></div>
+      </fieldset>
+      <label class="field">Note for the student <small id="noteHelp">Optional, up to 80 letters.</small>
+        <input id="reasonNote" class="text" maxlength="80" autocomplete="off" aria-describedby="noteHelp">
+      </label>
+      <p id="reasonMsg" class="form-msg" role="alert"></p>
+      <p id="reasonBanNote" class="note" hidden>Ban: nobody can suggest it again, in this room or any of your future rooms.</p>
+      <div class="dialog-actions">
+        <button id="reasonCancel" type="button">Cancel</button>
+        <span id="reasonActions" class="reason-actions"></span>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="blockedDlg" class="dialog wide-dialog" aria-labelledby="blockedTitle">
+    <form method="dialog">
+      <h2 id="blockedTitle">Blocked today</h2>
+      <p class="note">Every song turned down in this room, newest first, with the reason the student saw and the full details (blocked words, the AI checker's notes). If this screen is on the projector, students can read it.</p>
+      <ul id="blockedList" class="blocked-list"></ul>
+      <div class="dialog-actions"><button class="primary" value="done">Done</button></div>
+    </form>
+  </dialog>
+
+  <!-- highlights.js: Top 5, the recap, the favorites -->
+  <dialog id="top5Dlg" class="dialog" aria-labelledby="top5Title">
+    <form method="dialog">
+      <h2 id="top5Title">🏆 Top 5 of the period</h2>
+      <p class="note">The songs that played with the best votes (👍 minus 👎) in this room. Ties go to more 👍, then the earlier song.</p>
+      <ol id="top5List" class="top5-list"></ol>
+      <p id="top5Empty" class="note" hidden>No songs have played yet.</p>
+      <div class="dialog-actions">
+        <button id="recapBtn" type="button">🎬 End-of-class recap</button>
+        <button id="playRecapBtn" type="button" class="primary">▶ Play recap</button>
+        <button class="primary" value="done">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="recapDlg" class="dialog recap-dialog" aria-labelledby="recapTitle">
+    <form method="dialog">
+      <h2 id="recapTitle">🎬 Class recap</h2>
+      <div id="recapBody" class="recap-body"></div>
+      <div class="dialog-actions">
+        <button id="recapMore" type="button" title="Show other fun stats">🎲 More stats</button>
+        <button id="recapCopy" type="button">📋 Copy recap</button>
+        <button id="recapPlay" type="button" class="primary">▶ Play recap</button>
+        <button value="done">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 🎵 The recap music's two <audio> elements (recap-audio.js); never shown -->
+  <div id="recapMusic" hidden></div>
+  <!-- "▶ Play recap" (recap-show.js): the full-screen awards show -->
+  <dialog id="showDlg" class="recap-show" aria-label="Period recap">
+    <div id="showStage" class="show-stage"></div>
+    <div class="show-controls">
+      <button id="showPrev" type="button" aria-label="Previous slide">◀ Back</button>
+      <button id="showPause" type="button" aria-pressed="false">⏸ Pause</button>
+      <button id="showNext" type="button" aria-label="Next slide">Next ▶</button>
+      <span id="showCount" class="show-count"></span>
+      <span id="showNote" class="show-note" role="status"></span>
+      <button id="showClose" type="button">✕ Close (Esc)</button>
+    </div>
+    <p id="showSay" class="sr-only" aria-live="polite"></p>
+  </dialog>
+
+  <dialog id="favDlg" class="dialog wide-dialog" aria-labelledby="favTitle">
+    <form method="dialog">
+      <h2 id="favTitle">⭐ Class favorites</h2>
+      <p class="note">Songs your classes loved (+2 or better when they finished, or a period's Top 5), kept across days. Songs only: no names. 📌 Pin keeps a song at the top; Remove takes it off. Students see the top 20 when ⭐ Class favorites is on in Settings.</p>
+      <ul id="favList" class="fav-list"></ul>
+      <p id="favEmpty" class="note" hidden>No favorites yet. A song that finishes with +2 or better gets in.</p>
+      <!-- repeats-host.js: the repeat cooldown's resting songs -->
+      <h3 id="restTitle" class="recap-h" tabindex="-1">😴 Resting songs</h3>
+      <p id="restNote" class="note"></p>
+      <ul id="restList" class="fav-list"></ul>
+      <p id="restEmpty" class="note" hidden>No songs are resting right now.</p>
+      <div class="dialog-actions"><button class="primary" value="done">Done</button></div>
+    </form>
+  </dialog>
+
+  <!-- The board (board link, protocol.js BOARD + REMOTE): the projector on a second computer -->
+  <dialog id="boardDlg" class="dialog" aria-labelledby="boardTitle">
+    <form method="dialog">
+      <h2 id="boardTitle">📺 Board link</h2>
+      <p class="note">Two computers: this one plays the music (keep your speakers here). The board on the projector computer shows the class code, now playing and the queue, with a small remote (play, pause, skip, veto, lock, recap). Music never plays on the board.</p>
+      <div id="boardEasy" class="board-easy">
+        <h3>Easiest: sign in once</h3>
+        <p>On the projector computer, open <b id="boardSigninUrl">roomdj.com/board</b>, sign in once and pick your name. It finds your room every period.</p>
+      </div>
+      <h3 class="board-or">Or: a link for this room only</h3>
+      <p class="banner warn board-warn">Keep this link to your own computers, and do not show it on the projector: anyone with it can skip, veto and pause.</p>
+      <div id="boardHave" class="board-have" hidden>
+        <label class="field" for="boardUrl">Board link</label>
+        <span class="code-row">
+          <input id="boardUrl" class="text" readonly spellcheck="false" aria-describedby="boardUrlHelp">
+          <button id="boardCopy" type="button" class="primary">📋 Copy</button>
+        </span>
+        <small id="boardUrlHelp" class="note">Paste it in the projector computer's browser. It keeps working until you make a new one or the room closes.</small>
+      </div>
+      <p id="boardNone" class="note" hidden>This computer does not have a board link for this room yet.</p>
+      <p id="boardStatus" class="note" role="status"></p>
+      <div class="dialog-actions">
+        <button id="boardNew" type="button">🔁 New board link</button>
+        <button class="primary" value="done">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- The teacher's own picks (teacher-suggest.js; protocol.js TEACHER PICKS) -->
+  <dialog id="suggestDlg" class="dialog wide-dialog" aria-labelledby="suggestTitle">
+    <div class="t-pane">
+    <h2 id="suggestTitle">🔎 Suggest a song</h2>
+    <p class="note">Your picks go through the same song check as students' songs (a song the checker does not know waits in Needs a look). They show as 🍎 your name, cost no credit, and work while suggestions are locked.</p>
+    <form id="tSearchForm" class="t-search" role="search">
+      <label for="tq" class="sr-only">Song or artist</label>
+      <input id="tq" class="text" type="search" autocomplete="off" spellcheck="false" placeholder="Song or artist" aria-describedby="tqMsg">
+      <button type="submit" class="primary">Search</button>
+    </form>
+    <p id="tqMsg" class="note" role="status"></p>
+    <ul id="tResults" class="fav-list t-results"></ul>
+    <form method="dialog">
+      <div class="dialog-actions"><button class="primary" value="done">Done</button></div>
+    </form>
+    </div>
+  </dialog>
+
+  <dialog id="keysDlg" class="dialog" aria-labelledby="keysTitle">
+    <form method="dialog">
+      <h2 id="keysTitle">Keyboard shortcuts</h2>
+      <p class="note">They work while you are not typing in a box. To change one, press Change, then the new key. Your keys are kept on this computer.</p>
+      <table class="keys-table">
+        <thead><tr><th scope="col">Key</th><th scope="col">Does</th><th scope="col"><span class="sr-only">Change</span></th></tr></thead>
+        <tbody id="keysList"></tbody>
+      </table>
+      <p id="keysMsg" class="form-msg" role="status"></p>
+      <div class="dialog-actions">
+        <button id="keysReset" type="button">Reset to the usual keys</button>
+        <button class="primary" value="done">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm" class="dialog" aria-labelledby="confirmQ">
+    <form method="dialog">
+      <h2 id="confirmQ" data-q></h2>
+      <p class="note" data-detail></p>
+      <div class="dialog-actions">
+        <button value="cancel">Cancel</button>
+        <button class="primary" value="ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Change times during a room (classtime.js) -->
+  <dialog id="timesDlg" class="dialog" aria-labelledby="timesTitle">
+    <form id="timesForm" method="dialog">
+      <h2 id="timesTitle">Change times</h2>
+      <fieldset class="field class-times">
+        <legend id="timesEndLegend">Class ends at <small>The room closes then.</small></legend>
+        <div id="timesBells" class="end-picks" role="radiogroup" aria-labelledby="timesEndLegend"></div>
+            <span class="end-custom">
+              <label class="pick"><input type="radio" name="timesEnd" value="custom"> <span>Custom time</span></label>
+              <input id="timesCustom" class="text" type="time" aria-label="Custom class end time">
+            </span>
+            <label class="pick"><input type="radio" name="timesEnd" value="day"> <span>The end of today</span></label>
+      </fieldset>
+      <label class="field">Cleanup starts <small id="timesCleanupHelp">The music fades out and suggestions close. Leave it empty for no cleanup.</small>
+        <input id="timesCleanup" class="text" type="time" aria-describedby="timesCleanupHelp"></label>
+      <p id="timesMsg" class="form-msg" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="timesCancel" type="button">Cancel</button>
+        <button id="timesSave" class="primary" type="submit">Use these times</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- The bell schedule presets (classtime.js), saved with the teacher's settings -->
+  <dialog id="bellDlg" class="dialog" aria-labelledby="bellTitle">
+    <form id="bellForm" method="dialog">
+      <h2 id="bellTitle">Bell schedule</h2>
+      <p class="note">When each class ends, for the "Class ends at" buttons. Kept with your teacher key, so it follows you to any computer. Sorted by time when you save.</p>
+      <ol id="bellRows" class="bell-rows"></ol>
+      <button id="bellAdd" type="button">＋ Add a bell time</button>
+      <p id="bellMsg" class="form-msg" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="bellCancel" type="button">Cancel</button>
+        <button id="bellSave" class="primary" type="submit">Save bell schedule</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <script type="module" src="/src/host.js"></script>
+</body>
+</html>

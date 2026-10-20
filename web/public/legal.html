@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoomDJ Privacy and Legal</title>
+  <meta name="description" content="What RoomDJ keeps (no student accounts or names), how songs are found and checked, and where the music comes from.">
+  <link rel="canonical" href="https://roomdj.com/legal">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="RoomDJ">
+  <meta property="og:title" content="RoomDJ Privacy and Legal">
+  <meta property="og:description" content="What RoomDJ keeps (no student accounts or names), how songs are found and checked, and where the music comes from.">
+  <meta property="og:url" content="https://roomdj.com/legal">
+  <meta property="og:image" content="https://roomdj.com/social.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="RoomDJ: class song voting, minus the bad words. The projector board with the class code and the voted queue.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <!-- Dark unless the visitor picked Light (src/theme.js): blocking, before the first paint -->
+  <script src="/theme-boot.js"></script>
+  <style>
+    :root { --bg: #ffffff; --ink: #14181d; --muted: #5b6570; --line: #d5dae0; --accent: #be185d; color-scheme: light; }
+    :root[data-theme="dark"] { --bg: #121314; --ink: #ecedee; --muted: #a0a3a8; --line: #343639; --accent: #f472b6; color-scheme: dark; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding-inline: 16px; padding-block: 24px 48px; }
+    main { max-width: 68ch; margin: 0 auto; }
+    h1 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 4px; }
+    h2 { font-size: 1.15rem; margin: 28px 0 6px; padding-top: 18px; border-top: 1px solid var(--line); }
+    p, li { color: var(--ink); }
+    .muted { color: var(--muted); }
+    a { color: var(--accent); }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="muted"><a href="/">← Back to RoomDJ</a></p>
+  <h1>Privacy and legal</h1>
+  <p class="muted">RoomDJ · last updated 2026-10-14</p>
+
+  <h2>What this is</h2>
+  <p>RoomDJ (<a href="https://roomdj.com">roomdj.com</a>) lets a class suggest songs and vote on what plays next. It is an independent classroom project made by <a href="https://daltonjfowler.com" rel="noopener">Dalton Fowler</a>, a teacher. It is free for teachers: no ads and no payments. Teachers sign in with Spotify; students never make an account.</p>
+
+  <h2>Privacy</h2>
+  <ul>
+    <li>No accounts. You can look for songs without joining. To suggest and vote you join with today's class code (from your teacher) and a nickname. Please use a first name or a made-up name, not your full name.</li>
+    <li>A room keeps only nicknames, a random id for each device (so votes count once), the songs and the votes. All of it is deleted when the room closes: when the teacher closes it, at the end of the time the teacher picked (at most a day), or after 12 hours with nothing happening. The class code is kept only in a scrambled form (a hash) until then.</li>
+    <li>Nicknames are checked before a student joins: rude words, and names that pose as a teacher, are refused. While the teacher has the AI checker on, an AI model (Cloudflare Workers AI, part of the same Cloudflare service the site runs on) also checks whether a nickname is right for school. Only the nickname is sent to it, nothing about who typed it or which room. The nickname and the model's answer are kept for 30 days, so the same nickname is not checked again; nothing else about the student is kept with them.</li>
+    <li>While a room is open it also shows a "Top 5" of the songs that played, with the nickname of who suggested each one, and the teacher's end-of-class recap (who suggested the most songs, who voted the most). These are made from the room's own data and are deleted with it.</li>
+    <li>Your teacher's "Class favorites" list keeps the names of songs the class liked (title, artist, album, cover picture, length and genre) from day to day. It never keeps nicknames, device ids or anything else about who suggested or voted for a song.</li>
+    <li>Teachers sign in with their Spotify account. Spotify tells RoomDJ the account's id and display name. RoomDJ keeps only a scrambled form (a hash) of the id, so it knows the same teacher next time, and uses the display name as the teacher's starting name (the teacher can rename it). The Spotify login itself (its tokens) passes through RoomDJ's server once, goes back to the teacher's own computer for playing music, and is never stored or logged by RoomDJ. A sign-in lasts up to 30 days, or until the teacher signs out.</li>
+    <li>RoomDJ keeps each teacher's display name with that teacher's own settings, banned and allowed songs and favorites, and a room shows its teacher's name to the students in it ("Ms Lee's class"). Nothing about students is kept with it.</li>
+    <li>To stop the same song playing again too soon (the repeat cooldown), your teacher's account keeps each song that played (title and artist) and when it last played, for at most two weeks. It never keeps nicknames, device ids or who suggested the song.</li>
+    <li>A teacher can show the room on a second screen (the board, for a projector). It shows what the teacher's own big screen shows (the class code, the songs, their votes and who suggested them) and keeps nothing more. Music plays only on the teacher's own computer.</li>
+    <li>A teacher can sign the board in once, so it finds their room every period. The sign-in stays on that computer only if the teacher ticks "Stay signed in on this computer". To find the room, the server keeps a list of each teacher's open rooms (only the room's random id and when it ends), deleted when the room closes.</li>
+    <li>When one device types a wrong class code too many times in a row, it has to wait a little before trying again. That count is kept for at most 15 minutes.</li>
+    <li>Your browser keeps that random device id and your theme choice on this device only. Clearing site data removes them.</li>
+    <li>No cookies, no ads, no tracking.</li>
+    <li>The site runs on Cloudflare. Like any web host, Cloudflare keeps short request logs (for example the page asked for, the time, the browser and the network address) for up to 7 days, to keep the site running. They are not used for anything else.</li>
+  </ul>
+
+  <h2>Songs and the song checker</h2>
+  <ul>
+    <li>Songs are found with Apple's iTunes Search. Song names, artists and album pictures come from Apple, and the teacher's page plays Apple's 30-second previews.</li>
+    <li>The searches go to Apple from the school's own computers: in a room, the teacher's page asks Apple for the class (RoomDJ's server passes the search words to it and checks the answers); before joining, a student's own browser asks Apple. So Apple sees the search words and the school's internet address, as with any visit to Apple's site, but never nicknames. Apple is covered by the <a href="https://www.apple.com/legal/privacy/" rel="noopener">Apple Privacy Policy</a>.</li>
+    <li>Every suggestion is checked before it joins the queue. Songs marked explicit are blocked, and an AI model checks whether a song is right for school.</li>
+    <li>Album covers are checked too: when a song is suggested, RoomDJ's server fetches its cover from Apple's image service and an AI model (Cloudflare Workers AI) looks at it once. A cover that is not right for class is replaced by a plain 🎵 tile; the song itself is never blocked for its cover. Only the image is sent, nothing about the student or the room. The image is not stored: only the answer (fine, not for class, or not sure) is kept, so the same cover is not checked again. Music players (Spotify, YouTube, Apple Music) may show their own artwork or video, which RoomDJ does not control.</li>
+    <li>When the AI model does not know a song (often a new one), RoomDJ may look up its lyrics on <a href="https://lrclib.net" rel="noopener">LRCLIB</a>, a free public lyrics library, and let the AI model read them once to decide. Only the song's title and artist are sent to LRCLIB, from RoomDJ's server, never anything about the student or the room. The lyrics are used for that one check and thrown away: they are never stored, logged or shown to anyone. Only the answer (fine, not for school, or not sure) is kept, like any other song check.</li>
+    <li>The teacher can also play songs through other music services. With Spotify, the teacher's page loads Spotify's Web Playback SDK and plays from the teacher's own Spotify account. With YouTube, the teacher's page loads YouTube's embedded player (from youtube-nocookie.com). With Apple Music, the teacher's page loads Apple's MusicKit JS, the teacher logs in to Apple Music in Apple's own window, and the page plays from the teacher's own Apple Music subscription; RoomDJ's server only signs the developer token MusicKit needs. Apple Music is covered by the <a href="https://www.apple.com/legal/privacy/" rel="noopener">Apple Privacy Policy</a>. These players load only on the teacher's page, never on students' pages, and only when the teacher picks them.</li>
+    <li>To find the YouTube video for a song, RoomDJ's server sends the song's title and artist to the YouTube Data API (part of the YouTube API Services). No nicknames or other student details are sent. YouTube is covered by the <a href="https://www.youtube.com/t/terms" rel="noopener">YouTube Terms of Service</a> and the <a href="https://policies.google.com/privacy" rel="noopener">Google Privacy Policy</a>.</li>
+    <li>The checker can make mistakes: it may block a fine song, or let through one your teacher would not choose. Your teacher can skip, remove or ban any song at any time.</li>
+  </ul>
+
+  <h2>Trademarks</h2>
+  <p>RoomDJ is not affiliated with, made by or endorsed by Apple, Spotify, YouTube or Google. iTunes and Apple Music are trademarks of Apple Inc., Spotify is a trademark of Spotify AB, and YouTube is a trademark of Google LLC. They are named here only to say where songs come from.</p>
+
+  <h2>Disclaimer</h2>
+  <p>RoomDJ is provided "as is", with no warranty of any kind. It is not affiliated with or endorsed by Spotify, Apple, Google/YouTube, LRCLIB or Cloudflare; their names and marks belong to their owners. The AI song checker can make mistakes and is not a substitute for adult supervision.</p>
+
+  <h2>About this software</h2>
+  <p>RoomDJ is Dalton Fowler's own software. It is free to use but not open source.</p>
+
+  <h2>Contact</h2>
+  <p>Questions or a problem: contact Dalton Fowler through <a href="https://daltonjfowler.com" rel="noopener">daltonjfowler.com</a>.</p>
+</main>
+</body>
+</html>

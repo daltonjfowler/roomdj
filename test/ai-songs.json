@@ -1,0 +1,499 @@
+{
+  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js).",
+  "songs": [
+    {
+      "group": "a",
+      "title": "Pumped Up Kicks",
+      "artist": "Foster the People",
+      "expected": "inappropriate",
+      "why": "school shooting from the shooter's view"
+    },
+    {
+      "group": "a",
+      "title": "Jeremy",
+      "artist": "Pearl Jam",
+      "expected": "inappropriate",
+      "why": "a student's suicide in class"
+    },
+    {
+      "group": "a",
+      "title": "Adam's Song",
+      "artist": "blink-182",
+      "expected": "inappropriate",
+      "why": "suicide note"
+    },
+    {
+      "group": "a",
+      "title": "Semi-Charmed Life",
+      "artist": "Third Eye Blind",
+      "expected": "inappropriate",
+      "why": "crystal meth, sex; sounds upbeat (radio edit still about meth)"
+    },
+    {
+      "group": "a",
+      "title": "Cocaine",
+      "artist": "Eric Clapton",
+      "expected": "inappropriate",
+      "why": "drug use"
+    },
+    {
+      "group": "a",
+      "title": "Gin and Juice",
+      "artist": "Snoop Dogg",
+      "expected": "inappropriate",
+      "why": "drinking, weed, sex: the clean edit is still about them"
+    },
+    {
+      "group": "a",
+      "title": "Candy Shop",
+      "artist": "50 Cent",
+      "expected": "inappropriate",
+      "why": "sexual (clean edit exists)"
+    },
+    {
+      "group": "a",
+      "title": "Blurred Lines",
+      "artist": "Robin Thicke",
+      "expected": "inappropriate",
+      "why": "sexual, consent themes (not marked explicit)"
+    },
+    {
+      "group": "a",
+      "title": "Smack That",
+      "artist": "Akon",
+      "expected": "inappropriate",
+      "why": "sexual (clean edit exists)"
+    },
+    {
+      "group": "a",
+      "title": "Love the Way You Lie",
+      "artist": "Eminem",
+      "expected": "inappropriate",
+      "why": "domestic violence (clean edit exists)"
+    },
+    {
+      "group": "a",
+      "title": "Red Solo Cup",
+      "artist": "Toby Keith",
+      "expected": "inappropriate",
+      "why": "a whole song celebrating getting drunk"
+    },
+    {
+      "group": "a",
+      "title": "Tubthumping",
+      "artist": "Chumbawamba",
+      "expected": "inappropriate",
+      "why": "a drinking song (\"he drinks a whisky drink, he drinks a vodka drink\")"
+    },
+    {
+      "group": "a",
+      "title": "Margaritaville",
+      "artist": "Jimmy Buffett",
+      "expected": "inappropriate",
+      "why": "drinking as the main theme, mild and comic"
+    },
+    {
+      "group": "b",
+      "title": "Bleeding Love",
+      "artist": "Leona Lewis",
+      "expected": "ok",
+      "why": "love song"
+    },
+    {
+      "group": "b",
+      "title": "Firework",
+      "artist": "Katy Perry",
+      "expected": "ok",
+      "why": "self-esteem anthem"
+    },
+    {
+      "group": "b",
+      "title": "Bad Blood",
+      "artist": "Taylor Swift",
+      "expected": "ok",
+      "why": "falling out with a friend"
+    },
+    {
+      "group": "b",
+      "title": "Dynamite",
+      "artist": "BTS",
+      "expected": "ok",
+      "why": "happy disco pop"
+    },
+    {
+      "group": "b",
+      "title": "Kill This Love",
+      "artist": "BLACKPINK",
+      "expected": "ok",
+      "why": "ending a bad relationship"
+    },
+    {
+      "group": "b",
+      "title": "Demons",
+      "artist": "Imagine Dragons",
+      "expected": "ok",
+      "why": "inner struggles, no violence"
+    },
+    {
+      "group": "b",
+      "title": "Radioactive",
+      "artist": "Imagine Dragons",
+      "expected": "ok",
+      "why": "renewal, apocalypse imagery"
+    },
+    {
+      "group": "b",
+      "title": "Monster Mash",
+      "artist": "Bobby \"Boris\" Pickett",
+      "expected": "ok",
+      "why": "Halloween novelty song"
+    },
+    {
+      "group": "b",
+      "title": "Thriller",
+      "artist": "Michael Jackson",
+      "expected": "ok",
+      "why": "horror-movie fun"
+    },
+    {
+      "group": "b",
+      "title": "Another One Bites the Dust",
+      "artist": "Queen",
+      "expected": "ok",
+      "why": "breakup / defiance; played at school games"
+    },
+    {
+      "group": "b",
+      "title": "Killer Queen",
+      "artist": "Queen",
+      "expected": "inappropriate",
+      "why": "about a high-class call girl, veiled (hidden sexual meaning)"
+    },
+    {
+      "group": "b",
+      "title": "I Shot the Sheriff",
+      "artist": "Bob Marley & The Wailers",
+      "expected": "either",
+      "why": "a shooting, told as a protest song"
+    },
+    {
+      "group": "b",
+      "title": "Highway to Hell",
+      "artist": "AC/DC",
+      "expected": "either",
+      "why": "life on the road; some schools object to the title"
+    },
+    {
+      "group": "c",
+      "title": "Here Comes the Sun",
+      "artist": "The Beatles",
+      "expected": "ok",
+      "why": "classic, clean"
+    },
+    {
+      "group": "c",
+      "title": "Happy",
+      "artist": "Pharrell Williams",
+      "expected": "ok",
+      "instrumental": false,
+      "why": "clean pop"
+    },
+    {
+      "group": "c",
+      "title": "As It Was",
+      "artist": "Harry Styles",
+      "expected": "ok",
+      "why": "clean pop, 2022"
+    },
+    {
+      "group": "c",
+      "title": "Flowers",
+      "artist": "Miley Cyrus",
+      "expected": "ok",
+      "why": "clean pop, 2023"
+    },
+    {
+      "group": "c",
+      "title": "Espresso",
+      "artist": "Sabrina Carpenter",
+      "expected": "inappropriate",
+      "why": "mild sexual innuendo, 2024 (inappropriate under the stricter rule)"
+    },
+    {
+      "group": "c",
+      "title": "Golden",
+      "artist": "HUNTR/X",
+      "expected": "ok_or_unknown",
+      "why": "KPop Demon Hunters, 2025: may be past the model's knowledge"
+    },
+    {
+      "group": "c",
+      "title": "Wap (Waffles and Pancakes)",
+      "artist": "The Moonies",
+      "expected": "either",
+      "why": "obscure kid-safe parody whose title points at an explicit hit"
+    },
+    {
+      "group": "c",
+      "title": "Lullabye for a Stormy Night",
+      "artist": "Vienna Teng",
+      "expected": "ok_or_unknown",
+      "why": "obscure, gentle"
+    },
+    {
+      "group": "c",
+      "title": "Constellations",
+      "artist": "The Oh Hellos",
+      "expected": "ok_or_unknown",
+      "why": "obscure indie folk"
+    },
+    {
+      "group": "a",
+      "title": "Cake by the Ocean",
+      "artist": "DNCE",
+      "expected": "inappropriate",
+      "why": "sexual innuendo behind a silly title"
+    },
+    {
+      "group": "a",
+      "title": "The Lazy Song",
+      "artist": "Bruno Mars",
+      "expected": "inappropriate",
+      "why": "a passing line about sex in an otherwise lazy-day song"
+    },
+    {
+      "group": "c",
+      "title": "Sweet Caroline",
+      "artist": "Neil Diamond",
+      "expected": "ok",
+      "why": "stadium singalong, clean"
+    },
+    {
+      "group": "c",
+      "title": "Cups (When I'm Gone)",
+      "artist": "Anna Kendrick",
+      "expected": "ok",
+      "why": "innocent; the cup is a game, not a drink"
+    },
+    {
+      "group": "c",
+      "title": "Shut Up and Dance",
+      "artist": "Walk the Moon",
+      "expected": "ok",
+      "why": "clean dance pop"
+    },
+    {
+      "group": "c",
+      "title": "Mr. Blue Sky",
+      "artist": "Electric Light Orchestra",
+      "expected": "ok",
+      "why": "clean, happy"
+    },
+    {
+      "group": "d",
+      "title": "Clair de Lune",
+      "artist": "Claude Debussy",
+      "expected": "ok",
+      "instrumental": true,
+      "why": "solo piano"
+    },
+    {
+      "group": "d",
+      "title": "Canon in D",
+      "artist": "Johann Pachelbel",
+      "expected": "ok",
+      "instrumental": true,
+      "why": "baroque strings"
+    },
+    {
+      "group": "d",
+      "title": "Snowman",
+      "artist": "WYS",
+      "expected": "ok_or_unknown",
+      "instrumental": true,
+      "why": "lofi hip hop beat, no vocals"
+    },
+    {
+      "group": "d",
+      "title": "Take Five",
+      "artist": "The Dave Brubeck Quartet",
+      "expected": "ok",
+      "instrumental": true,
+      "why": "instrumental jazz"
+    },
+    {
+      "group": "d",
+      "title": "Bohemian Rhapsody",
+      "artist": "Queen",
+      "expected": "either",
+      "instrumental": false,
+      "why": "sung throughout (lyrics mention killing a man)"
+    },
+    {
+      "group": "d",
+      "title": "He's a Pirate",
+      "artist": "Klaus Badelt",
+      "expected": "ok",
+      "instrumental": true,
+      "why": "film score"
+    },
+    {
+      "group": "d",
+      "title": "Flight of the Bumblebee",
+      "artist": "Nikolai Rimsky-Korsakov",
+      "expected": "ok",
+      "instrumental": true,
+      "why": "orchestral"
+    },
+    {
+      "group": "d",
+      "title": "Gymnopédie No. 1",
+      "artist": "Erik Satie",
+      "expected": "ok",
+      "instrumental": true,
+      "why": "solo piano"
+    },
+    {
+      "group": "e",
+      "title": "Ordinary",
+      "artist": "Alex Warren",
+      "expected": "ok",
+      "why": "love song, 2025"
+    },
+    {
+      "group": "e",
+      "title": "Daisies",
+      "artist": "Justin Bieber",
+      "expected": "ok",
+      "why": "love song, 2025"
+    },
+    {
+      "group": "e",
+      "title": "Gabriela",
+      "artist": "KATSEYE",
+      "expected": "ok",
+      "why": "a rival for a boy's attention, 2025"
+    },
+    {
+      "group": "e",
+      "title": "Sapphire",
+      "artist": "Ed Sheeran",
+      "expected": "ok",
+      "why": "love song, 2025"
+    },
+    {
+      "group": "e",
+      "title": "Love Me Not",
+      "artist": "Ravyn Lenae",
+      "expected": "ok",
+      "why": "love song, 2024"
+    },
+    {
+      "group": "e",
+      "title": "What It Sounds Like",
+      "artist": "HUNTR/X",
+      "expected": "ok",
+      "why": "KPop Demon Hunters, 2025: finding your voice"
+    },
+    {
+      "group": "e",
+      "title": "The Fate of Ophelia",
+      "artist": "Taylor Swift",
+      "expected": "either",
+      "why": "2025 love song; a teacher may read mild innuendo into it"
+    },
+    {
+      "group": "e",
+      "title": "Abracadabra",
+      "artist": "Lady Gaga",
+      "expected": "either",
+      "why": "2025 dance pop; dark magic imagery"
+    },
+    {
+      "group": "e",
+      "title": "Soda Pop",
+      "artist": "Saja Boys",
+      "expected": "either",
+      "why": "KPop Demon Hunters, 2025: a flirty \"you need me\" song by the villains"
+    },
+    {
+      "group": "e",
+      "title": "A Bar Song (Tipsy)",
+      "artist": "Shaboozey",
+      "expected": "inappropriate",
+      "why": "getting drunk at the bar is the whole song, 2024"
+    },
+    {
+      "group": "e",
+      "title": "Pour Me a Drink",
+      "artist": "Post Malone",
+      "expected": "inappropriate",
+      "why": "drinking as the main theme, 2024"
+    },
+    {
+      "group": "e",
+      "title": "Pink Pony Club",
+      "artist": "Chappell Roan",
+      "expected": "inappropriate",
+      "why": "dancing at a strip club, sexual themes (2025 hit)"
+    },
+    {
+      "group": "e",
+      "title": "Taste",
+      "artist": "Sabrina Carpenter",
+      "expected": "inappropriate",
+      "why": "sexual innuendo, 2024"
+    },
+    {
+      "group": "e",
+      "title": "Anxiety",
+      "artist": "Doechii",
+      "expected": "inappropriate",
+      "why": "heavy profanity, 2025 (clean edit judged by the original)"
+    },
+    {
+      "group": "e",
+      "title": "Denial Is a River",
+      "artist": "Doechii",
+      "expected": "inappropriate",
+      "why": "drug use and heavy profanity, 2024"
+    },
+    {
+      "group": "e",
+      "title": "Messy",
+      "artist": "Lola Young",
+      "expected": "inappropriate",
+      "why": "heavy profanity, 2024"
+    },
+    {
+      "group": "e",
+      "title": "Main Theme",
+      "artist": "LouisF",
+      "expected": "ok",
+      "instrumental": true,
+      "why": "Balatro soundtrack, 2024: instrumental"
+    },
+    {
+      "group": "e",
+      "title": "Silksong",
+      "artist": "Christopher Larkin",
+      "expected": "ok",
+      "instrumental": true,
+      "why": "Hollow Knight: Silksong soundtrack, 2025: instrumental"
+    },
+    {
+      "group": "f",
+      "title": "Trippin' on a Hole in a Paper Heart",
+      "artist": "Stone Temple Pilots",
+      "expected": "either",
+      "why": "Dalton asked 2026-10-07: strong or right? Lyrics about inner turmoil; title has \"trippin\""
+    },
+    {
+      "group": "f",
+      "title": "Interstate Love Song",
+      "artist": "Stone Temple Pilots",
+      "expected": "either",
+      "why": "Dalton asked 2026-10-07: often described as about hiding heroin use from a partner"
+    }
+  ]
+}

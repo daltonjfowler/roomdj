@@ -1,0 +1,84 @@
+{
+  "kind": "youtube#searchListResponse",
+  "etag": "hand-written-fixture",
+  "nextPageToken": "CAUQAA",
+  "regionCode": "US",
+  "pageInfo": { "totalResults": 1000000, "resultsPerPage": 5 },
+  "items": [
+    {
+      "kind": "youtube#searchResult",
+      "etag": "e1",
+      "id": { "kind": "youtube#video", "videoId": "OffVideo001" },
+      "snippet": {
+        "publishedAt": "2013-11-21T15:00:00Z",
+        "channelId": "UCAAAAAAAAAAAAAAAAAAAAAA",
+        "title": "Pharrell Williams - Happy (Official Music Video)",
+        "description": "",
+        "thumbnails": { "default": { "url": "https://i.ytimg.com/vi/OffVideo001/default.jpg", "width": 120, "height": 90 } },
+        "channelTitle": "Pharrell Williams",
+        "liveBroadcastContent": "none",
+        "publishTime": "2013-11-21T15:00:00Z"
+      }
+    },
+    {
+      "kind": "youtube#searchResult",
+      "etag": "e2",
+      "id": { "kind": "youtube#video", "videoId": "LiveOscar01" },
+      "snippet": {
+        "publishedAt": "2014-03-03T00:00:00Z",
+        "channelId": "UCBBBBBBBBBBBBBBBBBBBBBB",
+        "title": "Pharrell Williams - Happy (Live at the Oscars)",
+        "description": "",
+        "thumbnails": {},
+        "channelTitle": "Oscars",
+        "liveBroadcastContent": "none",
+        "publishTime": "2014-03-03T00:00:00Z"
+      }
+    },
+    {
+      "kind": "youtube#searchResult",
+      "etag": "e3",
+      "id": { "kind": "youtube#video", "videoId": "TopicAudio1" },
+      "snippet": {
+        "publishedAt": "2018-07-19T00:00:00Z",
+        "channelId": "UCCCCCCCCCCCCCCCCCCCCCCC",
+        "title": "Happy (From &quot;Despicable Me 2&quot;)",
+        "description": "Provided to YouTube by Columbia",
+        "thumbnails": {},
+        "channelTitle": "Pharrell Williams - Topic",
+        "liveBroadcastContent": "none",
+        "publishTime": "2018-07-19T00:00:00Z"
+      }
+    },
+    {
+      "kind": "youtube#searchResult",
+      "etag": "e4",
+      "id": { "kind": "youtube#video", "videoId": "KidsCover01" },
+      "snippet": {
+        "publishedAt": "2015-01-01T00:00:00Z",
+        "channelId": "UCDDDDDDDDDDDDDDDDDDDDDD",
+        "title": "Happy - Pharrell Williams (Cover by Kids Choir)",
+        "description": "",
+        "thumbnails": {},
+        "channelTitle": "Kids Sing Along",
+        "liveBroadcastContent": "none",
+        "publishTime": "2015-01-01T00:00:00Z"
+      }
+    },
+    {
+      "kind": "youtube#searchResult",
+      "etag": "e5",
+      "id": { "kind": "youtube#video", "videoId": "SpedUpEdit1" },
+      "snippet": {
+        "publishedAt": "2023-05-05T00:00:00Z",
+        "channelId": "UCEEEEEEEEEEEEEEEEEEEEEE",
+        "title": "pharrell williams - happy (sped up)",
+        "description": "",
+        "thumbnails": {},
+        "channelTitle": "speedy songs",
+        "liveBroadcastContent": "none",
+        "publishTime": "2023-05-05T00:00:00Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoomDJ admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#831843">
+  <!-- Blocking on purpose: sets data-theme before the first paint. -->
+  <script src="/theme-boot.js"></script>
+</head>
+<body>
+  <header class="titlebar">
+    <a class="brand" href="/" aria-label="RoomDJ home"><img src="/icon.svg" alt="" width="54" height="54"><span class="brand-name">RoomDJ admin</span></a>
+    <span class="grow"></span>
+    <a class="toplink" href="/host/">Teacher page</a>
+    <button id="theme" class="themebtn" type="button">🌙 Dark</button>
+  </header>
+
+  <main id="main" class="admin">
+    <!-- Not signed in, or not an admin: one way forward, no details -->
+    <section id="gate" class="center" hidden>
+      <div class="center-card card">
+        <h1>Admin</h1>
+        <p id="gateText" class="note">Sign in with Spotify on the teacher page first. It brings you back here.</p>
+        <a id="gateBtn" class="who-btn" href="/host/?then=admin">Sign in with Spotify</a>
+      </div>
+    </section>
+
+    <section id="dash" hidden>
+      <div class="admin-head">
+        <h1>Admin</h1>
+        <span id="updated" class="note"></span>
+        <button id="refresh" type="button">↻ Refresh</button>
+      </div>
+
+      <div class="tiles">
+        <div class="tile card"><span class="tile-n" id="nTeachers"></span><span class="tile-l">teachers on your app</span></div>
+        <div class="tile card"><span class="tile-n" id="nFree"></span><span class="tile-l">free teachers (own app)</span></div>
+        <div class="tile card"><span class="tile-n" id="nWeek"></span><span class="tile-l">new free teachers, 7 days</span></div>
+        <div class="tile card"><span class="tile-n" id="nSessions"></span><span class="tile-l">sign-ins active (30 days)</span></div>
+        <div class="tile card"><span class="tile-n" id="nSongs"></span><span class="tile-l">checked songs, shared</span></div>
+      </div>
+
+      <section class="card admin-card" aria-labelledby="tTeachers">
+        <h2 id="tTeachers">Teachers on your Spotify app</h2>
+        <p class="note">Who may sign in is your Spotify app's User Management list. Link each person's Spotify email here so they land on their own name.</p>
+        <ul id="teacherList" class="admin-list"></ul>
+        <details id="teacherOff" class="admin-off" hidden>
+          <summary>Turned off <span id="teacherOffCount"></span></summary>
+          <ul id="teacherOffList" class="admin-list"></ul>
+        </details>
+        <form id="linkForm" class="link-form">
+          <h3>Link a Spotify email</h3>
+          <label class="field">Their Spotify email <input id="linkEmail" class="text" type="email" autocomplete="off" required></label>
+          <label class="field">Teacher <select id="linkTeacher" class="text"></select></label>
+          <button type="submit" class="primary">Link</button>
+          <p id="linkMsg" class="form-msg" role="status"></p>
+        </form>
+      </section>
+
+      <section class="card admin-card" aria-labelledby="tFree">
+        <h2 id="tFree">Free teachers</h2>
+        <p class="note">New per day, last 14 days.</p>
+        <ol id="perDay" class="bars"></ol>
+        <h3>Free teachers, newest first</h3>
+        <p class="note">They use their own Spotify app. Turn one off to sign them out and keep them out (their own app cannot get around it).</p>
+        <ul id="freeList" class="admin-list"></ul>
+        <details id="freeOff" class="admin-off" hidden>
+          <summary>Turned off <span id="freeOffCount"></span></summary>
+          <ul id="freeOffList" class="admin-list"></ul>
+        </details>
+      </section>
+
+      <section class="card admin-card" aria-labelledby="tToday">
+        <h2 id="tToday">Today</h2>
+        <ul id="todayList" class="admin-list"></ul>
+      </section>
+      <p id="dashMsg" class="form-msg" role="alert"></p>
+    </section>
+  </main>
+  <div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <div id="toasts" class="toasts"></div>
+  <script type="module" src="/src/admin-page.js"></script>
+</body>
+</html>

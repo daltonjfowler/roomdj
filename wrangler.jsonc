@@ -1,0 +1,68 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "classqueue",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-08-31",
+  // roomdj.com is the real address; www redirects to it (src/worker.js). The workers.dev URL
+  // stays on as a fallback.
+  "routes": [
+    { "pattern": "roomdj.com", "custom_domain": true },
+    { "pattern": "www.roomdj.com", "custom_domain": true }
+  ],
+  "workers_dev": true,
+  // One Durable Object per open room, named by a random room id. It holds the queue, votes and
+  // connected sockets (WebSocket hibernation API) and deletes itself after the room closes.
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  // This app's own namespace (title classqueue-CLASS_KV): teacher settings, ban list, filter
+  // verdict cache, search cache. Never reuse a sibling site's namespace.
+  // Created as `wrangler kv namespace create classqueue-CLASS_KV`: a bare `CLASS_KV` name is
+  // uploadmycode's namespace.
+  "kv_namespaces": [{ "binding": "CLASS_KV", "id": "04009b6989154b8797be4834bc16b64d" }],
+  // Rate-limit fuses (src/worker.js). namespace_id is unique across Dalton's account (sibling
+  // sites use 20260926-20260951). A school shares ONE address: per-address limits are never
+  // tighter than a whole class needs. JOIN_RATE_IP: class code tries, counted before the compare
+  // (a class of 35 joins once a day). SEARCH_*: browsing before joining (no code needed): per
+  // device (as the room search), per address (35 students x 15 = 525), and everyone together.
+  // BOARD_RATE_IP: the board's sign-in (POST /api/teacher/board): a waiting board asks every 10 s,
+  // and every board in a school shares one address (30 boards waiting = 180 a minute).
+  // LYRICS_RATE_ALL: LRCLIB lookups for songs the AI does not know (src/lyrics.js), everyone
+  // together; each can cost one more AI call, so it also guards the Workers AI budget. Rooms have
+  // their own 10 a minute too.
+  "ratelimits": [
+    { "name": "JOIN_RATE_IP", "namespace_id": "20261001", "simple": { "limit": 60, "period": 60 } },
+    { "name": "SEARCH_RATE", "namespace_id": "20261002", "simple": { "limit": 15, "period": 60 } },
+    { "name": "SEARCH_RATE_IP", "namespace_id": "20261003", "simple": { "limit": 600, "period": 60 } },
+    { "name": "SEARCH_RATE_ALL", "namespace_id": "20261004", "simple": { "limit": 1200, "period": 60 } },
+    { "name": "BOARD_RATE_IP", "namespace_id": "20261005", "simple": { "limit": 300, "period": 60 } },
+    { "name": "LYRICS_RATE_ALL", "namespace_id": "20261006", "simple": { "limit": 30, "period": 60 } },
+    // AUTH_RATE_IP: Spotify sign-ins (src/auth.js), per address: a staff meeting signing in at once fits.
+    { "name": "AUTH_RATE_IP", "namespace_id": "20261007", "simple": { "limit": 30, "period": 60 } }
+  ],
+  // Workers AI: the theme check in shared/filter.js (and its lyrics check, src/lyrics.js).
+  "ai": { "binding": "AI" },
+  // Every 15 minutes: check a few of Apple's chart songs before classes suggest them (src/prewarm.js;
+  // at most PREWARM_AI_PER_DAY AI calls a day).
+  "triggers": { "crons": ["*/15 * * * *"] },
+  // Public config (not secrets). SPOTIFY_CLIENT_ID: the Spotify app's Client ID (32 hex
+  // characters, from developer.spotify.com/dashboard). Empty = Spotify is hidden on the host page.
+  // The host page logs in with PKCE. Never set the secret SPOTIFY_CLIENT_SECRET: it would turn on
+  // the dormant Spotify catalog search, which Spotify's Developer Policy does not allow here
+  // (CLAUDE.md invariant 10).
+  // ADMIN_PROFILES: teacher profile ids (comma-separated) whose SPOTIFY sign-in opens /admin/
+  // (src/admin.js). Never the teacher key.
+  "vars": { "SPOTIFY_CLIENT_ID": "cb5810b6e2e64ca38407949a4615f160", "ADMIN_PROFILES": "dalton-fowler" },
+  // TEACHER_KEY (and optional TEACHER_KEY_2) are secrets: npx wrangler secret put TEACHER_KEY.
+  // Optional secrets: YOUTUBE_API_KEY; APPLE_TEAM_ID + APPLE_KEY_ID + APPLE_PRIVATE_KEY (Apple Music,
+  // hidden until all three are set; docs/APPLE-SETUP.md).
+  // public/ is built from web/ by `npm run build` (npm run deploy does it first).
+  "assets": {
+    "directory": "./public/",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "404-page"
+  },
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}

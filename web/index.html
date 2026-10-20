@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoomDJ: Classroom Song Voting, Minus the Bad Words</title>
+  <meta name="description" content="Free classroom music for teachers: students suggest and vote on songs from their Chromebooks, and a filter keeps every song school-appropriate. Works with Spotify.">
+  <link rel="canonical" href="https://roomdj.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="RoomDJ">
+  <meta property="og:title" content="RoomDJ: Classroom Song Voting, Minus the Bad Words">
+  <meta property="og:description" content="Free classroom music for teachers: students suggest and vote on songs from their Chromebooks, and a filter keeps every song school-appropriate. Works with Spotify.">
+  <meta property="og:url" content="https://roomdj.com/">
+  <meta property="og:image" content="https://roomdj.com/social.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="RoomDJ: class song voting, minus the bad words. The projector board with the class code and the voted queue.">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"RoomDJ","url":"https://roomdj.com/","description":"Classroom song voting: students suggest and vote on songs from their Chromebooks, the teacher's computer plays the winners, and a filter keeps the music school-appropriate.","applicationCategory":"EducationalApplication","operatingSystem":"Web browser (Chromebook, Windows, Mac)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"audience":{"@type":"EducationalAudience","educationalRole":"teacher"},"image":"https://roomdj.com/social.jpg","author":{"@type":"Person","name":"Dalton Fowler","url":"https://daltonjfowler.com"}}</script>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#831843">
+  <!-- Blocking on purpose: sets data-theme before the first paint. -->
+  <script src="/theme-boot.js"></script>
+  <script src="/logo-alive.js" defer></script>
+</head>
+<body>
+  <header class="titlebar">
+    <a class="brand" href="/" aria-label="RoomDJ home"><img src="/icon.svg" data-logo alt="" width="54" height="54"><span class="brand-name">RoomDJ</span></a>
+    <span id="roomPill" class="pill" hidden><span class="dot" aria-hidden="true"></span><span id="roomPillText"></span></span>
+    <!-- 🔔 The bell countdown (bell-pill.js): not live; announced only at cleanup and at 1 minute -->
+    <span id="bellPill" class="pill bell-pill" role="timer" aria-live="off" hidden><span id="bellIcon" aria-hidden="true">🔔</span> <span id="bellWords" class="bell-words">Bell in</span> <b id="bellClock"></b></span>
+    <span class="grow"></span>
+    <button id="leave" class="toplink" type="button" hidden>Leave room</button>
+    <button id="theme" class="themebtn" type="button">🖥️ System</button>
+  </header>
+
+  <!-- What RoomDJ is, for anyone new (hidden once a student is in a room: student.css .in-room) -->
+  <aside id="intro" class="intro" aria-label="About RoomDJ"><b>🎵 Class song voting, minus the bad words.</b> Students suggest and vote on songs from their Chromebooks, the top song plays on the teacher's computer, and a filter keeps it school-clean. <a href="/about">How it works</a></aside>
+  <main id="main">
+    <!-- Before joining: look for songs, and join with today's class code -->
+    <section id="joinScreen" class="room browse">
+      <section class="card join-card" aria-labelledby="joinTitle">
+        <!-- Who is this for: students stay here, teachers go to the host page -->
+        <nav class="who-row" aria-label="Student or teacher">
+          <span class="who-btn who-on" aria-current="page"><span aria-hidden="true">🎒</span> Student <small>Join your class</small></span>
+          <a class="who-btn" href="/host/"><span aria-hidden="true">🍎</span> Teacher <small>Start your room</small></a>
+        </nav>
+        <h1 id="joinTitle">Join your class</h1>
+        <p id="joinNote" class="banner info">Ask your teacher for today's class code to suggest and vote.</p>
+        <form id="joinForm" novalidate>
+          <label class="field">Class code <small>The words and number on the board.</small>
+            <input id="code" class="text code-input" name="code" required autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="joinMsg">
+          </label>
+          <!-- Made, never typed (shared/nickgen.js); the typed box is for local tests only (TYPED_NICKNAMES) -->
+          <div id="nickGen" class="field">
+            <span id="nickGenLabel">Your nickname <small>Made for you. Your class sees it.</small></span>
+            <span class="code-row">
+              <output id="nickShown" class="text nick-shown" aria-labelledby="nickGenLabel" aria-live="polite"></output>
+              <button id="nickRoll" type="button">🎲 New name</button>
+            </span>
+          </div>
+          <label id="nickField" class="field" hidden>Nickname <small>A first name or a fun name. Your class sees it.</small>
+            <input id="nick" class="text" name="nick" required autocomplete="nickname" spellcheck="false" aria-describedby="joinMsg">
+          </label>
+          <p id="joinMsg" class="form-msg" role="alert"></p>
+          <button id="joinBtn" class="primary big wide" type="submit">Join</button>
+        </form>
+      </section>
+
+      <section class="card search-card" aria-labelledby="browseLabel">
+        <h2 id="browseLabel" class="label">Look for songs</h2>
+        <p class="note">These songs passed a quick check. Each song is checked again when you suggest it.</p>
+        <form id="browseForm" role="search" class="search-row">
+          <label class="sr-only" for="bq">Search for a song or an artist</label>
+          <input id="bq" class="text" type="search" placeholder="Search for a song or an artist" autocomplete="off" spellcheck="false">
+        </form>
+        <p id="browseMsg" class="note search-msg" aria-live="polite"></p>
+        <ul id="browseResults" class="results" aria-label="Songs you can suggest after you join"></ul>
+      </section>
+    </section>
+
+    <!-- Room -->
+    <section id="roomScreen" class="room" hidden>
+      <h1 id="roomTitle" class="sr-only">Your class's music</h1>
+      <!-- 📚 Back to work (protocol.js BACK TO WORK): after a suggestion, the full-page screen -->
+      <section id="restScreen" class="card rest-card" aria-labelledby="restTitle" hidden>
+        <h2 id="restTitle" class="rest-title" tabindex="-1">📚 Back to work!</h2>
+        <p id="restText" class="rest-text">Your pick is in. Check back in 5 minutes.</p>
+        <p class="rest-clock"><span class="sr-only">Time left: </span><span id="restClock">3:00</span></p>
+        <p id="restNow" class="note rest-now" hidden></p>
+      </section>
+      <div class="col">
+        <!-- The room's teacher (protocol.js state.teacher); never any other teacher -->
+        <p id="classOf" class="class-of" hidden></p>
+        <section class="card now" aria-labelledby="nowLabel">
+          <h2 id="nowLabel" class="label"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>Now playing</h2>
+          <div id="nowPlaying" class="now-body"></div>
+        </section>
+
+        <section class="card search-card" aria-labelledby="searchLabel">
+          <h2 id="searchLabel" class="label">Suggest a song</h2>
+          <p id="lockedNote" class="banner warn" hidden>Your teacher has paused new suggestions for now. You can still vote.</p>
+          <p id="cleanupNote" class="banner info cleanup-note" role="status" hidden>🧹 Cleanup time! Suggestions are closed for today.</p>
+          <p id="instrumentalNote" class="banner info" hidden>🎹 Instrumentals only right now: songs with no singing.</p>
+          <!-- ⭐ Class favorites (protocol.js FAVORITES): only while the teacher has them on -->
+          <div id="findBy" class="find-by segmented" role="group" aria-label="Find a song" hidden>
+            <button id="findSearch" type="button" aria-pressed="true">🔎 Search</button>
+            <button id="findFav" type="button" aria-pressed="false">⭐ Class favorites</button>
+          </div>
+          <form id="searchForm" role="search" class="search-row">
+            <label class="sr-only" for="q">Search for a song or an artist</label>
+            <input id="q" class="text" type="search" placeholder="Search for a song or an artist" autocomplete="off" spellcheck="false">
+          </form>
+          <!-- One line: the credits pill (only while the teacher has them on, protocol.js CREDITS) and my songs waiting -->
+          <div class="status-row">
+            <p id="credits" class="credits" hidden><span class="credits-pill"><span aria-hidden="true">🎟</span> <b id="creditsN">0 credits</b></span>
+              <small class="note">A song costs 1.<span id="creditsJump"> ⚡ Jump costs 2: it plays next.</span></small></p>
+            <p id="waiting" class="note waiting"></p>
+          </div>
+          <p id="searchMsg" class="note search-msg" aria-live="polite"></p>
+          <p id="searchCredit" class="sp-credit" hidden></p>
+          <ul id="results" class="results" aria-label="Search results"></ul>
+          <div id="favPane" class="fav-pane" hidden>
+            <p class="note">Songs your teacher's classes loved most. It still goes through the song check.</p>
+            <p id="favEmpty" class="note" hidden>No class favorites yet. When a song gets lots of 👍, it shows up here.</p>
+            <ul id="favResults" class="results" aria-label="Class favorites"></ul>
+          </div>
+        </section>
+
+        <!-- Top 5 of the period (protocol.js TOP 5 + RECAP), once a song has played -->
+        <section id="top5Card" class="card top5-card" aria-labelledby="top5Label" hidden>
+          <h2 id="top5Label" class="label">🏆 Top 5 so far</h2>
+          <ol id="top5" class="top5"></ol>
+        </section>
+      </div>
+
+      <section class="card queue-card" aria-labelledby="queueLabel">
+        <h2 id="queueLabel" class="label">Up next <span id="queueCount" class="count"></span></h2>
+        <!-- The hint follows the teacher's 👎 setting (protocol.js DOWNVOTE MODE) -->
+        <p class="note"><span id="voteHint">👍 the songs you want. Most 👍 plays next, and every song gets its turn.</span>
+          <!-- 👎 left this class (protocol.js DOWNVOTE LIMIT); hidden while unlimited -->
+          <span id="downLeft" class="down-left" title="Thumbs down you can still give this class" hidden></span></p>
+        <ol id="queue" class="queue"></ol>
+        <p id="queueEmpty" class="note empty-note" hidden>The queue is empty. Search for a song and suggest it!</p>
+      </section>
+    </section>
+
+    <!-- Kicked / closed / errors -->
+    <section id="endScreen" class="center" hidden>
+      <div class="center-card card">
+        <img src="/icon.svg" alt="" width="64" height="64">
+        <h1 id="endTitle">The room is closed</h1>
+        <p id="endText" class="note"></p>
+        <button id="endBtn" class="primary big wide" type="button">Join another room</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <!-- The two that matter most, big; the family sites small below -->
+    <div class="footer-big">
+      <a class="footer-card" href="https://teachchat.app" target="_blank" rel="noopener"><b><span aria-hidden="true">🌱</span> teachChat</b><small>Class chat built for school</small></a>
+      <a class="footer-card" href="https://daltonjfowler.com" target="_blank" rel="noopener"><b><span aria-hidden="true">👋</span> Made by Dalton Fowler</b><small>More classroom tools</small></a>
+    </div>
+    <div class="footer-small">
+      <a href="https://uploadmycode.com" target="_blank" rel="noopener">uploadmycode</a>
+      <a href="https://uploadmylaser.com" target="_blank" rel="noopener">uploadmylaser</a>
+      <a href="https://uploadmymodel.com" target="_blank" rel="noopener">uploadmymodel</a>
+      <a href="https://uploadmycut.com" target="_blank" rel="noopener">uploadmycut</a>
+      <a href="/about" target="_blank" rel="noopener">About</a>
+      <a href="/legal" target="_blank" rel="noopener">Privacy &amp; legal</a>
+      <a href="https://github.com/daltonjfowler/roomdj" target="_blank" rel="noopener">Source code</a>
+      <a href="mailto:dalton@teachchat.app?subject=RoomDJ%20bug%20report%20(student%20page)&amp;body=What%20happened%3F%0A%0A%0AWhat%20were%20you%20doing%20just%20before%3F%0A%0A%0AStudent%20page%20or%20teacher%20page%3F%20Spotify%2C%20YouTube%20or%20song%20previews%3F%0A%0A">🐞 Report a bug</a>
+    </div>
+    <details class="site-build"><summary>Site details</summary><p data-build></p></details>
+  </footer>
+
+  <div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <!-- Not a live region: every toast is also said once through #announce. -->
+  <div id="toasts" class="toasts"></div>
+  <div id="netBanner" class="net-banner" role="status" hidden></div>
+  <script type="module" src="/src/student.js"></script>
+</body>
+</html>

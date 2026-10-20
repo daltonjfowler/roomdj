@@ -1,0 +1,454 @@
+/* Host page, made for a projector: big address and code on the left, big now playing in the middle, the
+   ranked queue on the right. Fills the screen at 1366 × 768 and up; stacks on small screens. */
+
+/* The teacher's tools: 📺 Screen ▾, 🏠 Room ▾, 📋 Lists ▾ (menu.js), 🔎 Suggest a song, ⚙️ Settings. */
+.tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tools > button { font-weight: 600; }
+#lockBtn.on { color: var(--warn); }
+/* "Needs a look": the accent colour, not the alarm red, so it is easy to spot but not scary. */
+.menu-pop > #reviewBadge { background: var(--accent-soft); font-weight: 650; }
+#listsMenu.has-review > .menu-btn { border-color: var(--accent-line); }
+.badge-count { display: inline-block; min-width: 1.6em; padding: 0 .4em; border-radius: 99px; background: var(--accent); color: var(--accent-ink); text-align: center; font-variant-numeric: tabular-nums; }
+.badge-count[hidden] { display: none; }
+#listsMenuBtn.bump { animation: bump .6s ease-out 2; }
+@keyframes bump { 50% { transform: scale(1.08); box-shadow: 0 0 0 4px var(--accent-soft); } }
+@media (prefers-reduced-motion: reduce) { #listsMenuBtn.bump { animation: none; } }
+/* Narrow screens: the bar wraps neatly, the tools on a row of their own. */
+@media (max-width: 900px) {
+  .host .titlebar { row-gap: 6px; }
+  .host #roomTools { order: 10; flex-basis: 100%; }
+  .host #roomTools > button, .host #roomTools .menu-btn { padding-inline: 10px; }
+}
+@media (max-width: 480px) {
+  .host #roomTools .menu-btn .caret { display: none; }
+  .host .toplink { display: none; }
+}
+
+.stage {
+  display: grid; gap: 14px; padding: 14px; min-height: 0; position: relative;
+  /* ✏️ Edit layout (layout.js) sets --cols / --areas for a moved, resized or hidden column. */
+  grid-template-columns: var(--cols, minmax(230px, 300px) minmax(0, 1.15fr) minmax(0, 1fr));
+  grid-template-areas: var(--areas, "warn warn warn" "join now queue");
+  grid-template-rows: auto 1fr;
+}
+.stage > .card { padding: 16px 18px; min-width: 0; }
+.ai-warn { grid-area: warn; font-size: 1.1rem; }
+
+/* Join panel */
+.join-panel { grid-area: join; display: grid; gap: 6px; align-content: start; text-align: center; }
+.join-host { margin: 0 0 8px; font-size: 1.25rem; font-weight: 700; word-break: break-all; }
+/* The class code is words: one word per line, big enough to read from the back of the room. */
+.big-code { margin: 0; font-size: clamp(1.8rem, 2.8vw, 2.8rem); font-weight: 800; line-height: 1.1; color: var(--accent); overflow-wrap: anywhere; }
+.big-code span { display: block; }
+.code-row { display: flex; gap: 8px; }
+.code-row .text { flex: 1; min-width: 0; }
+.code-row button { flex: none; }
+/* The site address is what students type, so it is as big as the code. */
+.join-host { font-size: clamp(1.6rem, 2.4vw, 2.4rem); color: var(--text); }
+
+/* Now playing */
+.now-panel { grid-area: now; display: grid; gap: 14px; align-content: start; }
+.now-song { display: grid; gap: 16px; justify-items: center; text-align: center; }
+.now-art { width: min(100%, 300px, 38vh); aspect-ratio: 1; border-radius: 14px; object-fit: cover; background: var(--card2); box-shadow: var(--shadow); }
+.now-text p { margin: 0; }
+.now-title { font-size: clamp(1.4rem, 2.4vw, 2.2rem); font-weight: 750; line-height: 1.15; }
+.now-artist { font-size: clamp(1.05rem, 1.6vw, 1.4rem); color: var(--muted); }
+.now-by { margin-top: 6px !important; color: var(--accent); font-weight: 600; }
+.now-votes { margin-top: 4px !important; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ok); }
+.now-sp { display: flex; justify-content: center; margin-top: 4px !important; }
+.qitem .sp-link { display: inline-flex; width: 24px; height: 24px; vertical-align: -6px; margin-right: 4px; }
+.now-empty { margin: 0; padding: 40px 0; text-align: center; font-size: 1.3rem; color: var(--muted); }
+.progress { height: 8px; border-radius: 99px; background: var(--card2); border: 1px solid var(--line); overflow: hidden; }
+.progress-bar { height: 100%; width: 0; background: var(--accent); transition: width .25s linear; }
+.controls { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.volume { display: inline-flex; align-items: center; gap: 6px; }
+.volume input { accent-color: var(--accent); width: 110px; }
+.now-panel .note { text-align: center; }
+/* YouTube's player: YouTube asks for at least 200 x 200 px, visible while it plays. */
+.yt-box { width: min(100%, 400px); aspect-ratio: 16 / 9; min-height: 200px; margin: 0 auto; border-radius: 10px; overflow: hidden; background: #000; }
+.yt-box iframe { display: block; width: 100%; height: 100%; border: 0; }
+.music-from { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; font-size: .9rem; color: var(--muted); }
+.music-from .text { width: auto; min-height: 40px; padding: 6px 10px; }
+
+/* Right column: Needs a look (when there is something) above the queue */
+.side { grid-area: queue; display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; max-height: calc(100dvh - 140px); }
+.side > .card { padding: 16px 18px; min-width: 0; }
+.review-panel { flex: 0 1 auto; max-height: 50%; overflow: auto; display: grid; gap: 8px; align-content: start; border: 2px solid var(--accent-line); background: var(--accent-soft); }
+.review-note { margin: 0; }
+.review .qitem { grid-template-columns: auto minmax(0, 1fr) auto; background: var(--card); }
+.review .qitem:first-child { border-color: var(--line); background: var(--card); }
+.review .qitem.fresh { border-color: var(--accent); }
+.review .item-tools button.primary { font-weight: 650; }
+
+/* Queue */
+.queue-panel { flex: 1 1 auto; display: grid; gap: 10px; align-content: start; overflow: auto; min-height: 0; }
+.count { color: var(--muted); font-weight: 600; letter-spacing: 0; }
+.queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.qitem {
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; gap: 10px; align-items: center;
+  padding: 8px 10px; border-radius: 10px; background: var(--card2); border: 1px solid var(--line);
+}
+.qitem:first-child { border-color: var(--accent-line); background: var(--accent-soft); }
+.qitem .rank { width: 1.5em; text-align: center; font-weight: 800; font-size: 1.2rem; color: var(--muted); }
+.qitem .art { width: 48px; height: 48px; }
+.score { display: grid; justify-items: end; line-height: 1.1; }
+.score b { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.score small { color: var(--muted); font-size: .78rem; white-space: nowrap; }
+/* 👎 on, counts hidden (protocol.js DOWNVOTE MODE): the teacher sees the net and 👎 (muted); in big
+   screen the class may be looking, so 👍 alone. */
+.score.down-hidden .for-class { display: none; }
+.score .down-muted { opacity: .7; }
+.big .score.down-hidden .for-host { display: none; }
+.big .score.down-hidden .for-class { display: inline; }
+.ghost-mark { font-size: .75rem; opacity: .55; } /* 👻 GHOST VOTE: teacher only */
+.big .ghost-mark { display: none; }
+.item-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+/* Host queue rows: the teacher's 👍 / 👎 and one ⋯ menu (Play next, Play now, Veto, Ban), on the song's line. */
+.item-tools button { padding: 6px 9px; min-height: 36px; font-size: .85rem; }
+#queue .item-tools { flex-wrap: nowrap; }
+#queue .item-tools .more-btn { min-width: 36px; padding-inline: 6px; font-size: 1.05rem; }
+.empty-note { padding: 18px 0; text-align: center; }
+
+/* Students dialog */
+.students { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 50vh; overflow: auto; }
+.students li { display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 10px; align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.students .dot { width: 10px; height: 10px; border-radius: 99px; background: var(--line); }
+.students .dot.on { background: var(--ok); }
+.students .nick { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.students small { color: var(--muted); }
+.dialog textarea { resize: vertical; font-family: inherit; }
+
+/* Credits: Students dialog (balance + give buttons), Settings (Starting credits), the queue tag */
+.students li:has(.student-credits) { grid-template-columns: auto minmax(0, 1fr) auto auto auto auto auto; }
+/* 📚 Back to work (protocol.js BACK TO WORK): the countdown and Let back in, only while it runs */
+.student-rest { display: inline-flex; align-items: center; gap: 6px; }
+.student-rest:empty { display: none; }
+.rest-tag { font-variant-numeric: tabular-nums; font-weight: 650; color: var(--accent); white-space: nowrap; }
+.student-credits { display: inline-flex; align-items: center; gap: 4px; }
+.student-credits b { min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
+.student-credits button { padding-inline: 8px; }
+.credits-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.credits-bar input { width: 5em; }
+.credits-field { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin: 0; display: grid; gap: 8px; }
+.credits-field legend { padding: 0 4px; }
+.credits-start { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.credits-start input { width: 5em; }
+.credits-start-row { display: grid; gap: 4px; }
+.credits-start-row[hidden] { display: none; }
+/* On/Off switches (Credits, Priority jump): a checkbox with role="switch", drawn as a track */
+.switch-row { font-weight: 600; }
+.check input.switch {
+  appearance: none; -webkit-appearance: none; position: relative; width: 40px; height: 22px; margin: 0;
+  border-radius: 999px; border: 1px solid var(--muted); background: var(--card2); cursor: pointer; transition: background .15s;
+}
+.check input.switch::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--muted); transition: transform .15s;
+}
+.check input.switch:checked { background: var(--accent); border-color: var(--accent); }
+.check input.switch:checked::before { transform: translateX(18px); background: var(--accent-ink); }
+.check input.switch:disabled { opacity: .45; cursor: not-allowed; }
+.switch-row:has(input:disabled) { cursor: not-allowed; }
+.switch-state { margin-left: auto; font-size: .85rem; color: var(--muted); font-weight: 650; }
+.switch-state::after { content: "Off"; }
+.switch-row:has(input:checked) .switch-state::after { content: "On"; color: var(--accent); }
+.switch-help { display: block; margin: -4px 0 0 50px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .check input.switch, .check input.switch::before { transition: none; } }
+.jtag, .ptag { color: var(--accent); font-weight: 650; }
+.song-text > .ptag { display: block; font-size: .85rem; }
+.qitem.pushed { border-color: var(--accent-line); }
+.qitem.jumped { border-color: var(--accent-line); }
+
+@media (max-width: 1100px) {
+  .stage { grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); grid-template-areas: "warn warn" "join now" "queue queue"; }
+  .side { max-height: none; }
+  .review-panel { max-height: none; }
+}
+@media (max-width: 700px) {
+  .stage { grid-template-columns: 1fr; grid-template-areas: "warn" "join" "now" "queue"; padding: 10px; }
+  .qitem { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .qitem .art { display: none; }
+  .review .qitem { grid-template-columns: minmax(0, 1fr); }
+  .item-tools { grid-column: 1 / -1; justify-content: flex-end; }
+}
+.check-help { display: block; margin: -8px 0 0 28px; color: var(--muted); }
+
+/* ---- Big screen (projector view): readable from the back of the room. Teacher tools hide;
+   "Needs a look" stays as a small badge, and Esc or "Leave big screen" brings them back. ---- */
+.big #roomTools > :not(#screenMenu):not(#listsMenu.has-review), .big #listsMenuPop > :not(#reviewBadge),
+.big .toplink, .big .panel-pill, .big .keys-hint, .big .filler-row, .big #fillerNow, .big .filler-form, .big #nowMenu, .big .item-tools, .big #musicFrom, .big #musicNote,
+.big #playerNote, .big #reviewPanel, .big .ai-warn, .big #lockedNote, .big .volume, .big .footer { display: none !important; }
+.big .stage { grid-template-columns: var(--cols, minmax(280px, 26vw) minmax(0, 1fr) minmax(0, 1.1fr)); gap: 2vh 1.4vw; padding: 1.6vh 1.4vw; }
+.big .stage > .card, .big .side > .card { padding: 1.6vh 1.2vw; }
+.big .join-panel { gap: 1vh; }
+.big .join-panel .label, .big .now-panel .label, .big .queue-panel .label { font-size: clamp(1rem, 1.3vw, 1.5rem); }
+.big .join-host { margin: 0; font-size: calc(clamp(2rem, min(3.6vw, 6vh), 4.6rem) * var(--big-scale, 1)); }
+.big #copyLink { display: none; }
+.big .big-code { font-size: calc(clamp(2rem, min(3.8vw, 6.4vh), 5rem) * var(--big-scale, 1)); }
+.big .join-panel .note { font-size: clamp(.95rem, 1.1vw, 1.3rem); }
+.big .now-panel { gap: 1.6vh; }
+.big .now-art { width: min(100%, 40vh); }
+.big .now-title { font-size: calc(clamp(1.8rem, min(3vw, 5.4vh), 4.2rem) * var(--big-scale, 1)); }
+.big .now-artist { font-size: calc(clamp(1.3rem, min(2vw, 3.6vh), 2.6rem) * var(--big-scale, 1)); }
+.big .now-by, .big .now-votes { font-size: calc(clamp(1.05rem, min(1.4vw, 2.6vh), 1.8rem) * var(--big-scale, 1)); }
+.big .now-empty { font-size: clamp(1.4rem, 2vw, 2.4rem); }
+.big .side { max-height: calc(100dvh - 90px); }
+.big .queue { gap: 1vh; }
+.big .queue .qitem { grid-template-columns: auto auto minmax(0, 1fr) auto; padding: 1vh .8vw; }
+.big .queue .qitem:nth-child(n+6) { display: none; } /* the top five */
+.big .qitem .rank { font-size: clamp(1.4rem, 2vw, 2.4rem); }
+.big .qitem .art { width: clamp(52px, 7vh, 96px); height: clamp(52px, 7vh, 96px); }
+.big .queue .song-title { font-size: calc(clamp(1.25rem, 1.9vw, 2.3rem) * var(--big-scale, 1)); white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.15; }
+.big .queue .song-artist { font-size: calc(clamp(1rem, 1.3vw, 1.6rem) * var(--big-scale, 1)); }
+.big .score b { font-size: calc(clamp(1.4rem, 2vw, 2.4rem) * var(--big-scale, 1)); }
+.big .score small { font-size: clamp(.9rem, 1vw, 1.2rem); }
+.big .empty-note { font-size: clamp(1.1rem, 1.5vw, 1.8rem); }
+@media (max-width: 1100px) {
+  .big .stage { grid-template-columns: minmax(220px, 34vw) minmax(0, 1fr); }
+}
+
+/* Who's teaching? (teacher profiles) */
+.who-step h2 { margin: 8px 0 4px; }
+.who-list { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 8px; }
+.who-list li { display: flex; gap: 6px; align-items: center; }
+.who-list .who-pick { flex: 1; text-align: left; font-weight: 650; min-height: 44px; }
+.who-list .who-pick[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent-line); }
+.who-list .who-pick small { font-weight: 400; color: var(--muted); }
+.who-hidden { margin: 8px 0; }
+/* Sign in with Spotify (account.js) */
+#signinStep h2 { margin: 8px 0 4px; }
+.app-pick { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin: 12px 0; display: grid; gap: 8px; }
+.app-pick legend { padding: 0 4px; }
+.app-pick .pick { display: flex; gap: 8px; align-items: baseline; }
+.app-pick small { display: block; color: var(--muted); }
+/* How to make your own Spotify app: a tinted box, numbered steps, the Redirect URI with Copy */
+.own-steps { margin: 6px 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card2); }
+.own-steps > summary { cursor: pointer; padding: 12px 14px; font-weight: 650; list-style: none; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.own-steps > summary::-webkit-details-marker { display: none; }
+.own-steps > summary::before { content: '▸'; color: var(--accent); transition: transform .15s; }
+.own-steps[open] > summary::before { transform: rotate(90deg); }
+.own-steps > summary small { font-weight: 400; color: var(--muted); }
+.steps { list-style: none; counter-reset: step; margin: 0; padding: 0 14px 4px; display: grid; gap: 14px; }
+.steps li { counter-increment: step; position: relative; padding-left: 38px; display: grid; gap: 4px; }
+.steps li::before { content: counter(step); position: absolute; left: 0; top: -2px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--accent); font-weight: 700; font-size: .9rem; }
+.steps li > span { color: var(--muted); line-height: 1.45; }
+.steps li > span b { color: var(--ink); }
+.copy-row { display: flex; gap: 8px; align-items: stretch; }
+.copy-row code { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+  color: var(--ink); overflow-wrap: anywhere; font-size: .9rem; }
+.copy-row button { flex: none; }
+.steps-more { display: block; padding: 10px 14px 14px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .own-steps > summary::before { transition: none; } }
+.who-hidden summary { cursor: pointer; color: var(--muted); }
+.teaching-as { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 12px; }
+.teacher-pill b, .teaching-as b { font-weight: 700; }
+.teacher-pill { max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .teacher-pill { display: none !important; } }
+
+/* "Remember on this computer" under the teacher key */
+.remember-row { margin: -4px 0 16px; display: grid; gap: 4px; }
+
+/* Reasons: the ▾ next to Veto / Remove / Ban, the quick-pick, and Blocked today */
+button.more { padding-inline: 8px; min-width: 32px; }
+.item-tools button.more { padding-inline: 7px; }
+.picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 12px; }
+.pick { display: flex; gap: 8px; align-items: center; min-height: 32px; cursor: pointer; }
+.reason-picks { border: 0; padding: 0; margin: 0; }
+.reason-picks legend { font-weight: 650; margin-bottom: 6px; }
+.reason-actions { display: inline-flex; gap: 8px; }
+.wide-dialog { max-width: 760px; }
+.blocked-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 60vh; overflow: auto; }
+.blocked-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+.blocked-list .art { width: 48px; height: 48px; border-radius: 8px; }
+.blocked-text p { margin: 0; }
+.blocked-text .song-title { font-weight: 650; }
+.blocked-text .song-artist { font-weight: 400; color: var(--muted); }
+/* Needs a look: the AI read the lyrics and is still not sure (src/lyrics.js). */
+.review-checked { display: block; color: var(--muted); font-size: .82rem; }
+.blocked-why { font-weight: 650; }
+.blocked-detail { color: var(--ink); overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .blocked-list li { grid-template-columns: auto minmax(0, 1fr); }
+  .blocked-list .item-tools { grid-column: 1 / -1; justify-content: flex-end; }
+}
+
+/* Big screen preferences (Settings, Teacher preferences; this computer only) */
+.big-size-s { --big-scale: .85; }
+.big-size-l { --big-scale: 1.2; }
+.big.big-no-who .now-by, .big.big-no-who .qby { display: none; }
+.big.big-no-art .now-art, .big.big-no-art .qitem .art { display: none; }
+.big.big-no-art .queue .qitem { grid-template-columns: auto minmax(0, 1fr) auto; }
+#fullBtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); }
+
+/* Background music (filler.js) */
+.filler { display: grid; gap: 6px; justify-items: center; }
+.filler-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+#fillerBtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); }
+#fillerNow { margin: 0; }
+.filler-form { width: min(100%, 460px); display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); }
+.filler-form[hidden] { display: none; }
+.filler-form .field { margin: 0; }
+.keys-hint { justify-self: center; font-size: .85rem; }
+
+/* Settings: tabs (menu.css), each a few groups; the dialog keeps one height so tabs do not jump. */
+.settings-dialog { max-width: 780px; }
+.settings-dialog form { gap: 12px; }
+.settings-dialog .tab-panel { height: min(58vh, 540px); overflow: auto; padding: 2px 4px 2px 2px; }
+.set-group { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 12px; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.set-group legend { padding: 0 4px; font-weight: 700; }
+.set-group legend small { font-weight: 400; color: var(--muted); }
+.set-group .field { margin: 0; }
+.inline-row { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; font-weight: 400; flex-wrap: wrap; }
+.inline-row .num { width: 6em; flex: none; }
+.inline-row select.text { width: auto; min-width: 6em; flex: none; } /* 👎 per student per class */
+.inline-row.is-off { color: var(--muted, inherit); opacity: .6; cursor: not-allowed; } /* remove score under the score floor */
+.inline-row .num:disabled { cursor: not-allowed; }
+.set-group > .switch-help:first-child, .set-group > .note { margin-left: 0; }
+.set-group small.note { display: block; margin-top: -4px; }
+#removeHelp { margin-left: 0; }
+@media (max-width: 640px) {
+  .settings-dialog .tab-panel { height: min(60vh, 540px); }
+  .tabs [role="tab"] { padding: 6px 8px; }
+}
+
+/* Teacher preferences (Settings) and the shortcuts dialog */
+.prefs-field { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin: 0; display: grid; gap: 8px; }
+.prefs-field legend { padding: 0 4px; }
+.prefs-period, .prefs-size { display: flex; align-items: center; gap: 8px; font-weight: 400; flex-wrap: wrap; }
+.prefs-period input { width: 5.5em; }
+.prefs-size select { width: auto; }
+.prefs-field .switch-help { margin-left: 0; }
+.prefs-sub { margin: 6px 0 0; font-weight: 650; }
+.prefs-sub small { color: var(--muted); font-weight: 400; }
+.prefs-field .linkbtn { justify-self: start; }
+.keys-table { width: 100%; border-collapse: collapse; }
+.keys-table th { text-align: left; font-size: .85rem; color: var(--muted); padding: 4px 6px; }
+.keys-table td { padding: 4px 6px; border-top: 1px solid var(--line); }
+.keys-table td:last-child { text-align: right; }
+.keys-table kbd { display: inline-block; min-width: 2.2em; padding: 2px 8px; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; background: var(--card2); font: inherit; font-weight: 700; text-align: center; }
+
+/* The board (board-host.js): the "📺 Board connected" pill and the Board link dialog. */
+.board-pill { background: var(--accent-soft); border-color: var(--accent-line); }
+.big #boardPill { display: none !important; }
+.board-have { display: grid; gap: 6px; margin: 10px 0; }
+.board-have[hidden] { display: none; }
+.board-have .text { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
+.board-warn { margin: 8px 0; font-weight: 600; }
+.board-easy { margin: 10px 0 4px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--accent-line); }
+.board-easy h3, .board-or { margin: 0 0 4px; font-size: 1rem; }
+.board-easy p { margin: 0; }
+.board-or { margin-top: 14px; }
+
+/* The teacher's own picks (teacher-suggest.js): the 🔎 Suggest a song dialog and the teacher's 👍 / 👎. */
+.queue-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.t-pane { padding: 18px 22px; display: grid; gap: 12px; }
+.t-pane form { padding: 0; }
+.t-search { display: flex !important; gap: 8px; }
+.t-search input { flex: 1 1 auto; min-width: 0; }
+.t-results { max-height: 50vh; }
+.t-results .item-tools, .fav-item .item-tools { flex-wrap: wrap; justify-content: flex-end; }
+.item-tools button.status { background: transparent; border-color: var(--line); color: var(--muted); font-weight: 600; }
+.tvote[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.big #suggestBtn, .big #nowUpBtn { display: none !important; }
+
+/* Host queue rows in a narrow queue card (a 1366 px screen): the title gets the whole first line,
+   the votes and the teacher's 👍 / 👎 / ⋯ share the second. Not on the big screen or the board. */
+.queue-panel { container-type: inline-size; }
+@container (max-width: 560px) {
+  body:not(.big) #queue .qitem {
+    grid-template-columns: auto auto minmax(0, 1fr) auto; row-gap: 2px;
+    grid-template-areas: "rank art text text" "rank art score tools";
+  }
+  body:not(.big) #queue .rank { grid-area: rank; }
+  body:not(.big) #queue .art { grid-area: art; }
+  body:not(.big) #queue .song-text { grid-area: text; }
+  body:not(.big) #queue .score { grid-area: score; display: flex; align-items: baseline; gap: 8px; justify-content: flex-start; }
+  body:not(.big) #queue .score b { font-size: 1.1rem; }
+  body:not(.big) #queue .item-tools { grid-area: tools; }
+}
+@media (max-width: 480px) {
+  .host .titlebar { gap: 8px; }
+  /* Only while a room runs (its tools fill the bar); the start screen keeps "RoomDJ" like the student page. */
+  .host.room-open:not(.board) .brand { font-size: 0; gap: 0; }
+  .host.room-open .panel-pill { display: none; }
+}
+
+/* ---- ✏️ Edit layout (layout.js, shared/layout.js) ----
+   A panel's text size: --scale zooms the panel's content (a real re-layout, so text stays crisp and
+   wraps or scrolls inside the panel; never a transform). Nested panels (Top 5, cleanup) zoom their own;
+   YouTube's players keep their size (YouTube asks for 200 x 200 px at least). */
+[data-panel] > :not([data-panel]):not(.layout-nozoom):not(.layout-layer) { zoom: var(--scale, 1); }
+.layout-off, .layout-col-off { display: none !important; }
+/* Bigger text wraps (or scrolls) inside its own panel, never out of it. */
+.stage .layout-scaled { overflow-wrap: anywhere; overflow-x: auto; }
+#fillerBox { zoom: calc(1 / var(--scale, 1)); }
+.layout-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.layout-layer[hidden] { display: none; }
+.layout-frame { position: absolute; border: 2px dashed var(--accent); border-radius: 12px; box-sizing: border-box; }
+.layout-frame[hidden] { display: none; }
+.layout-frame { container-type: inline-size; }
+/* Room for the tools: they sit over the panel's top edge (nested panels: the bottom edge). */
+body.layout-edit .card[data-panel] { padding-top: 54px; }
+body.layout-edit .cleanup-banner, body.layout-edit .top5-board { padding-bottom: 50px; }
+@container (max-width: 400px) {
+  .layout-label, .layout-pct { display: none; }
+  .layout-tools { gap: 3px; }
+  .layout-tools button { min-width: 30px; padding-inline: 5px; }
+}
+@container (max-width: 300px) {
+  .layout-tools button { min-width: 28px; min-height: 30px; padding-inline: 3px; font-size: .8rem; }
+}
+.layout-tools {
+  position: absolute; top: 4px; left: 4px; right: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+  pointer-events: none; font-size: .85rem; line-height: 1;
+}
+.layout-frame.nested .layout-tools { top: auto; bottom: 4px; }
+.layout-tools > *, .layout-grip, .layout-gutter { pointer-events: auto; }
+.layout-tools button, .layout-grip {
+  min-height: 34px; min-width: 34px; padding: 4px 8px; font-size: .85rem; font-weight: 650;
+  background: var(--card); border: 1px solid var(--accent-line); box-shadow: var(--shadow);
+}
+.layout-tools button:disabled { opacity: .5; }
+.layout-name, .layout-pct {
+  padding: 6px 8px; border-radius: 8px; background: var(--card); border: 1px solid var(--accent-line); font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.layout-move { cursor: grab; touch-action: none; }
+.layout-grip { position: absolute; right: 2px; bottom: 2px; cursor: nwse-resize; touch-action: none; font-size: 1.1rem; }
+.layout-gutters { position: absolute; inset: 0; pointer-events: none; }
+.layout-gutter {
+  position: absolute; width: 18px; margin-left: -9px; cursor: col-resize; touch-action: none; border-radius: 9px;
+}
+.layout-gutter[hidden] { display: none; }
+.layout-gutter::after { content: ""; position: absolute; left: 7px; top: 10%; bottom: 10%; width: 4px; border-radius: 4px; background: var(--accent); }
+.layout-gutter:hover, .layout-gutter.active, .layout-gutter:focus-visible { background: var(--accent-soft); }
+.layout-dragging, .layout-dragging * { cursor: grabbing !important; user-select: none; }
+.layout-drop { outline: 4px solid var(--accent); outline-offset: 2px; border-radius: 12px; }
+.layout-editbar {
+  position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 30;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
+  width: max-content; max-width: calc(100vw - 32px); padding: 8px 12px; border-radius: 14px;
+  background: var(--card); border: 2px solid var(--accent); box-shadow: var(--shadow);
+}
+.layout-editbar[hidden] { display: none; }
+.layout-editbar p { margin: 0; }
+.layout-editbar-text span { color: var(--muted); }
+.layout-hidden-list { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.layout-hidden-list:empty { display: none; }
+.layout-editbar button { min-height: 40px; }
+/* While editing there is room under the panels for the edit bar. */
+.layout-edit .stage { padding-bottom: 96px; }
+/* The board's remote steps aside while editing (the edit bar takes its place). */
+.layout-edit.board #remote { display: none; }
+.layout-edit.remote-idle { cursor: auto; }
+#layoutBtn[aria-checked="true"] { background: var(--accent-soft); }
+
+/* "Your open rooms" on the start screen (host.js loadOpenRooms) */
+.open-rooms { border: 1px solid var(--accent-line); background: var(--accent-soft); border-radius: 12px; padding: 10px 14px 12px; margin: 0 0 12px; text-align: left; }
+.open-rooms h2 { margin: 0 0 6px; font-size: 1.05rem; }
+.open-rooms-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.open-rooms-list li { display: flex; align-items: center; gap: 10px; }
+.open-rooms-list b { font-size: 1.05rem; }
+.open-rooms-list small { color: var(--muted); }
+.open-rooms-list button { flex: none; }

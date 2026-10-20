@@ -1,0 +1,9 @@
+# RoomDJ: the public pages may be indexed; the teacher page, the board, admin and the API not.
+User-agent: *
+Allow: /
+Disallow: /host/
+Disallow: /board/
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://roomdj.com/sitemap.xml

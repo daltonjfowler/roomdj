@@ -1,0 +1,45 @@
+/* The dropdown menu (menu.js) and the Settings tabs (tabs.js): one look for every menu on the host page. */
+
+.menu { position: relative; display: inline-flex; }
+.menu-btn { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; white-space: nowrap; }
+.menu-btn[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent-line); }
+.menu-btn .caret { font-size: .75em; color: var(--muted); }
+.menu-flag { font-size: .9em; }
+.more-btn { min-width: 40px; padding-inline: 8px; font-size: 1.15rem; font-weight: 800; line-height: 1; letter-spacing: .05em; }
+
+.menu-pop {
+  position: fixed; z-index: 30; min-width: 220px; max-width: min(340px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px); overflow: auto;
+  display: grid; gap: 2px; padding: 6px; border-radius: 12px;
+  background: var(--card); color: var(--ink); border: 1px solid var(--line); box-shadow: var(--shadow), 0 12px 32px rgba(16, 24, 40, .16);
+  animation: menu-in .12s ease-out;
+}
+.menu-pop[hidden] { display: none; }
+@keyframes menu-in { from { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .menu-pop { animation: none; } }
+
+.menu-pop > button {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 8px 12px;
+  border: 0; border-radius: 8px; background: transparent; text-align: left; font-weight: 550; white-space: nowrap;
+}
+.menu-pop > button:hover:not(:disabled), .menu-pop > button:focus-visible { background: var(--accent-soft); }
+.menu-pop > button:focus-visible { outline-offset: -2px; }
+.menu-pop > button[hidden] { display: none; }
+.menu-pop > button.danger { color: var(--bad); }
+.menu-pop > button.danger:hover:not(:disabled) { background: var(--bad-soft); }
+.menu-pop > button[aria-checked="true"] { color: var(--accent); font-weight: 650; }
+.menu-pop > button .badge-count, .menu-pop > button .menu-count { margin-left: auto; }
+.menu-count { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.menu-pop [role="separator"] { height: 1px; margin: 4px 6px; background: var(--line); }
+
+/* Tabs (Settings) */
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin: -4px 0 0; }
+.tabs [role="tab"] {
+  border: 0; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; background: transparent;
+  padding: 8px 10px; min-height: 40px; color: var(--muted); font-weight: 650; font-size: .95rem; white-space: nowrap;
+}
+.tabs [role="tab"]:hover:not(:disabled) { color: var(--ink); background: var(--accent-soft); border-color: transparent; border-bottom-color: var(--accent-line); }
+.tabs [role="tab"][aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-panel { display: grid; gap: 12px; align-content: start; }
+.tab-panel[hidden] { display: none; }
+.tab-panel:focus-visible { outline-offset: 4px; border-radius: 8px; }

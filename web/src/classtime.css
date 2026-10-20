@@ -1,0 +1,46 @@
+/* Class time (classtime.js): "Class ends at" picks, the bell schedule editor, the cleanup banner. */
+.class-times { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin: 0; display: grid; gap: 6px; }
+.class-times legend { padding: 0 4px; }
+.end-picks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.end-picks:empty { display: none; }
+.bell-pick.passed { opacity: .55; cursor: not-allowed; }
+.bell-pick small { font-weight: 400; }
+.end-custom { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.end-custom .text { width: auto; }
+.cleanup-at { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-weight: 600; }
+.cleanup-at .text { width: auto; }
+.class-times .linkbtn { justify-self: start; }
+
+.bell-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.bell-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+.bell-row .bell-ends { width: auto; }
+
+.songs-field { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin: 0; display: grid; gap: 8px; }
+.songs-field legend { padding: 0 4px; }
+.songs-field .linkbtn { justify-self: start; }
+.max-len-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.max-len-row .text { width: 5.5em; }
+
+/* Cleanup time: big and friendly on the projector, with a countdown to the bell. */
+.cleanup-banner { display: grid; gap: 4px; justify-items: center; text-align: center; padding: 12px 16px; border-radius: 12px;
+  border: 2px solid var(--accent-line); background: var(--accent-soft); color: var(--ink); }
+.cleanup-title { margin: 0; font-size: clamp(1.6rem, 3vw, 2.6rem); font-weight: 800; }
+.cleanup-count { margin: 0; font-size: clamp(1.1rem, 1.8vw, 1.6rem); }
+.cleanup-count b { font-variant-numeric: tabular-nums; }
+.big .cleanup-title { font-size: clamp(2.4rem, min(5vw, 9vh), 6rem); }
+.big .cleanup-count { font-size: clamp(1.4rem, min(2.6vw, 4.6vh), 3rem); }
+.big #cleanupKeep, .big #timesBtn { display: none !important; }
+@media (max-width: 640px) {
+  .bell-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .bell-row .bell-remove { grid-column: 1 / -1; justify-self: start; }
+}
+
+/* The class times, big (host room panel and the board): 🧹 Cleanup · 🔔 Class ends. */
+.times { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 6px 0; }
+.time-chip { display: inline-flex; align-items: baseline; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 6px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card2); font-size: 1.05rem; }
+.time-chip b { font-size: 1.45rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.time-chip small { color: var(--muted); }
+.time-chip.cleanup { border-color: var(--accent); }
+.big .time-chip { font-size: clamp(1.1rem, min(1.6vw, 2.8vh), 2rem); padding: .6vh 1vw; }
+.big .time-chip b { font-size: clamp(1.6rem, min(2.6vw, 4.6vh), 3.4rem); }
+.cleanup .time-chip.bell { border-color: var(--accent); }

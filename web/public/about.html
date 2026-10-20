@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About RoomDJ: Free Classroom Song Voting for Teachers</title>
+  <meta name="description" content="How RoomDJ works: students suggest and vote on songs, the teacher's computer plays the winners, and a filter blocks explicit and school-inappropriate songs. Free for teachers.">
+  <link rel="canonical" href="https://roomdj.com/about">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="RoomDJ">
+  <meta property="og:title" content="About RoomDJ: Free Classroom Song Voting for Teachers">
+  <meta property="og:description" content="How RoomDJ works: students suggest and vote on songs, the teacher's computer plays the winners, and a filter blocks explicit and school-inappropriate songs. Free for teachers.">
+  <meta property="og:url" content="https://roomdj.com/about">
+  <meta property="og:image" content="https://roomdj.com/social.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="RoomDJ: class song voting, minus the bad words. The projector board with the class code and the voted queue.">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"RoomDJ","url":"https://roomdj.com/","description":"Classroom song voting: students suggest and vote on songs from their Chromebooks, the teacher's computer plays the winners, and a filter keeps the music school-appropriate.","applicationCategory":"EducationalApplication","operatingSystem":"Web browser (Chromebook, Windows, Mac)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"audience":{"@type":"EducationalAudience","educationalRole":"teacher"},"image":"https://roomdj.com/social.jpg","author":{"@type":"Person","name":"Dalton Fowler","url":"https://daltonjfowler.com"}}</script>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <!-- Dark unless the visitor picked Light (src/theme.js): blocking, before the first paint -->
+  <script src="/theme-boot.js"></script>
+  <style>
+    :root { --bg: #ffffff; --ink: #14181d; --muted: #5b6570; --line: #d5dae0; --accent: #be185d; --soft: #fdf2f8; color-scheme: light; }
+    :root[data-theme="dark"] { --bg: #121314; --ink: #ecedee; --muted: #a0a3a8; --line: #343639; --accent: #f472b6; --soft: #2a1520; color-scheme: dark; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding-inline: 16px; padding-block: 24px 48px; }
+    main { max-width: 68ch; margin: 0 auto; }
+    h1 { font-size: 1.9rem; line-height: 1.15; margin: 8px 0 4px; }
+    h2 { font-size: 1.15rem; margin: 28px 0 6px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .muted { color: var(--muted); }
+    a { color: var(--accent); }
+    ul, ol { padding-left: 22px; }
+    li { margin: 6px 0; }
+    .lead { font-size: 1.12rem; }
+    .box { background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+    .cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 4px; }
+    .cta a { display: inline-block; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line); text-decoration: none; font-weight: 650; color: var(--ink); background: var(--soft); }
+    .cta a.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    :root[data-theme="dark"] .cta a.primary { color: #2b0716; }
+    .shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 12px 0; }
+    .shot { margin: 0; display: grid; gap: 6px; }
+    .shot.wide { grid-column: 1 / -1; }
+    .shot img { width: 100%; height: auto; display: block; border-radius: 10px; border: 1px solid var(--line); }
+    .shot.tall img { max-height: 520px; object-fit: cover; object-position: top; }
+    .shot figcaption { font-size: .9rem; color: var(--muted); }
+    .shot figcaption b { color: var(--ink); }
+    @media (max-width: 560px) { .shots { grid-template-columns: minmax(0, 1fr); } }
+    main { max-width: 860px; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="muted"><a href="/">← Back to RoomDJ</a></p>
+  <a href="/" aria-label="RoomDJ home"><img src="/icon.svg" alt="" width="64" height="64"></a>
+  <h1>RoomDJ</h1>
+  <p class="lead"><b>Class song voting, minus the bad words.</b> Students suggest songs and vote on what plays next from their Chromebooks. The teacher's computer plays the winners. A filter keeps it school-clean.</p>
+  <div class="cta">
+    <a class="primary" href="/host/">🍎 Start a room (teachers)</a>
+    <a href="/">🎒 Join a class (students)</a>
+  </div>
+
+  <h2>Why I made it</h2>
+  <p>I'm Dalton, a high school engineering and CS teacher in New Jersey. Music in the room makes work time better. Taking requests out loud does not: half the class shouts, the other half asks for songs I cannot play at school, and I end up DJing instead of teaching. So I built a thing. Kids pick, kids vote, the filter says no so I don't have to.</p>
+
+  <h2>How a class works</h2>
+  <ol>
+    <li><b>The teacher opens a room</b> at <a href="/host/">roomdj.com/host</a> and signs in with Spotify. The class code goes up on the board.</li>
+    <li><b>Students join</b> at roomdj.com with the code. They get a made-up nickname like "Brave Otter". No accounts, nothing to type about themselves.</li>
+    <li><b>They suggest and vote.</b> Every suggestion is checked first. The song with the most votes plays next on the teacher's computer.</li>
+    <li><b>At the end</b>, a quick recap: the class's Top 5, who picked the crowd favorite, a few fun stats.</li>
+  </ol>
+  <p><b>📺 Projector on a different computer?</b> Open the board at <a href="/board/">roomdj.com/board</a> on the projector computer. It shows the class code, what's playing and the votes, and plays nothing itself, so the music can come from your laptop or any other device.</p>
+
+  <h2>What it looks like</h2>
+  <p class="muted">A real class on RoomDJ (tap any picture to see it full size).</p>
+  <div class="shots">
+      <figure class="shot wide"><a href="/screens/teacher-control.jpg" target="_blank" rel="noopener"><img src="/screens/teacher-control.jpg" alt="The teacher control screen: the class code, the song playing with its cover, and the queue with votes" loading="lazy"></a><figcaption><b>The teacher screen.</b> Class code on the left, the song playing in the middle, the queue on the right: veto, ban or bump any song.</figcaption></figure>
+      <figure class="shot wide"><a href="/screens/settings-votes.jpg" target="_blank" rel="noopener"><img src="/screens/settings-votes.jpg" alt="RoomDJ Settings, Songs tab: thumbs down votes set to On, counts hidden; scores never go below 0; thumbs down per student per class; Ghost thumbs up" loading="lazy"></a><figcaption><b>Settings: you decide how voting works.</b> 👎 votes can be <b>Off</b> (students only 👍, so every song gets its turn), <b>On, counts hidden</b> (students can 👎, but only you see how many, so nobody gets piled on), or <b>On, counts shown</b>. <b>Scores never go below 0</b> keeps every student's song in line to play. Limit 👎 per student, and turn on <b>Ghost 👍</b> to quietly give a song that's been waiting a little love. Save it as your default, or change it for just this room.</figcaption></figure>
+      <figure class="shot"><a href="/screens/menu-room.jpg" target="_blank" rel="noopener"><img src="/screens/menu-room.jpg" alt="The Room menu open: change code, change times, lock suggestions, students, close room" loading="lazy"></a><figcaption><b>Room menu.</b> Change the code or times, pause suggestions, see students, close the room.</figcaption></figure>
+      <figure class="shot"><a href="/screens/menu-lists.jpg" target="_blank" rel="noopener"><img src="/screens/menu-lists.jpg" alt="The Lists menu open: Blocked today, Top 5, Favorites, Resting songs, Play recap" loading="lazy"></a><figcaption><b>Lists menu.</b> What got blocked today, the Top 5, favorites, songs resting, and the recap.</figcaption></figure>
+      <figure class="shot wide"><a href="/screens/board.jpg" target="_blank" rel="noopener"><img src="/screens/board.jpg" alt="The projector board: the class code, now playing and the queue in big type" loading="lazy"></a><figcaption><b>The board.</b> For the projector, on any computer. It shows the code, the song and the votes, and plays nothing, so the music can come from your laptop.</figcaption></figure>
+      <figure class="shot tall"><a href="/screens/student-vote.jpg" target="_blank" rel="noopener"><img src="/screens/student-vote.jpg" alt="A student page on a Chromebook: the queue with thumbs up and thumbs down" loading="lazy"></a><figcaption><b>Students vote</b> 👍 or 👎 from their Chromebooks. Names like "Splendid Phoenix" are made up for them.</figcaption></figure>
+      <figure class="shot tall"><a href="/screens/student-back-to-work.jpg" target="_blank" rel="noopener"><img src="/screens/student-back-to-work.jpg" alt="The Back to work screen a student sees after suggesting a song, with a countdown" loading="lazy"></a><figcaption><b>Back to work!</b> After a pick, a student waits a few minutes (you choose how long) before the next one.</figcaption></figure>
+      <figure class="shot"><a href="/screens/recap-title.jpg" target="_blank" rel="noopener"><img src="/screens/recap-title.jpg" alt="Recap slide: Period recap, 4 songs, 11 votes" loading="lazy"></a><figcaption><b>The recap.</b> An end-of-class awards show on the projector, with the #1 song playing.</figcaption></figure>
+      <figure class="shot"><a href="/screens/recap-decades.jpg" target="_blank" rel="noopener"><img src="/screens/recap-decades.jpg" alt="Recap slide: the decades of the songs played" loading="lazy"></a><figcaption>Fun stats from that class only: decades, genres, longest song, top voter.</figcaption></figure>
+      <figure class="shot wide"><a href="/screens/recap-top5.jpg" target="_blank" rel="noopener"><img src="/screens/recap-top5.jpg" alt="Recap slide: Top 5, number 4, September by Earth, Wind and Fire" loading="lazy"></a><figcaption>The Top 5, counted down to #1.</figcaption></figure>
+  </div>
+
+  <h2>What keeps it school-clean</h2>
+  <ul>
+    <li>Explicit versions are swapped for the clean version, or blocked when there isn't one.</li>
+    <li>Word lists, plus your own blocked words and banned songs.</li>
+    <li>An AI check reads what each new song is about (drugs, drinking, violence and so on), and checks album covers too. When it isn't sure, the song waits for the teacher in "Needs a look" instead of slipping through.</li>
+    <li>The teacher can veto, ban, lock suggestions, or play a pick of their own any time.</li>
+  </ul>
+  <p class="muted">The checker is good, not perfect. It is not a replacement for a teacher in the room.</p>
+
+  <h2>Students' privacy</h2>
+  <ul>
+    <li>No student accounts, no names, no emails. Nicknames are made up for them.</li>
+    <li>Students never touch Spotify. Only the teacher's computer plays music.</li>
+    <li>A room's songs, votes and nicknames are deleted when it closes (at the end of class, or the end of the day).</li>
+  </ul>
+  <p>Details in <a href="/legal">Privacy &amp; legal</a>.</p>
+
+  <h2>What it costs</h2>
+  <p>Nothing. RoomDJ is free for teachers: no ads, no payments. It is also open source (MIT): the <a href="https://github.com/daltonjfowler/roomdj" target="_blank" rel="noopener">source code is on GitHub</a>. Each teacher needs Spotify Premium and a free "Spotify app" of their own, which takes about five minutes. <a href="/setup">Here's how</a>.</p>
+
+  <h2>Also by me</h2>
+  <p><a href="https://teachchat.app" rel="noopener">teachChat</a> is my classroom chat tool, with polls and teacher moderation. More classroom tools at <a href="https://daltonjfowler.com" rel="noopener">daltonjfowler.com</a>.</p>
+
+  <p class="muted">RoomDJ is not made by or affiliated with Spotify or Apple. Spotify is a trademark of Spotify AB.</p>
+</main>
+</body>
+</html>

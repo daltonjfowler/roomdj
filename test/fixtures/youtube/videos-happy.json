@@ -1,0 +1,37 @@
+{
+  "kind": "youtube#videoListResponse",
+  "etag": "hand-written-fixture",
+  "pageInfo": { "totalResults": 5, "resultsPerPage": 5 },
+  "items": [
+    {
+      "kind": "youtube#video", "etag": "v1", "id": "OffVideo001",
+      "snippet": { "title": "Pharrell Williams - Happy (Official Music Video)", "channelTitle": "Pharrell Williams", "categoryId": "10", "liveBroadcastContent": "none" },
+      "contentDetails": { "duration": "PT4M1S", "dimension": "2d", "definition": "hd", "caption": "false", "licensedContent": true, "contentRating": {}, "projection": "rectangular" },
+      "status": { "uploadStatus": "processed", "privacyStatus": "public", "license": "youtube", "embeddable": true, "publicStatsViewable": true, "madeForKids": false }
+    },
+    {
+      "kind": "youtube#video", "etag": "v2", "id": "LiveOscar01",
+      "snippet": { "title": "Pharrell Williams - Happy (Live at the Oscars)", "channelTitle": "Oscars", "categoryId": "10", "liveBroadcastContent": "none" },
+      "contentDetails": { "duration": "PT4M10S", "contentRating": {} },
+      "status": { "privacyStatus": "public", "embeddable": true }
+    },
+    {
+      "kind": "youtube#video", "etag": "v3", "id": "TopicAudio1",
+      "snippet": { "title": "Happy (From &quot;Despicable Me 2&quot;)", "channelTitle": "Pharrell Williams - Topic", "categoryId": "10", "liveBroadcastContent": "none" },
+      "contentDetails": { "duration": "PT3M53S", "contentRating": {} },
+      "status": { "privacyStatus": "public", "embeddable": true }
+    },
+    {
+      "kind": "youtube#video", "etag": "v4", "id": "KidsCover01",
+      "snippet": { "title": "Happy - Pharrell Williams (Cover by Kids Choir)", "channelTitle": "Kids Sing Along", "categoryId": "10", "liveBroadcastContent": "none" },
+      "contentDetails": { "duration": "PT3M50S", "contentRating": {} },
+      "status": { "privacyStatus": "public", "embeddable": true }
+    },
+    {
+      "kind": "youtube#video", "etag": "v5", "id": "SpedUpEdit1",
+      "snippet": { "title": "pharrell williams - happy (sped up)", "channelTitle": "speedy songs", "categoryId": "10", "liveBroadcastContent": "none" },
+      "contentDetails": { "duration": "PT3M5S", "contentRating": { "ytRating": "ytAgeRestricted" } },
+      "status": { "privacyStatus": "public", "embeddable": true }
+    }
+  ]
+}

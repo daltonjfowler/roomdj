@@ -1,0 +1,11 @@
+node_modules/
+/public/
+.wrangler/
+.dev.vars
+*.log
+.DS_Store
+test/browser/.out/
+test/.ai-songs-cache.json
+test/.art-covers-cache.json
+# Private docs (plans, audits): local only, never in the public repo
+notes/

@@ -1,0 +1,31 @@
+{
+  "about": "Album covers for scripts/art-test.mjs (the album art check, shared/art.js). Each is found on iTunes by artist + album (the cover iTunes serves, which is what RoomDJ shows). expected: INAPPROPRIATE (a teacher would not put it on a projector for ages 11-18) or OK. 'note' says why; labels were checked by looking at the cover iTunes actually serves (2026-10-08): Blind Faith and My Beautiful Dark Twisted Fantasy are served censored, so they are OK here.",
+  "covers": [
+    { "artist": "Deftones", "album": "Around the Fur", "expected": "INAPPROPRIATE", "note": "woman in a swimsuit, suggestive pose and framing", "song": "Be Quiet and Drive" },
+    { "artist": "Nirvana", "album": "Nevermind", "expected": "INAPPROPRIATE", "note": "nude baby, genitals visible", "song": "Smells Like Teen Spirit" },
+    { "artist": "Jane's Addiction", "album": "Nothing's Shocking", "expected": "INAPPROPRIATE", "note": "nude figures, bare breasts", "song": "Jane Says" },
+    { "artist": "Blind Faith", "album": "Blind Faith", "expected": "OK", "note": "iTunes serves the alternate band-photo cover, not the original topless girl" },
+    { "artist": "Ohio Players", "album": "Honey", "expected": "INAPPROPRIATE", "note": "nude woman covered in honey" },
+    { "artist": "Kanye West", "album": "My Beautiful Dark Twisted Fantasy", "expected": "OK", "note": "iTunes serves the pixelated (censored) painting, not the original nude one", "song": "Power" },
+    { "artist": "Lil' Kim", "album": "La Bella Mafia", "expected": "INAPPROPRIATE", "note": "lingerie-style outfit, suggestive pose (Hard Core is not on iTunes)", "song": "Magic Stick" },
+    { "artist": "Roxy Music", "album": "Country Life", "expected": "INAPPROPRIATE", "note": "two women in see-through lingerie" },
+    { "artist": "Prince", "album": "Lovesexy", "expected": "INAPPROPRIATE", "note": "nude Prince among flowers" },
+    { "artist": "Sabrina Carpenter", "album": "Man's Best Friend", "expected": "INAPPROPRIATE", "note": "suggestive pose, hair pulled (2025; censored alternate exists)", "song": "Manchild" },
+    { "artist": "Christina Aguilera", "album": "Stripped", "expected": "INAPPROPRIATE", "note": "topless, covered only by hair (the Anaconda single is not on iTunes)", "song": "Beautiful" },
+    { "artist": "Rihanna", "album": "Unapologetic", "expected": "INAPPROPRIATE", "note": "topless, covered only by text" },
+    { "artist": "Taylor Swift", "album": "1989", "expected": "OK", "note": "polaroid face crop" },
+    { "artist": "Adele", "album": "21", "expected": "OK", "note": "portrait" },
+    { "artist": "The Beatles", "album": "Abbey Road", "expected": "OK", "note": "crosswalk", "song": "Here Comes the Sun" },
+    { "artist": "Fleetwood Mac", "album": "Rumours", "expected": "OK", "note": "band photo (dance pose)" },
+    { "artist": "Michael Jackson", "album": "Thriller", "expected": "OK", "note": "white suit, tiger cub" },
+    { "artist": "Daft Punk", "album": "Random Access Memories", "expected": "OK", "note": "helmets" },
+    { "artist": "Pink Floyd", "album": "The Dark Side of the Moon", "expected": "OK", "note": "prism", "song": "Money" },
+    { "artist": "Coldplay", "album": "Parachutes", "expected": "OK", "note": "globe" },
+    { "artist": "Harry Styles", "album": "Harry's House", "expected": "OK", "note": "upside-down room" },
+    { "artist": "Olivia Rodrigo", "album": "SOUR", "expected": "OK", "note": "stickers on face" },
+    { "artist": "Lin-Manuel Miranda", "album": "Encanto", "expected": "OK", "note": "animated family", "song": "We Don't Talk About Bruno" },
+    { "artist": "Original Broadway Cast of Hamilton", "album": "Hamilton", "expected": "OK", "note": "star logo", "song": "My Shot" },
+    { "artist": "Metallica", "album": "Master of Puppets", "expected": "OK", "note": "dark: graveyard crosses on strings, not graphic" },
+    { "artist": "Billie Eilish", "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?", "expected": "OK", "note": "moody: sitting on a bed, white eyes, not graphic" }
+  ]
+}

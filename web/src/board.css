@@ -1,0 +1,37 @@
+/* The board (board.js): the host's big screen (host.css .big) on its own page, plus the remote bar. */
+.board .stage { padding-bottom: 84px; }
+.board .side { max-height: calc(100dvh - 160px); }
+.board .brand { cursor: pointer; } /* the logo goes home */
+.review-pill { background: var(--accent-soft); border-color: var(--accent-line); }
+.board-paused { margin: 0; font-weight: 650; }
+
+/* The remote: bottom centre; hides after a few seconds without the mouse (board.js). */
+.remote {
+  position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 15;
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center;
+  max-width: calc(100vw - 32px); padding: 8px 10px; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow);
+  transition: opacity .3s, transform .3s, visibility 0s;
+}
+.remote[hidden] { display: none; }
+.remote button { min-height: 44px; min-width: 44px; font-weight: 650; }
+#rLock.on { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.remote-note { font-size: .9rem; color: var(--muted); max-width: 32ch; }
+.remote-note:empty { display: none; }
+.remote-idle .remote { opacity: 0; visibility: hidden; transform: translate(-50%, 16px); transition: opacity .3s, transform .3s, visibility 0s .3s; }
+.remote-idle { cursor: none; }
+.board .toasts { bottom: 84px; }
+@media (prefers-reduced-motion: reduce) { .remote, .remote-idle .remote { transition: none; } }
+
+/* The sign-in board waiting for its teacher's room (protocol.js BOARD SIGN-IN): calm, with a clock. */
+.wait-screen {
+  min-height: calc(100dvh - 90px); display: grid; place-content: center; justify-items: center;
+  gap: 10px; padding: 24px 16px; text-align: center;
+}
+.wait-screen[hidden] { display: none; }
+.wait-clock { margin: 0; font-size: clamp(3.5rem, 14vw, 9rem); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.wait-title { margin: 8px 0 0; font-size: clamp(1.3rem, 3.4vw, 2.2rem); font-weight: 650; max-width: 40ch; text-wrap: balance; }
+.wait-brand { margin: 0; font-weight: 700; color: var(--accent); letter-spacing: .04em; }
+.wait-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; margin-top: 18px; }
+.wait-actions button { min-height: 44px; }
+.menu-actions { flex-wrap: wrap; }
