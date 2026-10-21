@@ -1055,7 +1055,7 @@ document.addEventListener('click', (e) => {
   btn.disabled = true;
 });
 
-/** A queue row's ⋯ menu (menu.js): Play next / Undo, Play now, Veto, Veto or ban with a reason, Ban. */
+/** A queue row's ⋯ menu (menu.js): Play next / Undo, Play now, ⭐ RoomDJ Favs (Spotify), Veto, Veto or ban with a reason, Ban. */
 function rowMenu(item, i) {
   const t = esc(item.song.title);
   return `<span class="menu row-menu">
@@ -1066,6 +1066,7 @@ function rowMenu(item, i) {
     ? '<button type="button" role="menuitem" tabindex="-1" data-act="unpush" title="Back to its place">⏬ Undo play next</button>'
     : '<button type="button" role="menuitem" tabindex="-1" data-act="push" title="Free; before votes and jumps">⏫ Play next</button>'}
       <button type="button" role="menuitem" tabindex="-1" data-act="playNow" title="Skips the song playing">▶ Play now</button>
+      ${player?.saveToFavs ? '<button type="button" role="menuitem" tabindex="-1" data-act="favs" title="Your own private playlist on Spotify">⭐ Save to RoomDJ Favs</button>' : ''}
       <div role="separator"></div>
       <button type="button" role="menuitem" tabindex="-1" data-act="veto" title="Take it out of the queue">🚫 Veto</button>
       <button type="button" role="menuitem" tabindex="-1" data-act="more" aria-haspopup="dialog" title="The student sees the reason and your note">💬 Veto or ban with a reason…</button>
@@ -1165,6 +1166,7 @@ $('#queue').addEventListener('click', async (e) => {
     return;
   }
   if (btn.dataset.act === 'playNow') return playChosenNow(item);
+  if (btn.dataset.act === 'favs') return saveFavs(item.song);
   if (btn.dataset.act === 'veto') send({ t: 'veto', id });
   if (btn.dataset.act === 'more') pickReason({ id, title: item.song.title, actions: ['veto', 'ban'], from: menuButtonOf(btn) });
   if (btn.dataset.act === 'ban') {
@@ -1942,16 +1944,21 @@ $('#skipBtn').addEventListener('click', () => {
   if (conn?.send({ t: 'skip', from: state.nowPlaying.id })) nextAsked = { from: state.nowPlaying.id, at: Date.now() };
   else toast('Reconnecting to the room. Try again in a moment.', 'warn');
 });
-// ⭐ RoomDJ Favs: the song playing goes in the teacher's own private Spotify playlist.
+// ⭐ RoomDJ Favs: a song (the one playing, or one waiting in the queue: its ⋯ menu) goes in the
+// teacher's own private Spotify playlist.
+async function saveFavs(song) {
+  if (!song || !player?.saveToFavs) return;
+  const done = await player.saveToFavs(song);
+  if (done.ok) toast(done.already ? `${song.title} is already in RoomDJ Favs.` : `⭐ Saved ${song.title} to RoomDJ Favs on Spotify.`, 'ok');
+  else toast(done.message, 'warn');
+}
 $('#favsBtn').addEventListener('click', async () => {
   const now = state?.nowPlaying;
-  if (!now || !player?.saveToFavs) return;
+  if (!now) return;
   const btn = $('#favsBtn');
   btn.disabled = true;
-  const done = await player.saveToFavs(now.song);
+  await saveFavs(now.song);
   btn.disabled = !state?.nowPlaying;
-  if (done.ok) toast(done.already ? `${now.song.title} is already in RoomDJ Favs.` : `⭐ Saved ${now.song.title} to RoomDJ Favs on Spotify.`, 'ok');
-  else toast(done.message, 'warn');
 });
 
 $('#nowUpBtn').addEventListener('click', () => {

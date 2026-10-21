@@ -152,7 +152,7 @@ try {
     check('authorize: client_id', q.client_id === CLIENT_ID);
     check('authorize: response_type=code, S256', q.response_type === 'code' && q.code_challenge_method === 'S256');
     check('authorize: redirect_uri is <origin>/host/', q.redirect_uri === HOST, q.redirect_uri);
-    check('authorize: scopes', q.scope === 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state', q.scope);
+    check('authorize: scopes', q.scope === 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-modify-private', q.scope); // playlist-modify-private: ⭐ RoomDJ Favs
     await p.page.goBack().catch(() => {});
     await p.page.waitForURL(/\/host\//).catch(() => {});
     pending = await p.page.evaluate(() => JSON.parse(sessionStorage.getItem('cq.spotifyLogin')));
@@ -250,6 +250,7 @@ try {
       } };
       window.onSpotifyWebPlaybackSDKReady?.();`,
     }));
+    const favs = { made: [], added: [] };
     await p.page.route('https://api.spotify.com/**', async (r) => {
       const req = r.request();
       if (req.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: CORS });
@@ -265,6 +266,16 @@ try {
       if (url.pathname === '/v1/me/player/play') {
         plays.push({ device: url.searchParams.get('device_id'), body: JSON.parse(req.postData() || '{}') });
         return r.fulfill({ status: 204, headers: CORS });
+      }
+      // ⭐ RoomDJ Favs (players/spotify.js saveToFavs): who am I, make the playlist, add to it.
+      if (url.pathname === '/v1/me' && req.method() === 'GET') return r.fulfill({ headers: CORS, json: { id: 'teacher-one' } });
+      if (url.pathname === '/v1/me/playlists' && req.method() === 'POST') {
+        favs.made.push(JSON.parse(req.postData() || '{}'));
+        return r.fulfill({ status: 201, headers: CORS, json: { id: 'PLFAVS' } });
+      }
+      if (url.pathname === '/v1/playlists/PLFAVS/items' && req.method() === 'POST') {
+        favs.added.push(...(JSON.parse(req.postData() || '{}').uris ?? []));
+        return r.fulfill({ status: 201, headers: CORS, json: { snapshot_id: 'x' } });
       }
       return r.fulfill({ status: 404, headers: CORS, json: {} });
     });
@@ -303,6 +314,19 @@ try {
     s1.send(JSON.stringify({ t: 'suggest', song: songB.id }));
     await until(() => s1.msgs.filter((m) => m.t === 'suggested').length >= 2, { timeout: 20_000 });
     check('room test: two songs queued', s1.msgs.filter((m) => m.t === 'suggested' && m.ok).length === 2, JSON.stringify(s1.msgs.filter((m) => m.t === 'suggested')));
+
+    // ⭐ Save to RoomDJ Favs from a waiting song's ⋯ menu (2026-10-20), not only the song playing.
+    const rowB = await until(() => host.msgs.findLast((m) => m.t === 'state')?.state.queue.find((q) => q.song.id === songB.id)?.id);
+    const favItem = `#queue [data-id="${rowB}"] button[data-act="favs"]`;
+    await reveal(p.page, favItem);
+    await p.page.click(favItem);
+    const saved = await until(async () => /Saved .* to RoomDJ Favs/.test(await toasts(p)), { timeout: 10_000 });
+    check('queue ⋯ menu: ⭐ Save to RoomDJ Favs adds that waiting song', Boolean(saved) && favs.made.length === 1 && favs.made[0].public === false
+      && favs.added.length === 1 && favs.added[0].includes(songB.title.split(' (')[0].replace(/\W+/g, '').toLowerCase()), JSON.stringify({ favs, t: await toasts(p) }));
+    await reveal(p.page, favItem);
+    await p.page.click(favItem);
+    const again = await until(async () => /already in RoomDJ Favs/.test(await toasts(p)), { timeout: 10_000 });
+    check('the same song again: "already in RoomDJ Favs", not added twice', Boolean(again) && favs.added.length === 1);
 
     await p.page.click('#startBtn');
     const skipped = await until(async () => /explicit version/.test(await toasts(p)), { timeout: 15_000 });

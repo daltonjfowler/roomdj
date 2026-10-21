@@ -564,7 +564,7 @@ Claude account).
    NEXT_LOCK_S (15) seconds of a song the host sends 'lockNext' and the next song is locked in.
    Browser tests that took votes back or switched `#setAi`/`#setUnknown` need updating.
 34. ⭐ RoomDJ Favs (Dalton, 2026-10-16; web/src/players/spotify.js saveToFavs): the host's ⭐ (Spotify
-   player only) adds the song playing to the teacher's own PRIVATE playlist "RoomDJ Favs", made on
+   player only; also "⭐ Save to RoomDJ Favs" in each queue row's ⋯ menu, 2026-10-20) adds the song playing (or that waiting song) to the teacher's own PRIVATE playlist "RoomDJ Favs", made on
    first use, via Spotify's 2026 endpoints (POST /me/playlists, POST /playlists/{id}/items). Needs
    the `playlist-modify-private` scope: teachers who signed in before must sign in again (403 says so).
    Runs only in the teacher's browser with their own token (invariant 1); the server never sees it.
