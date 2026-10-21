@@ -79,6 +79,8 @@ button.linkbtn:hover:not(:disabled) { color: var(--accent); background: none; }
 .banner.warn { color: var(--warn); background: var(--warn-soft); border-color: var(--warn); }
 .banner.bad { color: var(--bad); background: var(--bad-soft); border-color: var(--bad); }
 .banner.info { color: var(--ink); background: var(--accent-soft); border-color: var(--accent-line); }
+.conn-banner { margin: 10px 16px 0; }
+.conn-banner button { margin: 0 4px; font-weight: 700; }
 .check { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .check input { accent-color: var(--accent); width: 18px; height: 18px; flex: none; }
 

@@ -830,8 +830,15 @@ function enterRoom({ room: id, classCode, token, until, boardToken = null }) {
   conn = connectRoom(roomSocketUrl(id, { role: 'host', token }), { onMessage, onStatus });
 }
 
+// After about 15 s of failed tries (1 + 2 + 4 + 8 s backoff), offer a reload: a stuck socket or a
+// school filter (Fortinet SSL inspection breaks the WebSocket) does not always come back alone.
+const STUCK_TRIES = 4;
+$('#connReload').addEventListener('click', () => location.reload());
+
 async function onStatus(status, fails) {
   const pill = $('#connPill');
+  $('#connBanner').hidden = status !== 'retrying' || fails < 2; // a one-try blip stays in the pill
+  $('#connStuck').hidden = status !== 'retrying' || fails < STUCK_TRIES;
   if (status === 'open') {
     pill.classList.remove('off');
     $('#connText').textContent = 'Connected';

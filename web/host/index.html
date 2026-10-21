@@ -65,6 +65,12 @@
     <a class="toplink" href="/" target="_blank" rel="noopener">Student page</a>
     <button id="theme" class="themebtn" type="button">🖥️ System</button>
   </header>
+  <!-- A dropped room connection (host.js onStatus): the pill alone was easy to miss (2026-10-21). -->
+  <div id="connBanner" class="banner warn conn-banner" role="alert" hidden>
+    <b>Lost the connection to RoomDJ.</b> Getting back in by itself…
+    <span id="connStuck" hidden>Still not back? <button id="connReload" type="button">Reload page</button> Your room stays open.
+      If reloading does not fix it, the school's web filter may be blocking roomdj.com: ask IT to allow it.</span>
+  </div>
 
   <main id="main">
     <!-- Teacher key, then "Who's teaching?" (protocol.js TEACHER PROFILES), then open today's room -->

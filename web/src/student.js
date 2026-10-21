@@ -424,7 +424,7 @@ async function onStatus(status, fails) {
   }
   pill.classList.add('off');
   $('#roomPillText').textContent = 'Reconnecting…';
-  if (joined) setNet(navigator.onLine === false ? 'offline' : 'lost');
+  if (joined) setNet(navigator.onLine === false ? 'offline' : fails >= 4 ? 'stuck' : 'lost');
   const mine = conn;
   if (!joined) {
     // Never got in: the room is gone, or the server turned the join down (e.g. the nickname).
@@ -599,6 +599,7 @@ $('#endBtn').addEventListener('click', () => {
 const NET_TEXT = {
   lost: 'Lost the connection. Getting back in…',
   offline: 'You are offline. Check the Wi-Fi. RoomDJ gets back in by itself.',
+  stuck: 'Still not back in. Try reloading this page.', // after about 15 s of failed tries
 };
 function setNet(kind) {
   const b = $('#netBanner');
