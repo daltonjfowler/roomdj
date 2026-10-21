@@ -1,8 +1,7 @@
 // Coupons (shared/coupon.js COUPONS): checking one and using it up, once, everywhere.
 //
-// Built dark (Dalton, 2026-10-20: "build this on backend without implementing till done"): nothing
-// takes a coupon unless the COUPONS var is 'on' AND COUPON_PUBLIC_KEYS holds a key. The teacher can
-// still turn coupons off per teacher (settings.coupons). No student page or host page shows them yet.
+// LIVE since 2026-10-20 (wrangler.jsonc vars COUPONS = 'on' and COUPON_PUBLIC_KEYS = teachChat's public
+// key). Nothing takes a coupon without both. The teacher can turn coupons off (settings.coupons).
 //
 // "Good once" has to hold across rooms and across Cloudflare's data centers, which KV (eventually
 // consistent) cannot promise. So each coupon id gets its own tiny Durable Object (CouponLedger,

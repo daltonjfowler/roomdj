@@ -13,8 +13,7 @@
   // One Durable Object per open room, named by a random room id. It holds the queue, votes and
   // connected sockets (WebSocket hibernation API) and deletes itself after the room closes.
   // COUPON_LEDGER: one tiny object per coupon id, so a coupon is good once everywhere (src/coupons.js).
-  // Coupons stay off until the vars COUPONS = "on" and COUPON_PUBLIC_KEYS (the issuers' Ed25519
-  // public keys, base64url, comma separated) are set; neither is set yet (built dark, 2026-10-20).
+  // Coupons need the vars COUPONS = "on" and COUPON_PUBLIC_KEYS (vars below; live since 2026-10-20).
   "durable_objects": {
     "bindings": [
       { "name": "ROOMS", "class_name": "Room" },
@@ -62,7 +61,15 @@
   // (CLAUDE.md invariant 10).
   // ADMIN_PROFILES: teacher profile ids (comma-separated) whose SPOTIFY sign-in opens /admin/
   // (src/admin.js). Never the teacher key.
-  "vars": { "SPOTIFY_CLIENT_ID": "cb5810b6e2e64ca38407949a4615f160", "ADMIN_PROFILES": "dalton-fowler" },
+  "vars": {
+    "SPOTIFY_CLIENT_ID": "cb5810b6e2e64ca38407949a4615f160",
+    "ADMIN_PROFILES": "dalton-fowler",
+    // 🎟 Coupons LIVE (Dalton, 2026-10-20): teachChat's PUBLIC Ed25519 key (its private half is the
+    // teachChat secret ROOMDJ_COUPON_KEY). Comma separated, so a new key can be added before the old
+    // one is removed. COUPONS "off" (or removing it) stops every coupon at once.
+    "COUPONS": "on",
+    "COUPON_PUBLIC_KEYS": "4-68bzwV4lw9cH_AY7vUbrpFRnjgogyGK3aOPyj6DHs"
+  },
   // TEACHER_KEY (and optional TEACHER_KEY_2) are secrets: npx wrangler secret put TEACHER_KEY.
   // Optional secrets: YOUTUBE_API_KEY; APPLE_TEAM_ID + APPLE_KEY_ID + APPLE_PRIVATE_KEY (Apple Music,
   // hidden until all three are set; docs/APPLE-SETUP.md).

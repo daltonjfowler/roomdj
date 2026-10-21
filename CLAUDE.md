@@ -569,6 +569,14 @@ Claude account).
    the `playlist-modify-private` scope: teachers who signed in before must sign in again (403 says so).
    Runs only in the teacher's browser with their own token (invariant 1); the server never sees it.
 
+35. 🎟 Coupons (Dalton, 2026-10-20; shared/coupon.js COUPONS, src/coupons.js): a student trades class points in
+   teachChat for a coupon (RDJ1.<payload>.<Ed25519 signature>, no names or ids) worth credits in ANY room. LIVE:
+   wrangler vars COUPONS = "on" + COUPON_PUBLIC_KEYS (teachChat's public key; its private half is the teachChat
+   secret ROOMDJ_COUPON_KEY). Good once everywhere (CouponLedger DO per coupon id). Refused and NOT used up
+   while the teacher's settings.coupons is off or the room has credits off. Student page: #coupon= link (used
+   after joining) or "Have a coupon?"; host Settings → Credits switch. RoomDJ stays free: no teachChat
+   branding or upsell here beyond the help line. Tests: test/coupon.test.mjs, test/browser/coupons.mjs.
+
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.
 `npm run test:signin` (Spotify sign-in against a fake Spotify: own app, RoomDJ's app claim, claimed teacher gone for the next person, another teacher's room not taken back, board, Sign out; its own wrangler dev on 8798 with `--persist-to .wrangler/signin-test` (delete it first) and `--var SPOTIFY_AUTH_TEST_BASE:http://127.0.0.1:8797`, see its header). The other browser tests use the teacher key: `cq.useKey` in localStorage, or `#useKey` via teacher-pick.mjs.
