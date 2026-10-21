@@ -454,3 +454,13 @@ body.layout-edit .cleanup-banner, body.layout-edit .top5-board { padding-bottom:
 .disclaimer-body h2 { margin: 0 0 10px; }
 .disclaimer-body p { line-height: 1.5; margin: 0 0 10px; }
 #disclaimerOk { min-width: 170px; }
+
+/* Quick start: Song suggestions on the open-room form */
+.quick-credits { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin: 12px 0 0; display: grid; gap: 6px; }
+.quick-credits legend { padding: 0 4px; }
+.credits-start .nowrap { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.quick-credits .pick { align-items: baseline; }
+.quick-credits .pick small { display: block; color: var(--muted); }
+.credits-start { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-left: 26px; }
+.credits-start[hidden] { display: none; }
+.credits-start .text { width: 5.5em; }

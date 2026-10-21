@@ -188,6 +188,7 @@ function showStart(message = '') {
   loadOpenRooms();
   if (!$('#openCode').value) suggestCode();
   classTime.prepareOpen(); // "Class ends at": the next bell, or one period from now
+  prepareCredits(); // "Song suggestions": this teacher's saved choice
   $('#openBtn').focus();
   checkProfile(); // in the background: renamed, or hidden on another computer
 }
@@ -582,6 +583,43 @@ $('#otherKey').addEventListener('click', () => {
  * Open a room (POST /api/teacher/rooms) with the typed class code and times, then go in. A room
  * already open is opened from "Your open rooms" instead (openRoomHere).
  */
+// ---- Quick start: Song suggestions (credits or unlimited) on the open-room form ----
+// Prefilled from this teacher's saved settings; what they pick is sent with the new room and kept
+// as their default (src/worker.js createRoom).
+const creditsPick = () => $('#keyForm').querySelector('input[name="openCredits"]:checked')?.value ?? 'unlimited';
+function showCreditsRow() {
+  const on = creditsPick() === 'credits';
+  $('#openCreditsRow').hidden = !on;
+  $('#openCreditsN').disabled = !on; // a hidden bad number must never block Open (readCredits checks it)
+}
+function setCreditsPick(startingCredits) {
+  const on = Number.isInteger(startingCredits);
+  $('#keyForm').querySelector(`input[name="openCredits"][value="${on ? 'credits' : 'unlimited'}"]`).checked = true;
+  if (on) $('#openCreditsN').value = String(startingCredits);
+  showCreditsRow();
+}
+async function prepareCredits() {
+  if (!$('#keyForm').querySelector('input[name="openCredits"]:checked')) setCreditsPick(DEFAULT_SETTINGS.startingCredits);
+  try {
+    const r = await fetch('/api/teacher/settings', { headers: teacherHeaders() });
+    if (r.ok) setCreditsPick((await r.json()).startingCredits ?? null);
+  } catch { /* offline: keep what is shown */ }
+}
+$('#keyForm').addEventListener('change', (e) => {
+  if (e.target.name === 'openCredits') {
+    showCreditsRow();
+    if (creditsPick() === 'credits') $('#openCreditsN').select();
+  }
+});
+/** → { ok: true, startingCredits: null | number } | { ok: false, message } */
+function readCredits() {
+  if (creditsPick() !== 'credits') return { ok: true, startingCredits: null };
+  const n = Number($('#openCreditsN').value);
+  const [lo, hi] = SETTINGS_LIMITS.startingCredits;
+  if (!Number.isInteger(n) || n < lo || n > hi) return { ok: false, message: `Starting credits: a whole number from ${lo} to ${hi}.` };
+  return { ok: true, startingCredits: n };
+}
+
 async function startRoom() {
   const key = getKey();
   if (!canTeach()) return showStart();
@@ -598,6 +636,11 @@ async function startRoom() {
     $('#keyMsg').textContent = times.message;
     return $(times.focus)?.focus();
   }
+  const credits = readCredits();
+  if (!credits.ok) {
+    $('#keyMsg').textContent = credits.message;
+    return $('#openCreditsN').focus();
+  }
   $('#openBtn').disabled = true;
   $('#keyMsg').textContent = '';
   let r, data;
@@ -605,7 +648,7 @@ async function startRoom() {
     r = await fetch('/api/teacher/rooms', {
       method: 'POST',
       headers: teacherHeaders(profile?.id, key),
-      body: JSON.stringify({ code: v.code, until: times.until, cleanupAt: times.cleanupAt, profile: profile.id, period: times.period ?? null }),
+      body: JSON.stringify({ code: v.code, until: times.until, cleanupAt: times.cleanupAt, profile: profile.id, period: times.period ?? null, startingCredits: credits.startingCredits }),
     });
     data = await r.json().catch(() => ({}));
   } catch {

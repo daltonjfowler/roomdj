@@ -184,6 +184,16 @@
             <small id="openCleanupHelp" class="note">The music fades out and suggestions close. Leave it empty for no cleanup.</small>
             <button id="bellEditBtn" type="button" class="linkbtn" aria-haspopup="dialog">🔔 Edit bell schedule</button>
           </fieldset>
+          <!-- Quick start (Dalton, 2026-10-20): credits or unlimited for this room, kept as this teacher's
+               default (POST /api/teacher/rooms startingCredits). Everything else: their saved Settings. -->
+          <fieldset class="field quick-credits">
+            <legend id="openCreditsLegend">Song suggestions</legend>
+            <label class="pick"><input type="radio" name="openCredits" value="unlimited"> <span>♾️ Unlimited <small>Suggesting is free.</small></span></label>
+            <label class="pick"><input type="radio" name="openCredits" value="credits"> <span>🎟️ Credits <small>Each suggestion costs 1. You can give more any time.</small></span></label>
+            <label id="openCreditsRow" class="credits-start">Each student starts with
+              <span class="nowrap"><input id="openCreditsN" class="text" type="number" step="1" value="5" inputmode="numeric" aria-describedby="keyMsg"> credits</span></label>
+            <small class="note">Everything else comes from your saved settings (⚙️ Settings in the room).</small>
+          </fieldset>
           <p id="keyMsg" class="form-msg" role="alert"></p>
           <button id="openBtn" class="primary big wide" type="submit">Open today's room</button>
           <button id="closeAllBtn" class="linkbtn" type="button" title="Close every room you have open, on this computer or any other">Close my open rooms</button>

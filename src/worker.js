@@ -197,7 +197,16 @@ async function createRoom(request, env) {
   // Who's teaching (protocol.js TEACHER PROFILES): an active profile on the list, kept by the room.
   const profile = await requestProfile(request, env, typeof read.body?.profile === 'string' ? read.body.profile : null);
   if (profile instanceof Response) return profile;
-  const settings = await readSettings(env, profile);
+  let settings = await readSettings(env, profile);
+  // Quick start (the open-room form's Song suggestions): credits or unlimited for this room, kept as
+  // the teacher's default once the room opens. Absent: the saved setting, as before.
+  let newDefault = false;
+  if (read.body && Object.hasOwn(read.body, 'startingCredits') && read.body.startingCredits !== settings.startingCredits) {
+    const changed = validateSettings({ ...settings, startingCredits: read.body.startingCredits }, { testAiOff: env.TEST_AI_OFF === 'on' });
+    if (!changed.ok) return json(400, { error: 'credits', message: changed.errors[0] });
+    settings = changed.settings;
+    newDefault = true;
+  }
   // Class time: the page sends BELL times; the room keeps the real moments (+ the teacher's
   // bellOffsetSeconds, protocol.js BELL OFFSET), checked as such: cleanupAt (optional) after now
   // and before class ends (shared/classtime.js).
@@ -232,6 +241,7 @@ async function createRoom(request, env) {
     return json(500, { error: 'server', message: 'Could not open a room. Try again.' });
   }
   await putCodeRoute(env, hash, id, until);
+  if (newDefault) await env.CLASS_KV.put(teacherKvKey(KV_SETTINGS, profile), JSON.stringify(settings));
   return json(200, { room: id, code: v.code, until, cleanupAt, hostToken });
 }
 
