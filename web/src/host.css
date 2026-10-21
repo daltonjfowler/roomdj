@@ -224,7 +224,7 @@
 #otherApp { display: block; margin: 8px auto 0; }
 #otherApp[hidden] { display: none; }
 .shared-row { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
-.shared-row .linkbtn { color: var(--accent); font-size: inherit; }
+.shared-row .mini-btn { display: block; width: fit-content; margin-top: 8px; padding: 4px 12px; min-height: 0; font-size: .85rem; font-weight: 600; border-radius: 999px; }
 .remember-row[hidden] { display: none; }
 .steps li { counter-increment: step; position: relative; padding-left: 38px; display: grid; gap: 4px; }
 .steps li::before { content: counter(step); position: absolute; left: 0; top: -2px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
@@ -469,4 +469,4 @@ body.layout-edit .cleanup-banner, body.layout-edit .top5-board { padding-bottom:
 .quick-note { display: block; margin: 6px 0 0; }
 
 /* Step 4 of the first-time sign-in: the Client secret warning, big and plain (Dalton, 2026-10-20) */
-.secret-warn { display: block; font-size: 1.1rem; font-weight: 800; line-height: 1.35; color: var(--bad); background: var(--bad-soft); border: 1px solid var(--bad); border-radius: 8px; padding: 8px 10px; }
+.secret-warn { display: block; font-weight: 700; line-height: 1.4; color: var(--bad); background: var(--bad-soft); border-radius: 8px; padding: 6px 10px; }
