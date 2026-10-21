@@ -225,6 +225,9 @@
 #otherApp[hidden] { display: none; }
 .shared-row { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
 .shared-row .mini-btn { display: block; width: fit-content; margin-top: 8px; padding: 4px 12px; min-height: 0; font-size: .85rem; font-weight: 600; border-radius: 999px; }
+/* Purple (Dalton, 2026-10-20); white on #7c3aed passes contrast on light and dark cards */
+.shared-row .mini-btn { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.shared-row .mini-btn:hover:not(:disabled) { background: #6d28d9; border-color: #6d28d9; }
 .remember-row[hidden] { display: none; }
 .steps li { counter-increment: step; position: relative; padding-left: 38px; display: grid; gap: 4px; }
 .steps li::before { content: counter(step); position: absolute; left: 0; top: -2px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
