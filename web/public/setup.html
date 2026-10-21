@@ -32,6 +32,7 @@
     li { margin: 6px 0; }
     code { font: 0.95em ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; }
     .box { background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+    .secret-line { display: block; font-size: 1.15rem; font-weight: 800; margin-bottom: 4px; }
     dt { font-weight: 650; margin-top: 12px; }
     dd { margin: 4px 0 0; }
   </style>
@@ -81,7 +82,7 @@
     <li>In your app's <b>Settings</b> (Basic Information), find <b>Client ID</b>: 32 letters and numbers.</li>
     <li>Copy it. That's the only thing RoomDJ needs.</li>
   </ol>
-  <p class="box">Never copy the <b>Client secret</b>. RoomDJ will never ask for it, and nobody else needs it either.</p>
+  <p class="box"><strong class="secret-line">⚠️ NEVER copy the Client secret.</strong> RoomDJ will never ask for it, and nobody else needs it either. Only the Client ID.</p>
 
   <h2>5. Sign in to RoomDJ</h2>
   <ol>

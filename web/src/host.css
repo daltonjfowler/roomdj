@@ -467,3 +467,6 @@ body.layout-edit .cleanup-banner, body.layout-edit .top5-board { padding-bottom:
 .quick-rest { margin-top: 12px; }
 .quick-rest select { max-width: 14em; }
 .quick-note { display: block; margin: 6px 0 0; }
+
+/* Step 4 of the first-time sign-in: the Client secret warning, big and plain (Dalton, 2026-10-20) */
+.secret-warn { display: block; font-size: 1.1rem; font-weight: 800; line-height: 1.35; color: var(--bad); background: var(--bad-soft); border: 1px solid var(--bad); border-radius: 8px; padding: 8px 10px; }
