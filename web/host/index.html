@@ -192,8 +192,13 @@
             <label class="pick"><input type="radio" name="openCredits" value="credits"> <span>🎟️ Credits <small>Each suggestion costs 1. You can give more any time.</small></span></label>
             <label id="openCreditsRow" class="credits-start">Each student starts with
               <span class="nowrap"><input id="openCreditsN" class="text" type="number" step="1" value="5" inputmode="numeric" aria-describedby="keyMsg"> credits</span></label>
-            <small class="note">Everything else comes from your saved settings (⚙️ Settings in the room).</small>
           </fieldset>
+          <!-- Quick start: 📚 back to work (protocol.js BACK TO WORK), kept as this teacher's default too -->
+          <label class="field quick-rest">📚 Back to work
+            <small>After a student suggests a song, they wait this long before suggesting another. Votes are never blocked.</small>
+            <select id="openRest" class="text"></select>
+          </label>
+          <small class="note quick-note">Everything else comes from your saved settings (⚙️ Settings in the room).</small>
           <p id="keyMsg" class="form-msg" role="alert"></p>
           <button id="openBtn" class="primary big wide" type="submit">Open today's room</button>
           <button id="closeAllBtn" class="linkbtn" type="button" title="Close every room you have open, on this computer or any other">Close my open rooms</button>

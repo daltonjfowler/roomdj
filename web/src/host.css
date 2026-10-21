@@ -464,3 +464,6 @@ body.layout-edit .cleanup-banner, body.layout-edit .top5-board { padding-bottom:
 .credits-start { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-left: 26px; }
 .credits-start[hidden] { display: none; }
 .credits-start .text { width: 5.5em; }
+.quick-rest { margin-top: 12px; }
+.quick-rest select { max-width: 14em; }
+.quick-note { display: block; margin: 6px 0 0; }

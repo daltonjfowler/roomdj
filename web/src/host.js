@@ -592,6 +592,29 @@ function showCreditsRow() {
   $('#openCreditsRow').hidden = !on;
   $('#openCreditsN').disabled = !on; // a hidden bad number must never block Open (readCredits checks it)
 }
+// 📚 Back to work (quick start): Off or one of BACK_TO_WORK_MINUTES.
+$('#openRest').innerHTML = ['<option value="off">Off: no wait</option>',
+  ...BACK_TO_WORK_MINUTES.map((m) => `<option value="${m}">${m} ${m === 1 ? 'minute' : 'minutes'}</option>`)].join('');
+function setRestPick(s) {
+  $('#openRest').value = s.backToWork === false ? 'off' : String(s.backToWorkMinutes ?? DEFAULT_SETTINGS.backToWorkMinutes);
+}
+setRestPick(DEFAULT_SETTINGS);
+/** The quick choice as settings: { backToWork, backToWorkMinutes } (Off keeps the minutes it had). */
+function readRest(saved) {
+  const v = $('#openRest').value;
+  return v === 'off'
+    ? { backToWork: false, backToWorkMinutes: saved?.backToWorkMinutes ?? DEFAULT_SETTINGS.backToWorkMinutes }
+    : { backToWork: true, backToWorkMinutes: Number(v) };
+}
+let savedQuick = null; // the saved settings the quick choices were filled from
+let quickTouched = false; // the teacher changed a quick choice on this form
+/** The quick choices to send: only once the saved ones are shown, or the teacher picked (never the
+ *  form's starting values over a saved default that has not loaded yet). */
+function quickChoices(credits) {
+  if (!savedQuick && !quickTouched) return {};
+  return { startingCredits: credits.startingCredits, ...readRest(savedQuick) };
+}
+
 function setCreditsPick(startingCredits) {
   const on = Number.isInteger(startingCredits);
   $('#keyForm').querySelector(`input[name="openCredits"][value="${on ? 'credits' : 'unlimited'}"]`).checked = true;
@@ -602,10 +625,17 @@ async function prepareCredits() {
   if (!$('#keyForm').querySelector('input[name="openCredits"]:checked')) setCreditsPick(DEFAULT_SETTINGS.startingCredits);
   try {
     const r = await fetch('/api/teacher/settings', { headers: teacherHeaders() });
-    if (r.ok) setCreditsPick((await r.json()).startingCredits ?? null);
+    if (r.ok) {
+      savedQuick = await r.json();
+      if (!quickTouched) { // never undo what the teacher already picked on this form
+        setCreditsPick(savedQuick.startingCredits ?? null);
+        setRestPick(savedQuick);
+      }
+    }
   } catch { /* offline: keep what is shown */ }
 }
 $('#keyForm').addEventListener('change', (e) => {
+  if (['openCredits', 'openCreditsN', 'openRest'].includes(e.target.name || e.target.id)) quickTouched = true;
   if (e.target.name === 'openCredits') {
     showCreditsRow();
     if (creditsPick() === 'credits') $('#openCreditsN').select();
@@ -648,7 +678,7 @@ async function startRoom() {
     r = await fetch('/api/teacher/rooms', {
       method: 'POST',
       headers: teacherHeaders(profile?.id, key),
-      body: JSON.stringify({ code: v.code, until: times.until, cleanupAt: times.cleanupAt, profile: profile.id, period: times.period ?? null, startingCredits: credits.startingCredits }),
+      body: JSON.stringify({ code: v.code, until: times.until, cleanupAt: times.cleanupAt, profile: profile.id, period: times.period ?? null, ...quickChoices(credits) }),
     });
     data = await r.json().catch(() => ({}));
   } catch {

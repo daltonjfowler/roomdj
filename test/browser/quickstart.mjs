@@ -82,7 +82,7 @@ const picked = (page) => page.evaluate(() => ({
 
 try {
   await closeOpenRooms(BASE, KEY);
-  await putSettings({ ...saved, startingCredits: null });
+  await putSettings({ ...saved, startingCredits: null, backToWork: true, backToWorkMinutes: 5 });
 
   // 1. Saved: unlimited → Unlimited is picked, no credits row. Pick Credits 3 and open.
   let { context, page } = await startScreen('light', { width: 390, height: 1000 });
@@ -92,6 +92,8 @@ try {
   p = await picked(page);
   check('🎟 Credits shows "Each student starts with"', p.row);
   await page.fill('#openCreditsN', '3');
+  check('📚 Back to work prefilled from saved (5 minutes)', (await page.inputValue('#openRest')) === '5');
+  await page.selectOption('#openRest', '2');
   await page.screenshot({ path: `${OUT}quickstart-phone-light.png`, fullPage: true });
   check('no sideways scroll at 390 px', !(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)));
   await page.click('#openBtn');
@@ -99,6 +101,8 @@ try {
   let room = await roomSettings(page);
   check('the room opens with 3 starting credits', room.settings.startingCredits === 3, JSON.stringify(room.settings.startingCredits));
   check('kept as the teacher default', (await getSettings()).startingCredits === 3);
+  check('the room waits 2 minutes between suggestions', room.settings.backToWork === true && room.settings.backToWorkMinutes === 2, JSON.stringify([room.settings.backToWork, room.settings.backToWorkMinutes]));
+  check('2 minutes kept as the default', (await getSettings()).backToWorkMinutes === 2);
   room.close();
   await context.close();
   await closeOpenRooms(BASE, KEY);
@@ -107,6 +111,8 @@ try {
   ({ context, page } = await startScreen('dark'));
   p = await picked(page);
   check('next time: 🎟 Credits 3 prefilled', p.pick === 'credits' && p.n === '3' && p.row, JSON.stringify(p));
+  check('next time: 2 minutes prefilled', (await page.inputValue('#openRest')) === '2');
+  await page.selectOption('#openRest', 'off');
   await page.screenshot({ path: `${OUT}quickstart-desktop-dark.png`, fullPage: true });
   await page.fill('#openCreditsN', '99');
   await page.click('#openBtn');
@@ -118,14 +124,18 @@ try {
   room = await roomSettings(page);
   check('the room opens unlimited (credits off)', room.settings.startingCredits === null);
   check('unlimited kept as the default', (await getSettings()).startingCredits === null);
+  check('the room has no wait (Off keeps the 2 minutes for later)', room.settings.backToWork === false && room.settings.backToWorkMinutes === 2);
   const others = await getSettings();
-  check('nothing else in the saved settings changed', JSON.stringify({ ...others, startingCredits: 0 }) === JSON.stringify({ ...saved, startingCredits: 0 }));
+  const rest = (x) => ({ ...x, startingCredits: 0, backToWork: 0, backToWorkMinutes: 0 });
+  check('nothing else in the saved settings changed', JSON.stringify(rest(others)) === JSON.stringify(rest(saved)));
   room.close();
   await context.close();
 
   // 3. The server refuses a bad value from a page that skips the form's check.
   const bad = await fetch(new URL('/api/teacher/rooms', BASE), { method: 'POST', headers, body: JSON.stringify({ code: `qs ${Date.now() % 1e6}`, until: Date.now() + 3600e3, profile: T1, startingCredits: 500 }) });
   check('server: 500 starting credits refused (400)', bad.status === 400, `HTTP ${bad.status}`);
+  const badRest = await fetch(new URL('/api/teacher/rooms', BASE), { method: 'POST', headers, body: JSON.stringify({ code: `qs ${Date.now() % 1e6}`, until: Date.now() + 3600e3, profile: T1, backToWork: true, backToWorkMinutes: 7 }) });
+  check('server: 7 minutes (not a choice) refused (400)', badRest.status === 400, `HTTP ${badRest.status}`);
 } finally {
   await closeOpenRooms(BASE, KEY);
   await putSettings(saved);

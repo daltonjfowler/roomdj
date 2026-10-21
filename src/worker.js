@@ -187,6 +187,9 @@ function makeRoomId() {
 
 // Open a room for the day with the teacher's class code. A code another open room has (the other
 // teacher's) is refused; the room is named by a random id, and KV maps the code's hash to it.
+// The open-room form's quick choices (createRoom): settings a new room may set and keep as the default.
+const QUICK_KEYS = ['startingCredits', 'backToWork', 'backToWorkMinutes'];
+
 async function createRoom(request, env) {
   const read = await readJson(request, MAX_JOIN_BYTES);
   if (read instanceof Response) return read;
@@ -198,14 +201,15 @@ async function createRoom(request, env) {
   const profile = await requestProfile(request, env, typeof read.body?.profile === 'string' ? read.body.profile : null);
   if (profile instanceof Response) return profile;
   let settings = await readSettings(env, profile);
-  // Quick start (the open-room form's Song suggestions): credits or unlimited for this room, kept as
-  // the teacher's default once the room opens. Absent: the saved setting, as before.
-  let newDefault = false;
-  if (read.body && Object.hasOwn(read.body, 'startingCredits') && read.body.startingCredits !== settings.startingCredits) {
-    const changed = validateSettings({ ...settings, startingCredits: read.body.startingCredits }, { testAiOff: env.TEST_AI_OFF === 'on' });
-    if (!changed.ok) return json(400, { error: 'credits', message: changed.errors[0] });
+  // Quick start (the open-room form): Song suggestions (credits or unlimited) and 📚 Back to work
+  // (the wait between suggestions) for this room, kept as the teacher's default once the room opens.
+  // A key left out keeps the saved setting, as before.
+  const quick = Object.fromEntries(QUICK_KEYS.filter((k) => read.body && Object.hasOwn(read.body, k) && read.body[k] !== settings[k]).map((k) => [k, read.body[k]]));
+  const newDefault = Object.keys(quick).length > 0;
+  if (newDefault) {
+    const changed = validateSettings({ ...settings, ...quick }, { testAiOff: env.TEST_AI_OFF === 'on' });
+    if (!changed.ok) return json(400, { error: 'quick', message: changed.errors[0] });
     settings = changed.settings;
-    newDefault = true;
   }
   // Class time: the page sends BELL times; the room keeps the real moments (+ the teacher's
   // bellOffsetSeconds, protocol.js BELL OFFSET), checked as such: cleanupAt (optional) after now
