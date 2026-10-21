@@ -466,6 +466,12 @@
           <label class="check switch-row"><input id="setJump" class="switch" type="checkbox" role="switch" aria-describedby="jumpHelp">
             <span>Priority jump</span><span class="switch-state" aria-hidden="true"></span></label>
           <small id="jumpHelp" class="switch-help"><span id="jumpOffNote">Turn credits on first. </span>On: a student can spend 2 credits on ⚡ Jump to make a song play next. Turning it off later does not move songs already jumped; they keep their place.</small>
+          <!-- 🎟 Coupons (shared/coupon.js COUPONS): shown only while the server takes coupons (GET /api/config) -->
+          <span id="couponsSetting" hidden>
+            <label class="check switch-row"><input id="setCoupons" class="switch" type="checkbox" role="switch" aria-describedby="couponsHelp">
+              <span>🎟️ Coupons</span><span class="switch-state" aria-hidden="true"></span></label>
+            <small id="couponsHelp" class="switch-help"><span id="couponsOffNote">Turn credits on first. </span>On: a student can use a coupon earned in another class tool (like teachChat points) for 1 credit. Each coupon works once.</small>
+          </span>
         </fieldset>
       </div>
 

@@ -284,6 +284,7 @@ const configReady = fetch('/api/config').then((r) => r.json()).then((c) => {
   sharedClientId = c?.services?.spotify?.clientId ?? null;
   testAiOff = c?.testAiOff === true;
   $('#testAiSwitches').hidden = !testAiOff;
+  $('#couponsSetting').hidden = c?.coupons !== true; // 🎟 built dark: only while the server takes coupons
 }).catch(() => {});
 let testAiOff = false; // local browser tests only (TEST_AI_OFF=on): the old AI switches show
 const OWN_ID = 'cq.ownClientId'; // the Client ID typed last time on this computer (public, not a secret)
@@ -1542,6 +1543,7 @@ function fillSettings(s) {
   $('#setCreditsOn').checked = on;
   $('#setCredits').value = on ? s.startingCredits : '';
   $('#setJump').checked = s.allowJump === true;
+  $('#setCoupons').checked = s.coupons !== false;
   showCreditSwitches();
   // 📚 Back to work and 🎵 recap music (protocol.js BACK TO WORK, RECAP MUSIC)
   $('#setBackToWork').innerHTML = ['<option value="off">Off</option>',
@@ -1602,6 +1604,8 @@ function showCreditSwitches() {
   $('#setCredits').disabled = !on;
   $('#setJump').disabled = !on;
   $('#jumpOffNote').hidden = on;
+  $('#setCoupons').disabled = !on;
+  $('#couponsOffNote').hidden = on;
 }
 const FIRST_CREDITS = 3; // what Starting credits shows when the switch first goes on
 $('#setCreditsOn').addEventListener('change', () => {
@@ -1681,6 +1685,7 @@ function readSettings() {
     // Kept as set even while credits are off (the switch is greyed out, not cleared); it only
     // counts while credits are on.
     allowJump: $('#setJump').checked,
+    coupons: $('#setCoupons').checked, // 🎟 like Priority jump: kept as set while credits are off
     // 📚 Off keeps the minutes it had, for when it comes back on.
     backToWork: $('#setBackToWork').value !== 'off',
     backToWorkMinutes: $('#setBackToWork').value === 'off'

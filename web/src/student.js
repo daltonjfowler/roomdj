@@ -16,6 +16,7 @@ import { showBell } from './bell-pill.js';
 import { generateNick, isGeneratedNick } from '../../shared/nickgen.js';
 import { AI_CATEGORIES, DEVICE_ID_PATTERN, FILTER_REASONS, NICK_MAX, QUERY_MAX, ROOM_ID_PATTERN, PUSH_TAG, byLabel, whyText } from '../../shared/protocol.js';
 import { JUMP_COST, SUGGEST_COST } from '../../shared/protocol.js';
+import { couponFromHash } from '../../shared/coupon.js';
 import { tooLong } from '../../shared/classtime.js';
 import { mainArtist, mainArtistName } from '../../shared/filter.js';
 import { restingEvidence, restingUntilLabel, songKey } from '../../shared/repeats.js';
@@ -246,7 +247,64 @@ function setNick(nick) {
 }
 setNick(isGeneratedNick($('#nick').value) ? $('#nick').value : generateNick());
 $('#nickRoll').addEventListener('click', () => setNick(generateNick()));
+// ---- 🎟 Coupons (shared/coupon.js COUPONS): a coupon from another class tool, spent for credits ----
+// A link like roomdj.com/#coupon=RDJ1... keeps the coupon for this tab (out of the address bar at
+// once) and uses it after the student joins a room that takes coupons. Or "Have a coupon?": paste it.
+let couponsServer = false; // GET /api/config `coupons`
+let couponSent = null; // the coupon waiting for its couponResult
+const linkCoupon = couponFromHash(location.hash);
+if (linkCoupon) {
+  store.set('sessionStorage', 'cq.coupon', linkCoupon);
+  history.replaceState(history.state, '', location.pathname + location.search);
+  tell('🎟️ Coupon saved. Join your class and it is used for you.', 'ok', 8000);
+}
+const couponsHere = (s) => couponsServer && s?.settings?.coupons !== false && (s?.you?.credits ?? null) !== null;
+function useCoupon(code) {
+  if (!conn?.send({ t: 'coupon', code })) return tell('Reconnecting. Try again in a moment.', 'warn');
+  couponSent = code;
+  $('#couponUse').disabled = true;
+}
+/** After each state: show "Have a coupon?", and use a coupon from a link once the room takes it. */
+function renderCoupons(s) {
+  const here = couponsHere(s);
+  $('#couponOpen').hidden = !here;
+  if (!here) $('#couponForm').hidden = true;
+  const kept = store.get('sessionStorage', 'cq.coupon');
+  if (here && kept && !couponSent) useCoupon(kept);
+}
+function couponResult(msg) {
+  const code = couponSent;
+  couponSent = null;
+  $('#couponUse').disabled = false;
+  const fromLink = code && code === store.get('sessionStorage', 'cq.coupon');
+  // Used, expired or not a coupon: forget it. Off, busy or offline: a link's coupon waits for later.
+  if (msg.ok || ['used', 'expired', 'bad'].includes(msg.reason)) {
+    if (fromLink) store.del('sessionStorage', 'cq.coupon');
+  }
+  if (msg.ok) {
+    $('#couponCode').value = '';
+    $('#couponForm').hidden = true;
+    $('#couponOpen').setAttribute('aria-expanded', 'false');
+    return tell(`🎟️ Coupon used: +${plural(msg.amount, 'credit')}. You have ${plural(msg.credits, 'credit')}.`, 'ok', 7000);
+  }
+  tell(msg.message || 'That coupon did not work.', msg.reason === 'bad' || msg.reason === 'used' || msg.reason === 'expired' ? 'bad' : 'warn', 7000);
+}
+$('#couponOpen').addEventListener('click', () => {
+  const open = $('#couponForm').hidden;
+  $('#couponForm').hidden = !open;
+  $('#couponOpen').setAttribute('aria-expanded', String(open));
+  if (open) $('#couponCode').focus();
+});
+$('#couponForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const code = $('#couponCode').value.trim();
+  if (!code) return $('#couponCode').focus();
+  useCoupon(code);
+});
+
 fetch('/api/config').then((r) => r.json()).then((c) => {
+  couponsServer = c?.coupons === true;
+  if (state) renderCoupons(state);
   if (!c?.typedNicknames) return;
   typedNicks = true;
   $('#nickGen').hidden = true;
@@ -468,6 +526,9 @@ function onMessage(msg) {
       if (state) renderFind(state);
       renderResults();
       break;
+    case 'couponResult':
+      couponResult(msg);
+      break;
     case 'credits':
       tell(msg.why === 'set'
         ? `Your teacher set your credits to ${msg.credits}.`
@@ -630,6 +691,7 @@ function render(s) {
   if (credits !== null) $('#creditsN').textContent = plural(credits, 'credit');
   $('#credits').classList.toggle('empty', credits === 0);
   $('#creditsJump').hidden = s.settings?.allowJump !== true; // Priority jump off: no Jump at all
+  renderCoupons(s);
 
   $('#queueCount').textContent = s.queue.length ? `(${s.queue.length})` : '';
   $('#queueEmpty').hidden = s.queue.length > 0;

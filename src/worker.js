@@ -48,6 +48,7 @@ import { roomProfile } from '../shared/profiles.js';
 
 export { Room } from './room.js';
 export { CouponLedger } from './coupons.js';
+import { couponsOn } from './coupons.js';
 
 const KV_SETTINGS = 'settings';
 const MAX_TEACHER_BYTES = 32 * 1024;
@@ -537,6 +538,8 @@ export function serviceConfig(env, request) {
     },
     // The old shared teacher key: local test servers with its secret only (keyAllowed).
     teacherKey: keyAllowed(request) && Boolean(env.TEACHER_KEY || env.TEACHER_KEY_2),
+    // 🎟 Coupons (src/coupons.js; built dark): the student page and Settings show them only then.
+    coupons: couponsOn(env),
     // Student nicknames are made ("Brave Otter", shared/nickgen.js); typed ones only for local tests.
     typedNicknames: env.TYPED_NICKNAMES === 'on',
     testAiOff: env.TEST_AI_OFF === 'on', // local browser tests only: the host shows the old AI switches

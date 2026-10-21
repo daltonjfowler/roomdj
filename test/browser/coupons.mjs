@@ -10,6 +10,7 @@
 // not used up; too many tries → rate. Without the two vars every coupon is refused as 'off'.
 
 import { readFileSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { T1, closeOpenRooms } from './teacher-pick.mjs';
 import { bytesToB64url } from '../../shared/coupon.js';
 import { generateNick } from '../../shared/nickgen.js';
@@ -152,6 +153,46 @@ try {
   check('no names or ids in a result', !JSON.stringify(a.got.filter((m) => m.t === 'couponResult')).match(/nick|device/));
   a.ws.close();
   b.ws.close();
+
+  // ---- The student page in Chrome: a coupon link, then joining with the class code ----
+  const { chromium } = await import(pathToFileURL(fileURLToPath(new URL('node_modules/playwright-core/index.mjs', ROOT))).href);
+  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+  try {
+    const page = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    const c3 = await coupon();
+    await page.goto(new URL(`/?code=${encodeURIComponent(code)}#coupon=${c3}`, BASE).href);
+    check('student page: the coupon leaves the address bar at once', !(await page.evaluate(() => location.hash)));
+    check('student page: "Coupon saved" note before joining', await until(async () => /Coupon saved/.test(await page.textContent('#toasts'))));
+    await page.waitForTimeout(800); // the config may bring back the typed nickname box (local TYPED_NICKNAMES)
+    if (await page.locator('#nickField').isVisible()) await page.fill('#nick', generateNick());
+    await page.click('#joinBtn');
+    const used = await until(async () => /Coupon used: \+1 credit\. You have 4 credits/.test(await page.textContent('#toasts')));
+    check('after joining: the link coupon is used by itself (+1, 3 starting = 4)', Boolean(used), await page.textContent('#toasts'));
+    check('the credits pill says 4', /4 credits/.test(await page.textContent('#creditsN')));
+    await page.reload();
+    await page.waitForTimeout(2500);
+    check('a reload does not try it again', !/already used/.test(await page.textContent('#toasts')));
+
+    // Have a coupon? paste box
+    await page.click('#couponOpen');
+    await page.fill('#couponCode', await coupon());
+    await page.click('#couponUse');
+    check('pasted coupon: used, 5 credits', Boolean(await until(async () => /You have 5 credits/.test(await page.textContent('#toasts')))));
+    check('the paste box closes after it works', await page.locator('#couponForm').isHidden());
+    await page.click('#couponOpen');
+    await page.fill('#couponCode', c3);
+    await page.click('#couponUse');
+    check('pasting a used coupon: "already used"', Boolean(await until(async () => /already used/.test(await page.textContent('#toasts')))));
+    await settings({ coupons: false });
+    check("the teacher's switch off: no 'Have a coupon?'", Boolean(await until(() => page.locator('#couponOpen').isHidden())));
+    await settings({ startingCredits: null, coupons: true });
+    check("credits off: no 'Have a coupon?'", Boolean(await until(() => page.locator('#couponOpen').isHidden())));
+    check('no page errors', errors.length === 0, errors.join(' | '));
+  } finally {
+    await browser.close();
+  }
 } finally {
   host.send({ t: 'close' });
   await sleep(500);

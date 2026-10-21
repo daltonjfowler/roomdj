@@ -197,3 +197,10 @@ button.why:hover { background: var(--accent-soft); }
 .intro b { color: var(--ink); }
 .intro a { white-space: nowrap; }
 .in-room .intro { display: none; }
+
+/* 🎟 Coupons: the paste box under the credits pill */
+.coupon-open { font-size: .95rem; }
+.coupon-form { display: grid; gap: 6px; margin: 4px 0 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); }
+.coupon-form[hidden] { display: none; }
+.coupon-line { display: flex; gap: 8px; }
+.coupon-line .text { flex: 1; min-width: 0; }

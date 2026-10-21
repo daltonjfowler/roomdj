@@ -119,7 +119,16 @@
             <p id="credits" class="credits" hidden><span class="credits-pill"><span aria-hidden="true">🎟</span> <b id="creditsN">0 credits</b></span>
               <small class="note">A song costs 1.<span id="creditsJump"> ⚡ Jump costs 2: it plays next.</span></small></p>
             <p id="waiting" class="note waiting"></p>
+            <!-- 🎟 Coupons (shared/coupon.js COUPONS): only while the server, the teacher and credits allow them -->
+            <button id="couponOpen" class="linkbtn coupon-open" type="button" aria-expanded="false" aria-controls="couponForm" hidden>🎟️ Have a coupon?</button>
           </div>
+          <form id="couponForm" class="coupon-form" hidden>
+            <label class="field" for="couponCode">Coupon <small>Paste the coupon you got for your class points. Each one works once.</small></label>
+            <span class="coupon-line">
+              <input id="couponCode" class="text" autocomplete="off" spellcheck="false" maxlength="400" placeholder="RDJ1...">
+              <button id="couponUse" class="primary" type="submit">Use it</button>
+            </span>
+          </form>
           <p id="searchMsg" class="note search-msg" aria-live="polite"></p>
           <p id="searchCredit" class="sp-credit" hidden></p>
           <ul id="results" class="results" aria-label="Search results"></ul>
