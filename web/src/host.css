@@ -292,6 +292,15 @@ button.more { padding-inline: 8px; min-width: 32px; }
 
 /* Settings: tabs (menu.css), each a few groups; the dialog keeps one height so tabs do not jump. */
 .settings-dialog { max-width: 780px; }
+/* Simple / All settings (host.js setLevel): Simple hides every [data-adv] row, tab and group. */
+.settings-dialog:not(.show-all) [data-adv] { display: none !important; }
+.settings-dialog.defaults-mode #applySettings { display: none; } /* ⚙️ More options: no room to use them in yet */
+.level-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.level-pick { display: inline-flex; padding: 3px; gap: 3px; border-radius: 12px; background: var(--card2); border: 1px solid var(--line); }
+.level-pick button { min-height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 650; }
+.level-pick button:hover { background: var(--card); color: var(--ink); }
+.level-pick button[aria-pressed="true"] { background: var(--card); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-line); }
+.level-row .note[hidden] { display: none; }
 .settings-dialog form { gap: 12px; }
 .settings-dialog .tab-panel { height: min(58vh, 540px); overflow: auto; padding: 2px 4px 2px 2px; }
 .set-group { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 12px; margin: 0; display: grid; gap: 8px; min-width: 0; }

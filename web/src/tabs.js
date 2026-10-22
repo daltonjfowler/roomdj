@@ -35,13 +35,15 @@ export function initTabs(list, { storageKey = '' } = {}) {
     if (tab) select(tab);
   });
   list.addEventListener('keydown', (e) => {
-    const at = tabs.indexOf(document.activeElement);
+    // Only the tabs on screen: Simple settings hide some (host.js setLevel).
+    const shown = tabs.filter((t) => t.getClientRects().length);
+    const at = shown.indexOf(document.activeElement);
     if (at < 0) return;
-    const go = { ArrowRight: at + 1, ArrowLeft: at - 1, ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    const go = { ArrowRight: at + 1, ArrowLeft: at - 1, ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: shown.length - 1 }[e.key];
     if (go === undefined) return;
     e.preventDefault();
     e.stopPropagation();
-    select(tabs[(go + tabs.length) % tabs.length], true);
+    select(shown[(go + shown.length) % shown.length], true);
   });
 
   /** The tab whose panel holds `el` (to show a field that has a problem). */

@@ -11,6 +11,15 @@
  */
 export async function reveal(page, sel) {
   await page.waitForSelector(sel, { state: 'attached', timeout: 15_000 });
+  // Simple settings hide the [data-adv] rows (web/src/host.js setLevel): All settings first, like a teacher.
+  const adv = await page.evaluate((s) => {
+    const el = document.querySelector(s);
+    const all = document.querySelector('#levelAll');
+    const panel = el?.closest('[role="tabpanel"]');
+    const advTab = panel && document.querySelector(`[role="tab"][aria-controls="${CSS.escape(panel.id)}"]`)?.hasAttribute('data-adv');
+    return Boolean((el?.closest('[data-adv]') || advTab) && !el.closest('.show-all') && all?.getClientRects().length);
+  }, sel);
+  if (adv) await page.click('#levelAll');
   const opener = await page.evaluate((s) => {
     const el = document.querySelector(s);
     if (!el || el.getClientRects().length) return null;

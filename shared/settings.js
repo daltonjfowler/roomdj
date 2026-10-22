@@ -129,6 +129,17 @@ function maxDownvotes(errors, value) {
   return intInRange(errors, '👎 per student', value, SETTINGS_LIMITS.maxDownvotes);
 }
 
+/** 👍 per student per class (protocol.js UPVOTE LIMIT): null = unlimited; otherwise a whole number (a real number). */
+function maxUpvotes(errors, value) {
+  if (value === null) return null;
+  const [min, max] = SETTINGS_LIMITS.maxUpvotes;
+  if (typeof value !== 'number') {
+    errors.push(`👍 per student must be unlimited or a whole number from ${min} to ${max}.`);
+    return null;
+  }
+  return intInRange(errors, '👍 per student', value, SETTINGS_LIMITS.maxUpvotes);
+}
+
 /** 👎 votes (protocol.js DOWNVOTE MODE): one of DOWNVOTE_MODES. */
 function downvoteMode(errors, value) {
   if (DOWNVOTE_MODES.includes(value)) return value;
@@ -193,6 +204,8 @@ export function validateSettings(input, { testAiOff = false } = {}) {
     artCheck: bool(errors, 'Album art check', pick('artCheck')),
     hideAllArt: bool(errors, 'Hide all album art', pick('hideAllArt')),
     maxDownvotes: maxDownvotes(errors, pick('maxDownvotes')),
+    upvotes: bool(errors, '👍 votes', pick('upvotes')),
+    maxUpvotes: maxUpvotes(errors, pick('maxUpvotes')),
     scoreFloor: bool(errors, 'Scores never go below 0', pick('scoreFloor')),
     downvoteMode: downvoteMode(errors, pick('downvoteMode')),
     ghostVote: bool(errors, 'Ghost 👍', pick('ghostVote')),

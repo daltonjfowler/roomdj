@@ -243,7 +243,7 @@ try {
   // Settings: the Credits switch is off, no number box, Priority jump greyed out with a note.
   await host.page.click('#settingsBtn');
   await host.page.waitForSelector('#settingsDlg[open]');
-  await reveal(host.page, '#setCreditsOn'); // the Credits tab
+  await reveal(host.page, '#setJump'); // the Credits tab, All settings (Priority jump is an advanced row)
   check('settings: Credits switch off, no Starting credits box', !(await host.page.isChecked('#setCreditsOn'))
     && !(await visible(host, '#setCredits')) && (await host.page.getAttribute('#setCreditsOn', 'role')) === 'switch');
   check('settings: Priority jump is off and greyed out, with "Turn credits on first."', !(await host.page.isChecked('#setJump'))

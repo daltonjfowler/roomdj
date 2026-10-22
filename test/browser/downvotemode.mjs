@@ -126,14 +126,14 @@ async function setMode(host, mode) {
 }
 
 // ---- The flow ----
-check('the defaults: 👎 off and the score floor on', DEFAULT_SETTINGS.downvoteMode === 'off' && DEFAULT_SETTINGS.scoreFloor === true);
+check('the defaults: 👎 on with counts hidden (2026-10-21) and the score floor on', DEFAULT_SETTINGS.downvoteMode === 'hidden' && DEFAULT_SETTINGS.scoreFloor === true);
 const savedDefaults = await (await api('/api/teacher/settings')).json();
 await api('/api/teacher/settings', {
   method: 'PUT',
   body: JSON.stringify({ aiCheck: false, blockUnknownSongs: false, hideVoteCounts: false, artCheck: false, cooldownDays: null, backToWork: false,
     maxWaitingPerStudent: 10, maxSongMinutes: null, maxDownvotes: 3, removeAtScore: -3,
-    // The defaults for these two (saved settings from earlier test runs may say otherwise).
-    downvoteMode: DEFAULT_SETTINGS.downvoteMode, scoreFloor: DEFAULT_SETTINGS.scoreFloor }),
+    // 👎 Off to start (this test walks Off, then hidden, then shown); the floor as its default. 👍 unlimited.
+    downvoteMode: 'off', scoreFloor: DEFAULT_SETTINGS.scoreFloor, upvotes: true, maxUpvotes: null }),
 });
 const pages = [];
 try {
@@ -144,7 +144,7 @@ try {
   await host.page.click('#openBtn');
   await host.page.waitForFunction(() => document.querySelector('#bigCode')?.textContent && !document.querySelector('#hostScreen').hidden, null, { timeout: 15_000 });
   const { room: roomId, classCode: code } = await host.page.evaluate(() => JSON.parse(sessionStorage.getItem('cq.host')));
-  check('a new room: 👎 off, floor on', Boolean(await until(() => lastState(host)?.downvoteMode === 'off' && lastState(host)?.settings.scoreFloor === true)));
+  check('a new room (saved 👎 Off): 👎 off, floor on', Boolean(await until(() => lastState(host)?.downvoteMode === 'off' && lastState(host)?.settings.scoreFloor === true)));
 
   // Two songs from a socket student.
   const maya = await studentSock(roomId, code, 'downmode-test-maya-0001', 'Maya');
@@ -171,7 +171,7 @@ try {
   await ava.page.waitForFunction(() => document.querySelectorAll('#queue li').length === 2);
   const row = (p, id) => p.page.locator(`#queue li[data-id="${id}"]`);
 
-  // ---- Off (the default) ----
+  // ---- Off ----
   check('off: the student page has no 👎 buttons', (await ava.page.locator('#queue .vote.down:visible').count()) === 0
     && (await ava.page.locator('#queue .vote.up:visible').count()) === 2);
   check('off: no "👎 N left"', !(await ava.page.locator('#downLeft').isVisible()));

@@ -2,7 +2,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { robotsTag } from '../src/seo.js';
+import { cleanPath, robotsTag } from '../src/seo.js';
+
+test('cleanPath: the public pages .html addresses only', () => {
+  assert.deepEqual(['/index.html', '/about.html', '/legal.html', '/setup.html'].map(cleanPath), ['/', '/about', '/legal', '/setup']);
+  for (const p of ['/', '/about', '/host/index.html', '/404.html', '/toString', '/constructor']) assert.equal(cleanPath(p), null, p);
+});
 
 test('robotsTag: public pages on roomdj.com yes; teacher page, board, admin, API and other hosts no', () => {
   for (const p of ['/', '/about', '/setup', '/legal', '/screens/board.jpg', '/social.jpg']) assert.equal(robotsTag(`https://roomdj.com${p}`, p), null, p);
@@ -14,7 +19,9 @@ test('robotsTag: public pages on roomdj.com yes; teacher page, board, admin, API
 
 test('robots.txt, sitemap and page tags agree', () => {
   const robots = readFileSync(new URL('../web/public/robots.txt', import.meta.url), 'utf8');
-  for (const d of ['/host/', '/board/', '/admin/', '/api/']) assert.match(robots, new RegExp(`Disallow: ${d}`));
+  assert.match(robots, /Disallow: \/api\//);
+  // Crawlable, so their noindex header is seen (a Disallow would hide it).
+  for (const d of ['/host/', '/board/', '/admin/']) assert.doesNotMatch(robots, new RegExp(`Disallow: ${d}`), d);
   assert.match(robots, /Sitemap: https:\/\/roomdj\.com\/sitemap\.xml/);
   const sitemap = readFileSync(new URL('../web/public/sitemap.xml', import.meta.url), 'utf8');
   for (const p of ['/', '/about', '/setup', '/legal']) assert.ok(sitemap.includes(`<loc>https://roomdj.com${p}</loc>`), p);

@@ -44,6 +44,7 @@ const OTHER_REASONS = {
 };
 const JUMP_NEED = `You need ${JUMP_COST} credits to jump a song. Ask your teacher for more.`;
 const DOWN_SPENT = "You've used your 👎 for this class. You can still 👍 songs you like."; // protocol.js DOWNVOTE LIMIT
+const UP_SPENT = "You've used your 👍 for this class."; // protocol.js UPVOTE LIMIT
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 /** A full stop at the end, unless it already ends a sentence. */
 const sentence = (s) => (/[.!?]$/.test(s) ? s : `${s}.`);
@@ -551,7 +552,7 @@ function onMessage(msg) {
         // A newer tab on this device took over; this one can take it back.
         showEnd('RoomDJ is open in another tab', 'This tab stopped because RoomDJ is open in another tab on this device.',
           { label: 'Use this tab instead', room });
-      } else if (msg.error === 'back_to_work' || msg.error === 'downvotes' || msg.error === 'downvotes_off' || msg.error === 'vote_final') {
+      } else if (['back_to_work', 'downvotes', 'downvotes_off', 'upvotes', 'upvotes_off', 'vote_final'].includes(msg.error)) {
         // A vote while resting, a 👎 over the limit (this page thought it had one left) or a 👎 while the
         // teacher has 👎 off (protocol.js DOWNVOTE MODE; the snapshot may not have arrived yet): undo it on the page.
         const undo = voteUndo.get(msg.id);
@@ -559,9 +560,13 @@ function onMessage(msg) {
         if (undo && item) Object.assign(item, undo);
         voteUndo.delete(msg.id);
         if (msg.error === 'downvotes' && state?.you) state.you.downvotesLeft = 0;
+        if (msg.error === 'upvotes' && state?.you) state.you.upvotesLeft = 0;
         if (state) renderQueue(state.queue);
+        if (state?.nowPlaying) renderNowVote(state.nowPlaying);
         if (msg.error === 'downvotes') tell(msg.message || DOWN_SPENT, 'warn', 7000);
         else if (msg.error === 'downvotes_off') tell(msg.message || '👎 is turned off in this class.', 'warn', 7000);
+        else if (msg.error === 'upvotes') tell(msg.message || UP_SPENT, 'warn', 7000);
+        else if (msg.error === 'upvotes_off') tell(msg.message || '👍 is turned off in this class.', 'warn', 7000);
         else if (msg.error === 'vote_final') tell(msg.message || VOTE_FINAL, 'warn', 5000);
         else restRefused(msg);
       } else {
@@ -749,15 +754,21 @@ const votesLabel = (label, n) => `${label}, ${n} ${n === 1 ? 'vote' : 'votes'}`;
 /** The room's 👎 mode (protocol.js DOWNVOTE MODE): 'off' (no 👎 buttons), 'hidden' (👎, no counts), 'shown'. */
 const downMode = () => (['off', 'hidden', 'shown'].includes(state?.downvoteMode) ? state.downvoteMode : 'shown');
 
+/** False while the teacher has 👍 off (protocol.js UPVOTE LIMIT): no 👍 buttons. */
+const upOn = () => state?.upvotes !== false;
+
 /** False while the teacher hides vote numbers (protocol.js HIDDEN COUNTS): buttons with no counts. */
 const countsOn = () => state?.voteCounts !== false;
 const VOTE_FINAL = 'Votes are final. You already voted on this song.';
 
 /** The hint over the queue: what the votes do in this mode. Votes are final (protocol.js VOTES ARE FINAL). */
 function renderVoteHint(mode) {
-  const text = (mode === 'off' ? '👍 the songs you want. Most 👍 plays next, and every song gets its turn.'
-    : '👍 the songs you want, 👎 the ones you do not. Most votes plays next.')
-    + ' Votes are final.' + (state?.nextLocked ? ' 🔒 The next song is locked in.' : '');
+  const up = upOn();
+  const text = (!up && mode === 'off' ? 'Songs play in the order they were suggested.'
+    : !up ? '👎 the songs you do not want: they play later.'
+      : mode === 'off' ? '👍 the songs you want. Most 👍 plays next, and every song gets its turn.'
+        : '👍 the songs you want, 👎 the ones you do not. Most votes plays next.')
+    + (up || mode !== 'off' ? ' Votes are final.' : '') + (state?.nextLocked ? ' 🔒 The next song is locked in.' : '');
   const el = $('#voteHint');
   if (el.textContent !== text) el.textContent = text;
 }
@@ -828,14 +839,29 @@ function downLeft() {
   return Math.max(0, n);
 }
 
-/** "👎 2 left" next to the voting hint; hidden while unlimited. */
-function renderDownLeft(left) {
-  const el = $('#downLeft');
+/**
+ * 👍 I may still cast this class (protocol.js UPVOTE LIMIT), or null = unlimited (or 👍 off): the
+ * server's count less this page's new 👍 the server has not answered yet. A 👍 is spent for good.
+ */
+function upLeft() {
+  const left = state?.you?.upvotesLeft;
+  if (!Number.isInteger(left) || !upOn()) return null;
+  let n = left;
+  for (const [id, before] of voteUndo) {
+    const item = state.nowPlaying?.id === id ? state.nowPlaying : state.queue.find((q) => q.id === id);
+    if (item?.myVote === 1 && before.myVote !== 1) n--;
+  }
+  return Math.max(0, n);
+}
+
+/** "👍 2 left" / "👎 2 left" next to the voting hint; hidden while unlimited. */
+function renderLeft(sel, emoji, words, left) {
+  const el = $(sel);
   el.hidden = left === null;
   if (left === null) return;
-  const text = `👎 ${left} left`;
+  const text = `${emoji} ${left} left`;
   if (el.textContent !== text) el.textContent = text;
-  el.setAttribute('aria-label', left === 0 ? 'No thumbs down left this class' : `${left} thumbs down left this class`);
+  el.setAttribute('aria-label', left === 0 ? `No ${words} left this class` : `${left} ${words} left this class`);
   el.classList.toggle('empty', left === 0);
 }
 
@@ -850,7 +876,9 @@ function renderQueue(queue) {
   const list = $('#queue');
   const mode = downMode();
   const left = mode === 'off' ? null : downLeft();
-  renderDownLeft(left);
+  const ups = upLeft();
+  renderLeft('#upLeft', '👍', 'thumbs up', ups);
+  renderLeft('#downLeft', '👎', 'thumbs down', left);
   renderVoteHint(mode);
   // Reading positions costs two layouts of the page (slow on a Chromebook with 40 songs): only
   // when the order really changes, and not in a burst of votes (sliding then is only a blur).
@@ -888,14 +916,15 @@ function renderQueue(queue) {
         const btn = li.querySelector(`.vote.${act}`);
         // DOWNVOTE MODE: 'off' = no 👎 button at all; 'hidden' = a 👎 button with no count.
         if (act === 'down') btn.hidden = mode === 'off';
+        else btn.hidden = !upOn(); // UPVOTE LIMIT: 👍 off = no 👍 button
         const counted = countsOn() && (act === 'up' || mode === 'shown');
         btn.setAttribute('aria-pressed', String(item.myVote === v));
-        // 👎 all used: a new 👎 says why on click (never a dead button); my own 👎 can still be taken back.
-        const spent = act === 'down' && left === 0 && item.myVote !== -1;
+        // All used: a new vote says why on click (never a dead button).
+        const spent = item.myVote !== v && (act === 'down' ? left === 0 : ups === 0);
         btn.setAttribute('aria-disabled', String(spent));
-        btn.title = spent ? DOWN_SPENT : '';
+        btn.title = spent ? (act === 'down' ? DOWN_SPENT : UP_SPENT) : '';
         const said = counted ? votesLabel(label, n) : label;
-        btn.setAttribute('aria-label', spent ? `${said}. No thumbs down left this class` : said);
+        btn.setAttribute('aria-label', spent ? `${said}. No ${label.toLowerCase()} left this class` : said);
         const shown = counted ? String(n) : '';
         if (btn.querySelector('.n').textContent !== shown) btn.querySelector('.n').textContent = shown;
       }
@@ -957,8 +986,10 @@ $('#queue').addEventListener('click', (e) => {
   }
   const want = btn.dataset.act === 'up' ? 1 : -1;
   if (want === -1 && downMode() === 'off') return; // no 👎 while the teacher has it off (the button is hidden)
+  if (want === 1 && !upOn()) return; // no 👍 while the teacher has it off (the button is hidden)
   if (item.myVote !== 0) return tell(VOTE_FINAL, 'warn', 5000); // votes are final
   if (want === -1 && downLeft() === 0) return tell(DOWN_SPENT, 'warn', 7000);
+  if (want === 1 && upLeft() === 0) return tell(UP_SPENT, 'warn', 7000);
   if (!sendVote(item, want)) return;
   renderQueue(state.queue);
   sayVotes(id);
@@ -983,6 +1014,8 @@ function sendVote(item, v) {
 function renderNowVote(now) {
   const btn = $('#nowUp');
   if (!btn) return;
+  btn.hidden = !upOn(); // UPVOTE LIMIT: 👍 off
+  btn.setAttribute('aria-disabled', String(now.myVote !== 1 && upLeft() === 0));
   btn.setAttribute('aria-pressed', String(now.myVote === 1));
   btn.setAttribute('aria-label', countsOn() ? votesLabel('Thumbs up for the song playing now', now.up) : 'Thumbs up for the song playing now');
   btn.querySelector('.n').textContent = countsOn() ? now.up : '';
@@ -990,8 +1023,9 @@ function renderNowVote(now) {
 
 $('#nowPlaying').addEventListener('click', (e) => {
   const now = state?.nowPlaying;
-  if (!e.target.closest('#nowUp') || !now) return;
+  if (!e.target.closest('#nowUp') || !now || !upOn()) return;
   if (now.myVote !== 0) return tell(VOTE_FINAL, 'warn', 5000); // votes are final
+  if (upLeft() === 0) return tell(UP_SPENT, 'warn', 7000);
   if (!sendVote(now, 1)) return;
   renderNowVote(now);
   sayVotes(now.id);

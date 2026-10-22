@@ -1,7 +1,7 @@
 # RoomDJ
 
 A classroom music queue, built for Chromebook classrooms. Students join with today's class code,
-search for songs, suggest them and vote 👍 (and 👎, if the teacher turns it on). The teacher's computer on the projector plays
+search for songs, suggest them and vote 👍 and 👎 (3 of each per class by default; the teacher can change either or turn it off). The teacher's computer on the projector plays
 the winners through the teacher's own music account, and a filter keeps it school-appropriate:
 no explicit songs, the teacher's blocked words and banned songs, and an AI theme check (songs the
 model does not know, mostly newer ones, are judged from their lyrics, fetched once from

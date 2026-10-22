@@ -309,13 +309,19 @@ export const DEFAULT_SETTINGS = Object.freeze({
   hideAllArt: false, // 🖼 never show any album covers (🎵 tiles everywhere). Saved settings without it read as false.
   maxDownvotes: 3, // 👎 per student per class (DOWNVOTE LIMIT below): a whole number 1..20, null = unlimited.
   //                  Saved settings and rooms without it read as 3.
+  upvotes: true, // 👍 votes on or off (UPVOTE LIMIT below). Saved settings and rooms without it read as true.
+  maxUpvotes: 3, // 👍 per student per class (UPVOTE LIMIT below; Dalton, 2026-10-21: "3 max"): a whole
+  //                number 1..20, null = unlimited. Saved settings without it read as 3; ROOMS saved
+  //                before it read as null (unlimited, as before: no change mid-period).
   scoreFloor: true, // scores never go below 0 (SCORE FLOOR below): 👎 can push a song down but never
   //                   remove it. Default on (Dalton, 2026-10-08: "0 is floor, so all student songs get
   //                   to play"). Saved settings without it read as true; ROOMS saved before the
   //                   setting existed keep false (migrateRoomState: no change mid-period).
-  downvoteMode: 'off', // 👎 votes (DOWNVOTE MODE below): 'off' | 'hidden' | 'shown' (DOWNVOTE_MODES).
-  //                      Default 'off': students only 👍, so every song gets its turn. Saved settings
-  //                      without it read as 'off'; ROOMS saved before it read as 'shown' (as before).
+  downvoteMode: 'hidden', // 👎 votes (DOWNVOTE MODE below): 'off' | 'hidden' | 'shown' (DOWNVOTE_MODES).
+  //                      Default 'hidden' (Dalton, 2026-10-21: "upvotes and downvotes on, 3 max"; was
+  //                      'off'): students may 👎 (3 a class), only the teacher sees 👎 counts, and the
+  //                      score floor keeps every song. Saved settings without it read as 'hidden';
+  //                      ROOMS saved before it read as 'shown' (as before).
   ghostVote: false, // 👻 ghost 👍 (GHOST VOTE below): a waiting song gets one quiet +1 👍 after ghostVoteMinutes.
   //                   Saved settings and rooms without it read as false.
   ghostVoteMinutes: 3, // SETTINGS_LIMITS.ghostVoteMinutes. Saved settings and rooms without it read as 3.
@@ -337,6 +343,7 @@ export const SETTINGS_LIMITS = Object.freeze({
   recapVolume: [10, 100],
   bellOffsetSeconds: [-120, 120],
   maxDownvotes: [1, 20],
+  maxUpvotes: [1, 20],
   ghostVoteMinutes: [1, 10],
 });
 
@@ -359,10 +366,26 @@ export const SETTINGS_LIMITS = Object.freeze({
 //   host offers DOWNVOTE_CHOICES (+ Unlimited); any whole number in SETTINGS_LIMITS.maxDownvotes is valid.
 export const DOWNVOTE_CHOICES = Object.freeze([1, 2, 3, 5]);
 
+// UPVOTE LIMIT (Dalton, 2026-10-21: "a limited number of upvotes or turn them on or off"; shared/queue.js
+//   vote): the 👍 twin of DOWNVOTE LIMIT, simpler because votes are final (VOTES ARE FINAL below).
+//   - settings.upvotes false: nobody can cast a new 👍, the teacher too (⏫ Play next stays); the room
+//     refuses it with { t: 'error', error: 'upvotes_off', id, message: '👍 is turned off in this class.' }.
+//     👍 already cast stay and still count. The pages show no 👍 buttons and no "👍 N left". The
+//     ghost 👍 (GHOST VOTE) gives nothing while 👍 is off.
+//   - settings.maxUpvotes (null = unlimited): each student device may cast this many 👍 per ROOM,
+//     counted in RoomState.upvotes[device] (deleted with the room; kick deletes it). Every new 👍
+//     uses one, on a waiting song or the song playing; a 👍 never comes back (votes are final).
+//     Over the limit: { t: 'error', error: 'upvotes', id, message: "You've used your 👍 for this
+//     class." }; nothing changes and no back-to-work rest starts.
+//   - The teacher (TEACHER_DEVICE) is unlimited and never counted. Lowering the limit removes no 👍.
+//   Snapshot: `upvotes` (on/off, everyone); you.upvotesLeft (null = unlimited or off); the host's
+//   students[].upvotes (used). The host offers UPVOTE_CHOICES (+ Unlimited).
+export const UPVOTE_CHOICES = Object.freeze([1, 2, 3, 5, 10]);
+
 // DOWNVOTE MODE (Dalton, 2026-10-08: "Set default to not show dislikes and 0 is floor. So all student
 //   songs will get to play"; shared/queue.js voteRules/itemScore/itemView, shared/highlights.js):
 //   settings.downvoteMode, one of DOWNVOTE_MODES:
-//   - 'off' (the default): nobody can cast a 👎. The pages show no 👎 buttons (student queue, host
+//   - 'off': nobody can cast a 👎. The pages show no 👎 buttons (student queue, host
 //     queue) and no "👎 N left"; the room refuses a new 👎 with { t: 'error', error: 'downvotes_off',
 //     id, message: '👎 is turned off in this class.' } (no rest starts; the teacher too: the veto stays).
 //     👎 already cast are KEPT in the room but IGNORED: every score is the 👍 count, every `down` a
@@ -568,14 +591,15 @@ export const CREDIT_GRANT_MAX = 100;
  *
  * State snapshot (server → client, message { t: 'state', state }).
  * @typedef {{ room: string, until: number, cleanupAt: number|null, cleanup: boolean, teacher: string|null,
- *   serverNow: number, bellOffsetSeconds: number, downvoteMode: 'off'|'hidden'|'shown',
+ *   serverNow: number, bellOffsetSeconds: number, downvoteMode: 'off'|'hidden'|'shown', upvotes: boolean,
  *   profile?: string|null,
  *   open: boolean, locked: boolean, nowPlaying: QueueItem|null,
  *   queue: QueueItem[], settings: object, top5: Top5Item[],
  *   you: { nick: string, waiting: number, review: number, credits: number|null, restUntil: number|null,
- *     restGraceUntil: number|null, restLeft: number, restGraceLeft: number, downvotesLeft: number|null } | null,
+ *     restGraceUntil: number|null, restLeft: number, restGraceLeft: number, downvotesLeft: number|null,
+ *     upvotesLeft: number|null } | null,
  *   students?: { device: string, nick: string, online: boolean, credits: number|null, restUntil: number|null,
- *     restLeft: number, downvotes: number }[],
+ *     restLeft: number, downvotes: number, upvotes: number }[],
  *   aiStatus?: 'ok'|'failing',
  *   review?: QueueItem[] }} State
  *   `room` is the room id, `until` when the room closes itself (ms: class ends). `cleanupAt`:

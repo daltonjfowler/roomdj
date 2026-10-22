@@ -1,9 +1,8 @@
-# RoomDJ: the public pages may be indexed; the teacher page, the board, admin and the API not.
+# RoomDJ: the public pages may be indexed. The teacher page, the board and admin may be crawled
+# so search engines read their noindex header (a blocked page can still be listed bare from links);
+# the API not at all.
 User-agent: *
 Allow: /
-Disallow: /host/
-Disallow: /board/
-Disallow: /admin/
 Disallow: /api/
 
 # SEO-tool crawlers (not search engines): they only chase old links from before RoomDJ, and every

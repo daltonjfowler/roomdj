@@ -42,7 +42,7 @@ import { handleAuth, teacherSession } from './auth.js';
 import { FREE_CAPS, freeUsage, spendFree } from './free.js';
 import { prewarm } from './prewarm.js';
 import { handleAdmin } from './admin.js';
-import { robotsTag } from './seo.js';
+import { cleanPath, robotsTag } from './seo.js';
 import { readOpenRooms, removeOpenRoom, updateOpenRooms } from './open-rooms.js';
 import { roomProfile } from '../shared/profiles.js';
 
@@ -91,10 +91,15 @@ export function redirectTarget(requestUrl) {
   const url = new URL(requestUrl);
   const host = url.hostname.toLowerCase();
   const isWww = host === 'www.' + CANONICAL_HOST;
-  if (!isWww && (url.protocol !== 'http:' || isLocal(host))) return null;
-  url.protocol = 'https:';
-  if (isWww) url.hostname = CANONICAL_HOST;
-  url.port = '';
+  const clean = cleanPath(url.pathname); // /about.html -> /about, a 301 (seo.js)
+  const toHttps = isWww || (url.protocol === 'http:' && !isLocal(host));
+  if (!toHttps && !clean) return null;
+  if (clean) url.pathname = clean;
+  if (toHttps) {
+    url.protocol = 'https:';
+    if (isWww) url.hostname = CANONICAL_HOST;
+    url.port = '';
+  }
   return url.toString();
 }
 

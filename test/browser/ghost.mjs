@@ -155,7 +155,7 @@ try {
   check('Settings → Songs: "👻 Ghost 👍" is off', !(await host.page.isChecked(sw))
     && (await host.page.locator('label', { has: host.page.locator('#setGhost') }).textContent()).includes('👻 Ghost 👍'));
   check('off: the minutes are greyed out (3)', (await host.page.isDisabled('#setGhostMin')) && (await host.page.inputValue('#setGhostMin')) === '3');
-  check('the help text', (await text(host, '#ghostHelp')).trim() === "Gives a waiting song a quiet +1 👍 after 3 minutes so every song gets some love. Students can't tell it apart.",
+  check('the help text', (await text(host, '#ghostHelp')).trim() === "Gives a waiting song a quiet +1 👍 after 3 minutes so every song gets some love. Students can't tell it apart. Nothing while 👍 is off.",
     await text(host, '#ghostHelp'));
   await host.page.setChecked(sw, true);
   check('on: the minutes can be changed', !(await host.page.isDisabled('#setGhostMin')));

@@ -41,7 +41,7 @@ import { cleanClientId } from '../../shared/accounts.js';
 import { isFreeTeacher } from '../../shared/protocol.js';
 import { initTeacherSuggest } from './teacher-suggest.js';
 import { NEXT_LOCK_S, PUSH_TAG, byLabel } from '../../shared/protocol.js';
-import { BACK_TO_WORK_MINUTES, DEFAULT_SETTINGS, DOWNVOTE_CHOICES } from '../../shared/protocol.js';
+import { BACK_TO_WORK_MINUTES, DEFAULT_SETTINGS, DOWNVOTE_CHOICES, UPVOTE_CHOICES } from '../../shared/protocol.js';
 import { clockLeft } from '../../shared/backtowork.js';
 import { afterShow, holdForShow } from '../../shared/recap-music.js';
 import { initRecapAudio } from './recap-audio.js';
@@ -1041,7 +1041,7 @@ function render(s) {
         ${item.pushed ? `<span class="ptag">${PUSH_TAG}</span>` : ''}</span>
       ${scoreHtml(item, s.downvoteMode).replace(/<\/span>$/, `${ghostHtml(item)}</span>`)}
       <span class="item-tools">
-        <button type="button" data-act="up" class="tvote" aria-pressed="${item.myVote === 1}" aria-label="${esc(`Your thumbs up for ${item.song.title}`)}" title="Your vote (one vote, like a student's)">👍</button>
+        ${s.upvotes === false ? '' : `<button type="button" data-act="up" class="tvote" aria-pressed="${item.myVote === 1}" aria-label="${esc(`Your thumbs up for ${item.song.title}`)}" title="Your vote (one vote, like a student's)">👍</button>`}
         ${s.downvoteMode === 'off' ? '' : `<button type="button" data-act="down" class="tvote" aria-pressed="${item.myVote === -1}" aria-label="${esc(`Your thumbs down for ${item.song.title}`)}" title="Your vote (one vote, like a student's)">👎</button>`}
         ${rowMenu(item, i)}
       </span>
@@ -1393,12 +1393,21 @@ function renderStudents() {
   $('#creditsOff').hidden = on;
   tickRests();
 }
-/** " · 👎 1/3": 👎 a student used of the room's limit (protocol.js DOWNVOTE LIMIT); only once they used one. */
+/**
+ * " · 👍 2/3 · 👎 1/3": votes a student used of the room's limits (protocol.js UPVOTE LIMIT, DOWNVOTE
+ * LIMIT); each only once they used one, and only while that vote is on.
+ */
 function downHtml(s) {
+  const out = [];
+  const up = state?.settings?.maxUpvotes;
+  if (state?.upvotes !== false && Number.isInteger(up) && s.upvotes) {
+    out.push(` · <span class="student-down" title="Thumbs up used of ${up} this class">👍 ${s.upvotes}/${up}</span>`);
+  }
   const limit = state?.settings?.maxDownvotes;
-  if (state?.downvoteMode === 'off') return ''; // 👎 off (protocol.js DOWNVOTE MODE)
-  if (!Number.isInteger(limit) || !s.downvotes) return '';
-  return ` · <span class="student-down" title="Thumbs down used of ${limit} this class">👎 ${s.downvotes}/${limit}</span>`;
+  if (state?.downvoteMode !== 'off' && Number.isInteger(limit) && s.downvotes) {
+    out.push(` · <span class="student-down" title="Thumbs down used of ${limit} this class">👎 ${s.downvotes}/${limit}</span>`);
+  }
+  return out.join('');
 }
 $('#studentsBtn').addEventListener('click', () => {
   $('#studentsDlg').showModal();
@@ -1537,6 +1546,12 @@ function fillSettings(s) {
   const downChoices = [...new Set([...DOWNVOTE_CHOICES, ...(down === null ? [] : [down])])].sort((a, b) => a - b);
   $('#setMaxDown').innerHTML = [...downChoices.map((n) => `<option value="${n}">${n}</option>`), '<option value="off">Unlimited</option>'].join('');
   $('#setMaxDown').value = down === null ? 'off' : String(down);
+  // 👍 (protocol.js UPVOTE LIMIT): Off, the choices (plus a saved number that is not one), Unlimited.
+  const up = Number.isInteger(s.maxUpvotes) ? s.maxUpvotes : null;
+  const upChoices = [...new Set([...UPVOTE_CHOICES, ...(up === null ? [] : [up])])].sort((a, b) => a - b);
+  $('#setUp').innerHTML = ['<option value="off">Off: no 👍</option>', ...upChoices.map((n) => `<option value="${n}">${n}</option>`),
+    '<option value="unlimited">Unlimited</option>'].join('');
+  $('#setUp').value = s.upvotes === false ? 'off' : up === null ? 'unlimited' : String(up);
   $('#setAi').checked = s.aiCheck !== false;
   $('#setUnknown').checked = s.blockUnknownSongs !== false;
   $('#setWords').value = (s.blocklist ?? []).join('\n');
@@ -1627,10 +1642,12 @@ function readSettings() {
   const [remLo, remHi] = SETTINGS_LIMITS.removeAtScore;
   const max = Number($('#setMax').value), remove = Number($('#setRemove').value);
   const words = [...new Set($('#setWords').value.split(/[\n,]/).map((w) => w.trim().toLowerCase()).filter(Boolean))];
+  const base = settingsBase();
   const fail = (text, field = null) => {
     $('#settingsMsg').textContent = text;
-    // The box with the problem: show its tab and put the cursor in it.
+    // The box with the problem: show its tab (and All settings, if Simple hides it) and put the cursor in it.
     const el = field && $(field);
+    if (el?.closest('[data-adv]')) setLevel(true, false);
     const tab = el && settingsTabs.tabFor(el);
     if (tab) settingsTabs.select(tab);
     el?.focus();
@@ -1647,7 +1664,7 @@ function readSettings() {
   }
   const removeOk = whole('#setRemove') && remove >= remLo && remove <= remHi;
   // Greyed out under the score floor: a bad value there keeps the room's own (it never removes anyway).
-  const removeAtScore = removeOk ? remove : (state?.settings?.removeAtScore ?? DEFAULT_SETTINGS.removeAtScore);
+  const removeAtScore = removeOk ? remove : (base.removeAtScore ?? DEFAULT_SETTINGS.removeAtScore);
   if (!floor && !removeOk) return fail(`The remove score must be a whole number from ${remLo} to ${remHi}.`, '#setRemove');
   if (words.length > SETTINGS_LIMITS.blocklistWords) return fail(`Up to ${SETTINGS_LIMITS.blocklistWords} blocked words.`, '#setWords');
   const long = words.find((w) => w.length > SETTINGS_LIMITS.blocklistWordLength);
@@ -1680,8 +1697,12 @@ function readSettings() {
     // 👻 Off keeps the minutes it had (a bad box while off: the room's own).
     ghostVote: ghostOn,
     ghostVoteMinutes: whole('#setGhostMin') && ghostMin >= ghostLo && ghostMin <= ghostHi
-      ? ghostMin : (state?.settings?.ghostVoteMinutes ?? DEFAULT_SETTINGS.ghostVoteMinutes),
+      ? ghostMin : (base.ghostVoteMinutes ?? DEFAULT_SETTINGS.ghostVoteMinutes),
     maxDownvotes: $('#setMaxDown').value === 'off' ? null : Number($('#setMaxDown').value),
+    // 👍 Off keeps the limit it had, for when it comes back on.
+    upvotes: $('#setUp').value !== 'off',
+    maxUpvotes: $('#setUp').value === 'off' ? (base.maxUpvotes === undefined ? DEFAULT_SETTINGS.maxUpvotes : base.maxUpvotes)
+      : $('#setUp').value === 'unlimited' ? null : Number($('#setUp').value),
     blocklist: words,
     ...(testAiOff ? { aiCheck: $('#setAi').checked, blockUnknownSongs: $('#setUnknown').checked } : {}),
     maxSongMinutes: songs.maxSongMinutes,
@@ -1696,7 +1717,7 @@ function readSettings() {
     // 📚 Off keeps the minutes it had, for when it comes back on.
     backToWork: $('#setBackToWork').value !== 'off',
     backToWorkMinutes: $('#setBackToWork').value === 'off'
-      ? (state?.settings?.backToWorkMinutes ?? DEFAULT_SETTINGS.backToWorkMinutes) : Number($('#setBackToWork').value),
+      ? (base.backToWorkMinutes ?? DEFAULT_SETTINGS.backToWorkMinutes) : Number($('#setBackToWork').value),
     recapMusic: $('#setRecapMusic').checked,
     recapVolume: Number($('#setRecapVolume').value),
     artCheck: $('#setArtCheck').checked,
@@ -1706,18 +1727,60 @@ function readSettings() {
 
 // Tabs (tabs.js): Songs, Credits, Class time, Display & sound, Shortcuts, Teacher; the last one is remembered.
 const settingsTabs = initTabs($('#settingsTabs'), { storageKey: 'cq.settingsTab' });
+
+// Simple or All settings (Dalton, 2026-10-21: "a simple customization set and advanced set like you
+// get in a 3D printer slicer"): Simple hides every [data-adv] row, group and tab (host.css). The
+// choice is remembered on this computer; ⚙️ More options always opens on All.
+const LEVEL_KEY = 'cq.settingsLevel';
+const savedLevelAll = () => { try { return localStorage.getItem(LEVEL_KEY) === 'all'; } catch { return false; } };
+function setLevel(all, remember = true) {
+  $('#settingsDlg').classList.toggle('show-all', all);
+  $('#levelSimple').setAttribute('aria-pressed', String(!all));
+  $('#levelAll').setAttribute('aria-pressed', String(all));
+  $('#levelNote').hidden = all;
+  if (remember) try { localStorage.setItem(LEVEL_KEY, all ? 'all' : 'simple'); } catch { /* blocked: this page only */ }
+  // A tab with nothing in Simple (⌨ Shortcuts): back to the first one.
+  if (!all && $('#settingsTabs [aria-selected="true"]')?.hasAttribute('data-adv')) settingsTabs.select('tabSongs');
+}
+$('#levelSimple').addEventListener('click', () => setLevel(false));
+$('#levelAll').addEventListener('click', () => setLevel(true));
+
+// The dialog edits the room's settings (⚙️ Settings in the room), or, from ⚙️ More options on the
+// open-room form, this teacher's saved defaults before any room: then only Save as my default.
+let settingsForRoom = true;
+/** What the form started from: the room's settings, or the saved defaults (More options). */
+const settingsBase = () => (settingsForRoom ? state?.settings : savedQuick) ?? DEFAULT_SETTINGS;
+function openSettings(forRoom, s, all) {
+  settingsForRoom = forRoom;
+  fillSettings(s);
+  $('#settingsDlg').classList.toggle('defaults-mode', !forRoom);
+  $('#defaultsNote').hidden = forRoom;
+  $('#settingsTitle').textContent = forRoom ? 'Settings' : 'Settings for your rooms';
+  settingsTabs.restore();
+  setLevel(all, false);
+  $('#settingsDlg').showModal();
+  $('#settingsTabs [aria-selected="true"]')?.focus();
+}
+
 $('#settingsBtn').addEventListener('click', () => {
   if (!state) return;
-  fillSettings(state.settings);
   $('#setTeacherName').textContent = state.teacher || currentProfile()?.name || '';
-  settingsTabs.restore();
-  $('#settingsDlg').showModal();
+  openSettings(true, state.settings, savedLevelAll());
   showUsage();
-  $('#settingsTabs [aria-selected="true"]')?.focus();
+});
+$('#moreOptions').addEventListener('click', async () => {
+  if (!canTeach()) return showStart();
+  if (!savedQuick) await prepareCredits(); // the saved defaults (and the quick choices from them)
+  // What this form already says (Song suggestions, Back to work) shows in the dialog too.
+  const credits = readCredits();
+  const quick = quickTouched ? { ...(credits.ok ? { startingCredits: credits.startingCredits } : {}), ...readRest(savedQuick) } : {};
+  $('#setTeacherName').textContent = currentProfile()?.name || '';
+  openSettings(false, { ...DEFAULT_SETTINGS, ...(savedQuick ?? {}), ...quick }, true);
 });
 $('#cancelSettings').addEventListener('click', () => $('#settingsDlg').close());
 $('#settingsForm').addEventListener('submit', (e) => {
   e.preventDefault();
+  if (!settingsForRoom) return void $('#saveDefault').click(); // Enter in a box: More options only saves
   const settings = readSettings();
   const before = state?.settings?.startingCredits ?? null;
   if (!settings || !send({ t: 'settings', settings })) return;
@@ -1732,7 +1795,7 @@ $('#saveDefault').addEventListener('click', async () => {
   const form = readSettings();
   if (!form) return;
   // Every setting is saved, not just the ones on this form: the room's own values fill the rest.
-  const settings = { ...(state?.settings ?? {}), ...form };
+  const settings = { ...(settingsForRoom ? state?.settings ?? {} : savedQuick ?? {}), ...form };
   const key = getKey();
   if (!canTeach()) return void ($('#settingsMsg').textContent = 'Sign in again (open a new room) to save defaults.');
   $('#saveDefault').disabled = true;
@@ -1740,13 +1803,21 @@ $('#saveDefault').addEventListener('click', async () => {
     // The room's teacher's defaults (a room from before profiles: the teacher picked here).
     const r = await fetch('/api/teacher/settings', {
       method: 'PUT',
-      headers: teacherHeaders(state?.profile ?? currentProfile()?.id, key),
+      headers: teacherHeaders((settingsForRoom ? state?.profile : null) ?? currentProfile()?.id, key),
       body: JSON.stringify(settings),
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return void ($('#settingsMsg').textContent = data.message || 'Could not save your defaults.');
-    send({ t: 'settings', settings });
     $('#settingsDlg').close();
+    if (!settingsForRoom) {
+      // ⚙️ More options: the open-room form now shows what was saved.
+      savedQuick = data;
+      quickTouched = false;
+      setCreditsPick(data.startingCredits ?? null);
+      setRestPick(data);
+      return toast('Saved. Your rooms start with these settings.', 'ok');
+    }
+    send({ t: 'settings', settings });
     toast('Saved. New rooms start with these settings, and this room uses them now.', 'ok');
   } catch {
     $('#settingsMsg').textContent = 'Could not reach RoomDJ. Try again.';

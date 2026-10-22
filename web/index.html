@@ -150,7 +150,8 @@
         <h2 id="queueLabel" class="label">Up next <span id="queueCount" class="count"></span></h2>
         <!-- The hint follows the teacher's 👎 setting (protocol.js DOWNVOTE MODE) -->
         <p class="note"><span id="voteHint">👍 the songs you want. Most 👍 plays next, and every song gets its turn.</span>
-          <!-- 👎 left this class (protocol.js DOWNVOTE LIMIT); hidden while unlimited -->
+          <!-- 👍 / 👎 left this class (protocol.js UPVOTE LIMIT, DOWNVOTE LIMIT); hidden while unlimited -->
+          <span id="upLeft" class="down-left" title="Thumbs up you can still give this class" hidden></span>
           <span id="downLeft" class="down-left" title="Thumbs down you can still give this class" hidden></span></p>
         <ol id="queue" class="queue"></ol>
         <p id="queueEmpty" class="note empty-note" hidden>The queue is empty. Search for a song and suggest it!</p>

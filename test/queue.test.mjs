@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { CREDITS_MAX, DEFAULT_SETTINGS, DOWNVOTE_CHOICES, JUMP_COST, QUEUE_MAX, REVIEW_MAX, SUGGEST_COST, TEACHER_DEVICE } from '../shared/protocol.js';
+import { CREDITS_MAX, DEFAULT_SETTINGS, DOWNVOTE_CHOICES, JUMP_COST, QUEUE_MAX, REVIEW_MAX, SUGGEST_COST, TEACHER_DEVICE, UPVOTE_CHOICES } from '../shared/protocol.js';
 import { validateSettings } from '../shared/settings.js';
 import {
   QUEUE_MESSAGES, addSuggestion, addToReview, allowReview, applyBlocklist, kickDevice, newRoomState, nextSong,
   nextIsFor, nickTaken, refusalMessage, snapshotFor, suggestRefusal, takeReview, veto, vote,
   VOTE_MESSAGES, boardSnapshot, pruneLowScores,
   JUMP_MESSAGES, creditsOf, creditsOn, jumpOn, jumpSong, migrateRoomState, refundCredits, refundItem, settleCredits,
-  spendCredits, teacherCredits, lockNext,
+  spendCredits, teacherCredits, lockNext, ghostMs,
 } from '../shared/queue.js';
 
 /** Not resting (📚 back to work, protocol.js BACK TO WORK). */
@@ -159,7 +159,7 @@ test('snapshot: mine/myVote/you for students, students + aiStatus + blocklist fo
   const forA = snapshotFor(s, A, { online: new Set([A]) });
   assert.equal(forA.queue[0].mine, true);
   assert.equal(forA.queue[0].myVote, 1);
-  assert.deepEqual(forA.you, { nick: 'Ana', waiting: 1, review: 0, credits: null, downvotesLeft: 3, ...NO_REST });
+  assert.deepEqual(forA.you, { nick: 'Ana', waiting: 1, review: 0, credits: null, downvotesLeft: 3, upvotesLeft: 2, ...NO_REST });
   assert.equal(forA.students, undefined);
   assert.equal(forA.aiStatus, undefined);
   assert.equal(forA.settings.blocklist, undefined);
@@ -172,7 +172,7 @@ test('snapshot: mine/myVote/you for students, students + aiStatus + blocklist fo
   assert.equal(host.queue[0].mine, false);
   assert.deepEqual(host.settings.blocklist, ['badword']);
   assert.equal(host.aiStatus, 'ok');
-  assert.deepEqual(host.students.find((x) => x.device === A), { device: A, nick: 'Ana', online: true, credits: null, downvotes: 0, restUntil: null, restLeft: 0 });
+  assert.deepEqual(host.students.find((x) => x.device === A), { device: A, nick: 'Ana', online: true, credits: null, downvotes: 0, upvotes: 1, restUntil: null, restLeft: 0 });
   assert.equal(host.students.find((x) => x.device === B).online, false);
   for (const snap of [forA, forB, host]) assert.equal(JSON.stringify(snap).includes('secret-hash'), false);
 });
@@ -197,7 +197,7 @@ test('review: add, duplicate everywhere, counts toward the limit, students never
   assert.deepEqual(addToReview(s, { device: A, nick: 'Ana', song: song(4), now: 6 }), { ok: false, reason: 'limit' });
   assert.deepEqual(addSuggestion(s, { device: A, nick: 'Ana', song: song(4), now: 6 }), { ok: false, reason: 'limit' });
   const forA = snapshotFor(s, A);
-  assert.deepEqual(forA.you, { nick: 'Ana', waiting: 2, review: 1, credits: null, downvotesLeft: 3, ...NO_REST });
+  assert.deepEqual(forA.you, { nick: 'Ana', waiting: 2, review: 1, credits: null, downvotesLeft: 3, upvotesLeft: 3, ...NO_REST });
   assert.equal(forA.review, undefined, 'students never get the review list');
   assert.equal(JSON.stringify(forA).includes('Song 1'), false);
   const host = snapshotFor(s, null);
@@ -242,7 +242,7 @@ test('review: allow joins the queue credited to the student, even over the limit
   assert.equal(view.by, 'Ana');
   assert.equal(view.mine, true);
   assert.equal(view.addedAt, 50, 'its tie place counts from when it was allowed');
-  assert.deepEqual(snapshotFor(s, A).you, { nick: 'Ana', waiting: 2, review: 0, credits: null, downvotesLeft: 3, ...NO_REST });
+  assert.deepEqual(snapshotFor(s, A).you, { nick: 'Ana', waiting: 2, review: 0, credits: null, downvotesLeft: 3, upvotesLeft: 3, ...NO_REST });
   assert.equal(vote(s, B, held.id, 1).ok, true, 'votes work once it is queued');
   assert.equal(allowReview(s, held.id), null, 'allowing twice does nothing');
   assert.equal(allowReview(s, 'nope'), null);
@@ -278,7 +278,7 @@ test('review: rooms saved before the review list still work', () => {
   const s = room();
   delete s.review;
   assert.equal(suggestRefusal(s, A, 'it:1'), null);
-  assert.deepEqual(snapshotFor(s, A).you, { nick: 'Ana', waiting: 0, review: 0, credits: null, downvotesLeft: 3, ...NO_REST });
+  assert.deepEqual(snapshotFor(s, A).you, { nick: 'Ana', waiting: 0, review: 0, credits: null, downvotesLeft: 3, upvotesLeft: 3, ...NO_REST });
   assert.deepEqual(snapshotFor(s, null).review, []);
   assert.equal(addToReview(s, { device: A, nick: 'Ana', song: song(1) }).ok, true);
 });
@@ -554,13 +554,13 @@ test('Priority jump: off by default; while off a jump is refused with reason off
 
 /** A room with `n` songs waiting (by C), and `limit` 👎 per student. */
 function downRoom(limit = 3, n = 6) {
-  const s = room({ maxDownvotes: limit, maxWaitingPerStudent: 10 });
+  const s = room({ maxDownvotes: limit, maxUpvotes: null, maxWaitingPerStudent: 10 });
   const items = [];
   for (let i = 1; i <= n; i++) items.push(addSuggestion(s, { device: C, nick: 'Cy', song: song(i), now: i }).item);
   return { s, items };
 }
 
-test('👎 limit: default 3; a 👎 over the limit is refused with downvotes; 👍 is never limited', () => {
+test('👎 limit: default 3; a 👎 over the limit is refused with downvotes; 👍 has its own limit', () => {
   assert.equal(DEFAULT_SETTINGS.maxDownvotes, 3);
   assert.deepEqual(DOWNVOTE_CHOICES, [1, 2, 3, 5]);
   const { s, items } = downRoom(2);
@@ -715,4 +715,79 @@ test('next lock: the next song is locked near the end; later votes do not change
   delete d.pushed;
   veto(s, c.id);
   assert.equal(snapshotFor(s, A).nextLocked, false);
+});
+
+// ---- 👍 limit and 👍 off (protocol.js UPVOTE LIMIT) -----------------------------------------------
+
+/** A room with `n` songs waiting (by C), 👍 `limit` per student. */
+function upRoom(settings = {}, n = 6) {
+  const s = room({ maxWaitingPerStudent: 10, ...settings });
+  const items = [];
+  for (let i = 1; i <= n; i++) items.push(addSuggestion(s, { device: C, nick: 'Cy', song: song(i), now: i }).item);
+  return { s, items };
+}
+
+test('👍 limit: default on, 3 a student; over the limit is refused with upvotes; the teacher is never counted', () => {
+  assert.equal(DEFAULT_SETTINGS.upvotes, true);
+  assert.equal(DEFAULT_SETTINGS.maxUpvotes, 3);
+  assert.deepEqual(UPVOTE_CHOICES, [1, 2, 3, 5, 10]);
+  const { s, items } = upRoom({ maxUpvotes: 2 });
+  assert.equal(snapshotFor(s, A).upvotes, true);
+  assert.equal(snapshotFor(s, A).you.upvotesLeft, 2);
+  assert.deepEqual(vote(s, A, items[0].id, 1), { ok: true, removed: false });
+  assert.equal(vote(s, A, items[0].id, 1).ok, true, 'the same 👍 again uses nothing');
+  assert.equal(snapshotFor(s, A).you.upvotesLeft, 1);
+  assert.equal(vote(s, A, items[1].id, 1).ok, true);
+  assert.deepEqual(vote(s, A, items[2].id, 1), { ok: false, error: 'upvotes' });
+  assert.equal(items[2].votes[A], undefined, 'nothing changed');
+  assert.equal(VOTE_MESSAGES.upvotes, "You've used your 👍 for this class.");
+  assert.equal(snapshotFor(s, A).you.upvotesLeft, 0);
+  assert.equal(snapshotFor(s, B).you.upvotesLeft, 2, 'per device');
+  assert.equal(snapshotFor(s, null).students.find((x) => x.device === A).upvotes, 2, 'the host sees what was used');
+  for (const it of items) assert.equal(vote(s, TEACHER_DEVICE, it.id, 1).ok, true, 'the teacher is unlimited');
+  // The song playing takes a 👍 too, and it uses one.
+  const t = upRoom({ maxUpvotes: 1 });
+  nextSong(t.s);
+  assert.equal(vote(t.s, A, t.s.nowPlaying.id, 1).ok, true);
+  assert.deepEqual(vote(t.s, A, t.s.queue[0].id, 1), { ok: false, error: 'upvotes' });
+  // Unlimited.
+  const u = upRoom({ maxUpvotes: null });
+  for (const it of u.items) assert.equal(vote(u.s, A, it.id, 1).ok, true);
+  assert.equal(snapshotFor(u.s, A).you.upvotesLeft, null);
+  // Lowering the limit removes no 👍; kick forgets the count.
+  s.settings.maxUpvotes = 1;
+  assert.equal(items[1].votes[A], 1);
+  kickDevice(s, A);
+  assert.equal(s.upvotes[A], undefined);
+});
+
+test('👍 off: a new 👍 is refused (upvotes_off) for students and the teacher; 👍 already cast stay; no ghost 👍', () => {
+  const { s, items } = upRoom({ upvotes: false, ghostVote: true });
+  assert.deepEqual(vote(s, A, items[0].id, 1), { ok: false, error: 'upvotes_off' });
+  assert.deepEqual(vote(s, TEACHER_DEVICE, items[0].id, 1), { ok: false, error: 'upvotes_off' });
+  assert.equal(VOTE_MESSAGES.upvotes_off, '👍 is turned off in this class.');
+  assert.equal(snapshotFor(s, A).upvotes, false);
+  assert.equal(snapshotFor(s, A).you.upvotesLeft, null);
+  assert.equal(ghostMs(s), null);
+  s.settings.upvotes = true;
+  assert.equal(vote(s, A, items[0].id, 1).ok, true);
+  s.settings.upvotes = false;
+  assert.equal(items[0].votes[A], 1, 'kept');
+  assert.equal(snapshotFor(s, null).queue[0].id, items[0].id, 'and still counts');
+});
+
+test('👍 limit: settings validation; rooms saved before it stay on and unlimited', () => {
+  assert.equal(validateSettings({}).settings.maxUpvotes, 3);
+  assert.equal(validateSettings({}).settings.upvotes, true);
+  for (const ok of [null, 1, 20]) assert.equal(validateSettings({ maxUpvotes: ok }).settings.maxUpvotes, ok);
+  for (const bad of [0, 21, 2.5, '3', true]) assert.equal(validateSettings({ maxUpvotes: bad }).ok, false, String(bad));
+  for (const bad of ['on', 1, null]) assert.equal(validateSettings({ upvotes: bad }).ok, false, String(bad));
+  const old = room();
+  delete old.settings.upvotes;
+  delete old.settings.maxUpvotes;
+  delete old.upvotes;
+  migrateRoomState(old);
+  assert.equal(old.settings.upvotes, true);
+  assert.equal(old.settings.maxUpvotes, null);
+  assert.deepEqual(old.upvotes, {});
 });

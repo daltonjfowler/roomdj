@@ -19,6 +19,7 @@
 //                                               search Spotify's catalog
 //     rest: { [device]: { from, grace, until } },   📚 back to work (shared/backtowork.js)
 //     downvotes: { [device]: number },          👎 used this room (protocol.js DOWNVOTE LIMIT)
+//     upvotes: { [device]: number },            👍 used this room (protocol.js UPVOTE LIMIT)
 //     credits: { [device]: number },           credit balances (protocol.js CREDITS); a device
 //                                               with none yet has settings.startingCredits
 //     cleanupAt: number|null, cleanup: boolean, cleanup time (protocol.js CLEANUP)
@@ -79,6 +80,7 @@ export function newRoomState(room, settings = DEFAULT_SETTINGS, now = Date.now()
     credits: {},
     rest: {}, // 📚 back to work: { [device]: { from, grace, until } } (shared/backtowork.js)
     downvotes: {}, // 👎 used per device this room (protocol.js DOWNVOTE LIMIT)
+    upvotes: {}, // 👍 used per device this room (protocol.js UPVOTE LIMIT)
     history: [], // songs that played this period (shared/highlights.js; Top 5, recap)
     profile: null, // the teacher profile { id, name, legacy } (protocol.js TEACHER PROFILES); null = from before profiles = legacy
     tally: { songs: {}, votes: {}, log: [] }, // songs suggested and votes cast per device, suggestion genres (recap)
@@ -128,6 +130,10 @@ export function migrateRoomState(state, { testAiOff = false } = {}) {
   // Rooms saved before the downvote limit (protocol.js DOWNVOTE LIMIT): the default, none used yet.
   if (state.settings.maxDownvotes === undefined) state.settings.maxDownvotes = DEFAULT_SETTINGS.maxDownvotes;
   state.downvotes ??= {};
+  // Rooms saved before the 👍 limit (protocol.js UPVOTE LIMIT): 👍 on and unlimited, as before.
+  state.settings.upvotes ??= true;
+  if (state.settings.maxUpvotes === undefined) state.settings.maxUpvotes = null;
+  state.upvotes ??= {};
   // Rooms saved before the score floor (protocol.js SCORE FLOOR): off, as before. (The DEFAULT is
   // on now, but a room that was running keeps what it had.)
   state.settings.scoreFloor ??= false;
@@ -166,7 +172,7 @@ export function countsHidden(state) {
 /** ms a song waits before its ghost 👍 (protocol.js GHOST VOTE), or null while the setting is off. */
 export function ghostMs(state) {
   const s = state?.settings;
-  if (s?.ghostVote !== true) return null;
+  if (s?.ghostVote !== true || !upvotesOn(state)) return null; // no ghost 👍 while 👍 is off (UPVOTE LIMIT)
   const min = Number.isInteger(s.ghostVoteMinutes) ? s.ghostVoteMinutes : DEFAULT_SETTINGS.ghostVoteMinutes;
   return min * 60_000;
 }
@@ -504,6 +510,8 @@ export const VOTE_MESSAGES = Object.freeze({
   playing_down: 'You can only give a 👍 to the song playing now.',
   downvotes: "You've used your 👎 for this class. You can still 👍 songs you like.",
   downvotes_off: '👎 is turned off in this class.',
+  upvotes: "You've used your 👍 for this class.",
+  upvotes_off: '👍 is turned off in this class.',
   vote_final: 'Votes are final. You already voted on this song.',
 });
 
@@ -525,6 +533,29 @@ export function downvotesLeft(state, device) {
   return Math.max(0, limit - downvotesUsed(state, device));
 }
 
+/** True while students (and the teacher) may cast a new 👍 (protocol.js UPVOTE LIMIT). */
+export function upvotesOn(state) {
+  return state?.settings?.upvotes !== false;
+}
+
+/** The room's 👍 limit per student (protocol.js UPVOTE LIMIT), or null = unlimited. */
+export function upvoteLimit(state) {
+  const n = state.settings?.maxUpvotes;
+  return Number.isInteger(n) ? n : null;
+}
+
+/** 👍 a device has used this room (the teacher: never counted). */
+export function upvotesUsed(state, device) {
+  return state.upvotes?.[device] ?? 0;
+}
+
+/** 👍 a device may still cast, or null when unlimited (or for the teacher, or while 👍 is off). */
+export function upvotesLeft(state, device) {
+  const limit = upvoteLimit(state);
+  if (limit === null || isTeacher(device) || !upvotesOn(state)) return null;
+  return Math.max(0, limit - upvotesUsed(state, device));
+}
+
 /**
  * One vote per device per song, queued or playing now. v = 0 takes the vote back. The song playing
  * takes 👍 (and a take-back) but no new 👎 ('playing_down'); its votes from the queue stay. Its
@@ -534,7 +565,9 @@ export function downvotesLeft(state, device) {
  * song still waits frees it; once the song left the queue it stays spent. The teacher is unlimited.
  * 👎 off (protocol.js DOWNVOTE MODE): a new 👎 is refused for everyone ('downvotes_off'); 👎 already
  * cast stay stored (ignored while off) and may still be taken back or switched to 👍.
- * @returns {{ ok: true, removed: boolean } | { ok: false, error: 'bad_vote'|'no_item'|'playing_down'|'downvotes'|'downvotes_off' }}
+ * 👍 (protocol.js UPVOTE LIMIT): a new 👍 is refused while 👍 is off ('upvotes_off'), or once a student
+ * has used settings.maxUpvotes ('upvotes'); each one is spent for good (votes are final).
+ * @returns {{ ok: true, removed: boolean } | { ok: false, error: 'bad_vote'|'no_item'|'playing_down'|'downvotes'|'downvotes_off'|'upvotes'|'upvotes_off' }}
  */
 export function vote(state, device, id, v) {
   if (v !== -1 && v !== 0 && v !== 1) return { ok: false, error: 'bad_vote' };
@@ -548,6 +581,15 @@ export function vote(state, device, id, v) {
   if (!isTeacher(device) && cast !== 0 && v !== cast) return { ok: false, error: 'vote_final' };
   if (v === -1 && before !== -1 && downvoteMode(state) === 'off') return { ok: false, error: 'downvotes_off' };
   if (playing && v === -1) return { ok: false, error: 'playing_down' };
+  if (v === 1 && before !== 1) {
+    if (!upvotesOn(state)) return { ok: false, error: 'upvotes_off' };
+    if (!isTeacher(device)) {
+      const left = upvotesLeft(state, device);
+      if (left !== null && left <= 0) return { ok: false, error: 'upvotes' };
+      state.upvotes ??= {};
+      state.upvotes[device] = upvotesUsed(state, device) + 1; // spent for good (votes are final)
+    }
+  }
   const counted = !isTeacher(device) && !playing; // 👎 on the song playing: spent, never freed
   if (v === -1 && before !== -1 && !isTeacher(device)) {
     const left = downvotesLeft(state, device);
@@ -697,6 +739,7 @@ export function kickDevice(state, device) {
   delete state.credits?.[device];
   delete state.rest?.[device];
   delete state.downvotes?.[device];
+  delete state.upvotes?.[device];
   relabelHistory(state, device, CLASSMATE, { forget: true }); // never on the Top 5 board by name
   delete tallies(state).songs[device];
   delete state.tally.votes[device];
@@ -758,6 +801,7 @@ export function snapshotFor(state, device, { online = new Set(), boards = 0, now
     bellOffsetSeconds: Number.isInteger(state.settings?.bellOffsetSeconds) ? state.settings.bellOffsetSeconds : 0,
     serverNow: now, // SERVER CLOCK: pages correct their own clock with it
     downvoteMode: downvoteMode(state), // 👎 off / counts hidden / shown (protocol.js DOWNVOTE MODE)
+    upvotes: upvotesOn(state), // 👍 on or off (protocol.js UPVOTE LIMIT)
     voteCounts: rules.counts, // false: draw no 👍/👎 numbers (protocol.js HIDDEN COUNTS)
     nextLocked: nextLockOf(state) !== null, // 🔒 the song up next is locked in (protocol.js NEXT LOCK)
     teacher: typeof state.profile?.name === 'string' ? state.profile.name : null, // "Ms Rivera's class"
@@ -771,12 +815,13 @@ export function snapshotFor(state, device, { online = new Set(), boards = 0, now
       nick: state.students[device]?.nick ?? '', waiting: waitingFor(state, device), review: reviewFor(state, device),
       credits: creditsOf(state, device),
       downvotesLeft: downvotesLeft(state, device), // 👎 limit (protocol.js DOWNVOTE LIMIT); null = unlimited
+      upvotesLeft: upvotesLeft(state, device), // 👍 limit (protocol.js UPVOTE LIMIT); null = unlimited or off
       ...restView(state, device, now), // 📚 back to work (shared/backtowork.js)
     },
   };
   if (isHost) {
     snap.students = Object.entries(state.students)
-      .map(([d, s]) => ({ device: d, nick: s.nick, online: online.has(d), credits: creditsOf(state, d), downvotes: downvotesUsed(state, d), ...restOfStudent(state, d, now) }))
+      .map(([d, s]) => ({ device: d, nick: s.nick, online: online.has(d), credits: creditsOf(state, d), downvotes: downvotesUsed(state, d), upvotes: upvotesUsed(state, d), ...restOfStudent(state, d, now) }))
       .sort((a, b) => a.nick.localeCompare(b.nick));
     snap.aiStatus = state.aiStatus ?? 'ok';
     snap.profile = state.profile?.id ?? null;

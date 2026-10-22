@@ -19,7 +19,7 @@ const song = (n) => ({
 
 /** A room with the NEW defaults unless `settings` says otherwise. */
 function room(settings = {}) {
-  const s = newRoomState('0123456789abcdef0123456789abcdef', { ...DEFAULT_SETTINGS, hideVoteCounts: false, maxWaitingPerStudent: 10, ...settings }, 1000);
+  const s = newRoomState('0123456789abcdef0123456789abcdef', { ...DEFAULT_SETTINGS, downvoteMode: 'off', hideVoteCounts: false, maxWaitingPerStudent: 10, ...settings }, 1000);
   s.students[A] = { nick: 'Ana', joinedAt: 1 };
   return s;
 }
@@ -32,14 +32,14 @@ function queued(s, n, { up = 0, down = 0, now = n } = {}) {
 }
 const titles = (snap) => snap.queue.map((q) => q.song.title);
 
-test('defaults: 👎 off and the score floor on; settings validation', () => {
+test('defaults: 👎 on with counts hidden (2026-10-21) and the score floor on; settings validation', () => {
   assert.deepEqual(DOWNVOTE_MODES, ['off', 'hidden', 'shown']);
-  assert.equal(DEFAULT_SETTINGS.downvoteMode, 'off');
+  assert.equal(DEFAULT_SETTINGS.downvoteMode, 'hidden');
   assert.equal(DEFAULT_SETTINGS.scoreFloor, true);
-  assert.equal(validateSettings({}).settings.downvoteMode, 'off');
+  assert.equal(validateSettings({}).settings.downvoteMode, 'hidden');
   // Saved settings from before the setting: the new default.
   const { downvoteMode, ...old } = DEFAULT_SETTINGS;
-  assert.equal(validateSettings({ ...old, blocklist: [] }).settings.downvoteMode, 'off');
+  assert.equal(validateSettings({ ...old, blocklist: [] }).settings.downvoteMode, 'hidden');
   for (const m of DOWNVOTE_MODES) assert.equal(validateSettings({ downvoteMode: m }).settings.downvoteMode, m);
   for (const bad of ['on', '', null, true, 1, 'Shown']) assert.equal(validateSettings({ downvoteMode: bad }).ok, false);
 });
@@ -56,9 +56,9 @@ test('old rooms (saved before the setting) keep 👎 shown and the floor off', (
   migrateRoomState(t);
   assert.equal(t.settings.downvoteMode, 'hidden');
   assert.equal(t.settings.scoreFloor, true);
-  // A new room is off with the floor on.
-  const n = room();
-  assert.equal(snapshotFor(n, A).downvoteMode, 'off');
+  // A new room is 👎 on with counts hidden, the floor on.
+  const n = newRoomState('0123456789abcdef0123456789abcdef', { ...DEFAULT_SETTINGS }, 1000);
+  assert.equal(snapshotFor(n, A).downvoteMode, 'hidden');
   assert.equal(n.settings.scoreFloor, true);
 });
 
