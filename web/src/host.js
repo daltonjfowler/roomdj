@@ -1531,16 +1531,13 @@ function fillSettings(s) {
   $('#setRemove').value = s.removeAtScore;
   $('#setScoreFloor').checked = s.scoreFloor === true; // protocol.js SCORE FLOOR
   $('#setHideCounts').checked = s.hideVoteCounts === true; // protocol.js HIDDEN COUNTS
-  showScoreFloor();
   // 👎 votes (protocol.js DOWNVOTE MODE); a room from before the setting reads 'shown'.
   $('#setDownMode').value = ['off', 'hidden', 'shown'].includes(s.downvoteMode) ? s.downvoteMode : 'shown';
-  showDownMode();
   // 👻 Ghost 👍 (protocol.js GHOST VOTE); settings from before it read off, 3 minutes.
   $('#setGhost').checked = s.ghostVote === true;
   $('#setGhostMin').min = SETTINGS_LIMITS.ghostVoteMinutes[0];
   $('#setGhostMin').max = SETTINGS_LIMITS.ghostVoteMinutes[1];
   $('#setGhostMin').value = Number.isInteger(s.ghostVoteMinutes) ? s.ghostVoteMinutes : DEFAULT_SETTINGS.ghostVoteMinutes;
-  showGhost();
   // 👎 per student per class (protocol.js DOWNVOTE LIMIT): the choices, plus a saved number that is not one.
   const down = Number.isInteger(s.maxDownvotes) ? s.maxDownvotes : null;
   const downChoices = [...new Set([...DOWNVOTE_CHOICES, ...(down === null ? [] : [down])])].sort((a, b) => a - b);
@@ -1552,7 +1549,6 @@ function fillSettings(s) {
   const upChoices = [...new Set([...UPVOTE_CHOICES, ...(up === null ? [] : [up])])].sort((a, b) => a - b);
   $('#setMaxUp').innerHTML = [...upChoices.map((n) => `<option value="${n}">${n}</option>`), '<option value="off">Unlimited</option>'].join('');
   $('#setMaxUp').value = up === null ? 'off' : String(up);
-  showUpMode();
   $('#setAi').checked = s.aiCheck !== false;
   $('#setUnknown').checked = s.blockUnknownSongs !== false;
   $('#setWords').value = (s.blocklist ?? []).join('\n');
@@ -1567,7 +1563,6 @@ function fillSettings(s) {
   $('#setCredits').value = on ? s.startingCredits : '';
   $('#setJump').checked = s.allowJump === true;
   $('#setCoupons').checked = s.coupons !== false;
-  showCreditSwitches();
   // 📚 Back to work and 🎵 recap music (protocol.js BACK TO WORK, RECAP MUSIC)
   $('#setBackToWork').innerHTML = ['<option value="off">Off</option>',
     ...BACK_TO_WORK_MINUTES.map((m) => `<option value="${m}">${m} ${m === 1 ? 'minute' : 'minutes'}</option>`)].join('');
@@ -1577,72 +1572,121 @@ function fillSettings(s) {
   $('#setHideAllArt').checked = s.hideAllArt === true;
   [$('#setRecapVolume').min, $('#setRecapVolume').max] = SETTINGS_LIMITS.recapVolume;
   $('#setRecapVolume').value = String(s.recapVolume ?? DEFAULT_SETTINGS.recapVolume);
-  showRecapVolume();
   [$('#setPeriod').min, $('#setPeriod').max] = SETTINGS_LIMITS.periodMinutes;
   $('#setPeriod').value = s.periodMinutes ?? 70;
   const offset = Number.isInteger(s.bellOffsetSeconds) ? s.bellOffsetSeconds : 0;
   $('#setBellOffset').value = offset > 0 ? `+${offset}` : String(offset);
   fillPrefs();
+  adaptSettings(); // every help line and hidden row for these values
   $('#settingsMsg').textContent = '';
 }
-function showRecapVolume() {
+// ADAPTIVE SETTINGS (Dalton, 2026-10-21: "the prompts/text change as you interact with it and stuff
+// will hide", "plain explanations anyone can understand"): after every change in the form, each help
+// line says what the CURRENT choice does, in plain words with the numbers picked, and a row that does
+// nothing with the other choices hides (its value is kept and saved as it was).
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+function say(sel, text) {
+  const el = $(sel);
+  if (el && el.textContent !== text) el.textContent = text;
+}
+function showIf(on, ...sels) {
+  for (const sel of sels) {
+    const el = $(sel);
+    if (el) el.hidden = !on;
+  }
+}
+const rowOf = (sel) => $(sel).closest('label');
+function adaptSettings() {
+  const num = (sel) => Number($(sel).value);
+  // 👍 and 👎 (protocol.js UPVOTE LIMIT, DOWNVOTE MODE / LIMIT)
+  const upOn = $('#setUpMode').value !== 'off';
+  const downMode = $('#setDownMode').value;
+  const downOn = downMode !== 'off';
+  say('#upModeHelp', upOn ? 'Students tap 👍 on the songs they want. The song with the most 👍 plays next.'
+    : downOn ? 'Nobody can 👍. Songs play in the order they were suggested, and 👎 moves songs down.'
+      : 'Nobody can 👍. Songs play in the order they were suggested.');
+  showIf(upOn, '#maxUpRow', '#maxUpHelp');
+  say('#maxUpHelp', $('#setMaxUp').value === 'off' ? 'Students can 👍 as many songs as they like.'
+    : `Each student gets ${plural(num('#setMaxUp'), '👍', '👍')} per class. Once they use one, it stays used.`);
+  say('#downModeHelp', downMode === 'off' ? 'Nobody can 👎. Every song gets its turn.'
+    : downMode === 'hidden' ? 'Students can 👎 songs they do not want. Only you see how many 👎 a song has.'
+      : 'Students can 👎 songs they do not want. Everyone sees how many 👎 a song has.');
+  showIf(downOn, '#maxDownRow', '#maxDownHelp');
+  say('#maxDownHelp', $('#setMaxDown').value === 'off' ? 'Students can 👎 as many songs as they like.'
+    : `Each student gets ${plural(num('#setMaxDown'), '👎', '👎')} per class. Once they use one, it stays used.`);
+  // Scores never go below 0 and the remove score only matter while 👎 is on (SCORE FLOOR).
+  const floor = $('#setScoreFloor').checked;
+  rowOf('#setScoreFloor').hidden = !downOn;
+  showIf(downOn, '#scoreFloorHelp');
+  say('#scoreFloorHelp', floor ? 'Votes never take a song out of line, so every student\'s song gets to play. Only you can remove a song.'
+    : 'Off: a song with too many 👎 leaves the line (the number below).');
+  showIf(downOn && !floor, '#removeRow', '#removeHelp');
+  const remove = num('#setRemove');
+  say('#removeHelp', Number.isInteger(remove) && remove < 0
+    ? `A song leaves the line once it has ${-remove} more 👎 than 👍.`
+    : 'Pick a number below 0, like -3.');
+  say('#hideCountsHelp', $('#setHideCounts').checked
+    ? 'Students and the board see the order of songs, but not how many votes each has. You still see every vote.'
+    : 'Students and the board see how many votes each song has.');
+  // 👻 Ghost 👍 needs 👍 on; its minutes need it on (GHOST VOTE).
+  const ghost = $('#setGhost').checked;
+  rowOf('#setGhost').hidden = !upOn;
+  showIf(upOn, '#ghostHelp');
+  showIf(upOn && ghost, '#ghostMinRow');
+  const gm = num('#setGhostMin');
+  say('#ghostHelp', ghost ? `A song that waits ${Number.isInteger(gm) && gm > 0 ? plural(gm, 'minute') : 'a few minutes'} gets 1 free 👍, so every song gets some love. Students cannot tell.`
+    : 'Off: songs only get the 👍 students give them.');
+  // Songs (classtime.js shows the minutes box)
+  say('#maxLenHelp', $('#setMaxLenOn').checked
+    ? `Songs longer than ${Number.isInteger(num('#setMaxLen')) && num('#setMaxLen') > 0 ? plural(num('#setMaxLen'), 'minute') : 'that'} are turned down. It costs no credit.`
+    : 'Off: songs of any length are fine.');
+  say('#instrumentalHelp', $('#setInstrumental').checked
+    ? 'Only songs with no singing or rapping. Songs the checker is not sure about wait for you in Needs a look.'
+    : 'Off: songs with singing are fine.');
+  const cool = $('#setCooldown').value;
+  say('#cooldownHelp', cool === 'off'
+    ? 'Off: a song can be picked again in your next class. It never plays twice in one class.'
+    : `A song that played in any of your classes cannot be picked again for ${$('#setCooldown').selectedOptions[0]?.textContent ?? 'a while'}. Any version counts (remix, sped up, live). Wake one early in 📋 Lists → 😴 Resting songs.`);
+  // Credits: Starting credits, Priority jump and coupons only matter while credits are on (CREDITS).
+  const credits = $('#setCreditsOn').checked;
+  showIf(credits, '#creditsStartRow');
+  $('#setCredits').disabled = !credits; // a hidden bad number must never block saving
+  say('#creditsHelp', credits ? 'Each song a student suggests costs 1 credit. You can give more in 🏠 Room → Students.'
+    : 'Off: suggesting songs is free.');
+  rowOf('#setJump').hidden = !credits;
+  showIf(credits, '#jumpHelp');
+  say('#jumpHelp', $('#setJump').checked
+    ? 'Students can spend 2 credits on ⚡ Jump to make a song play next. If you turn this off later, songs already jumped keep their place.'
+    : 'Off: no ⚡ Jump button. If you turn this off later, songs already jumped keep their place.');
+  rowOf('#setCoupons').hidden = !credits;
+  showIf(credits, '#couponsHelp');
+  say('#couponsHelp', $('#setCoupons').checked
+    ? 'Students can trade a coupon from another class app (like teachChat points) for 1 credit. Each coupon works once.'
+    : 'Off: coupons from other class apps do not work here.');
+  // Class time
+  const rest = $('#setBackToWork').value;
+  say('#backToWorkHelp', rest === 'off' ? 'Off: students can suggest another song right away.'
+    : `After a student suggests a song, their screen says "📚 Back to work!" for ${plural(Number(rest), 'minute')}. Voting does not start it. Students → Let back in ends it early.`);
+  // Display & sound
+  const recap = $('#setRecapMusic').checked;
+  showIf(recap, '#recapVolumeRow', '#recapVolumeHelp');
   $('#recapVolumeOut').textContent = `${$('#setRecapVolume').value}%`;
-  $('#recapVolumeRow').hidden = !$('#setRecapMusic').checked;
+  say('#recapMusicHelp', recap ? 'During ▶ Play recap, the #1 song of the class plays with a ta-da for each award. Then your music comes back.'
+    : 'Off: during ▶ Play recap your music just gets quieter.');
+  say('#artCheckHelp', $('#setHideAllArt').checked ? 'Not needed while all album covers are hidden.'
+    : $('#setArtCheck').checked ? 'A computer checks each album cover first. A cover that is not right for school shows as a plain 🎵. You can still show it.'
+      : 'Off: album covers show without a check.');
+  say('#hideAllArtHelp', $('#setHideAllArt').checked ? 'No album covers anywhere, just plain 🎵 tiles. Music players may still show their own pictures.'
+    : 'Off: album covers show (after the check above).');
+  say('#showFavHelp', $('#setShowFav').checked ? 'Students see a list of songs your classes loved most and can suggest one with a tap. No names are shown.'
+    : 'Off: students do not see the class favorites list.');
 }
-$('#setRecapMusic').addEventListener('change', showRecapVolume);
-$('#setRecapVolume').addEventListener('input', showRecapVolume);
+$('#settingsForm').addEventListener('input', adaptSettings);
+$('#settingsForm').addEventListener('change', adaptSettings);
 
-/** Scores never go below 0 (protocol.js SCORE FLOOR): the remove score is greyed out (it never removes). */
-function showScoreFloor() {
-  const on = $('#setScoreFloor').checked;
-  $('#setRemove').disabled = on;
-  $('#removeRow').classList.toggle('is-off', on);
-  $('#removeOffNote').hidden = !on;
-}
-$('#setScoreFloor').addEventListener('change', showScoreFloor);
-
-/** 👎 votes Off (protocol.js DOWNVOTE MODE): the 👎-per-student limit does not matter, so it hides. */
-function showDownMode() {
-  const off = $('#setDownMode').value === 'off';
-  $('#maxDownRow').hidden = off;
-  $('#maxDownHelp').hidden = off;
-}
-$('#setDownMode').addEventListener('change', showDownMode);
-
-/** 👍 votes Off (protocol.js UPVOTE LIMIT): the 👍-per-student limit does not matter, so it hides. */
-function showUpMode() {
-  const off = $('#setUpMode').value === 'off';
-  $('#maxUpRow').hidden = off;
-  $('#maxUpHelp').hidden = off;
-}
-$('#setUpMode').addEventListener('change', showUpMode);
-
-/** 👻 Ghost 👍 off: the minutes are greyed out (kept for when it comes back on). */
-function showGhost() {
-  const on = $('#setGhost').checked;
-  $('#setGhostMin').disabled = !on;
-  $('#ghostMinRow').classList.toggle('is-off', !on);
-  const n = Number($('#setGhostMin').value);
-  $('#ghostHelpMin').textContent = Number.isInteger(n) && n > 0 ? String(n) : String(DEFAULT_SETTINGS.ghostVoteMinutes);
-}
-$('#setGhost').addEventListener('change', showGhost);
-$('#setGhostMin').addEventListener('input', showGhost);
-
-/** Credits off: no Starting credits box, and Priority jump greyed out (it needs credits). */
-function showCreditSwitches() {
-  const on = $('#setCreditsOn').checked;
-  $('#creditsStartRow').hidden = !on;
-  $('#setCredits').disabled = !on;
-  $('#setJump').disabled = !on;
-  $('#jumpOffNote').hidden = on;
-  $('#setCoupons').disabled = !on;
-  $('#couponsOffNote').hidden = on;
-}
 const FIRST_CREDITS = 3; // what Starting credits shows when the switch first goes on
 $('#setCreditsOn').addEventListener('change', () => {
-  const on = $('#setCreditsOn').checked;
-  if (on && $('#setCredits').value === '') $('#setCredits').value = String(FIRST_CREDITS);
-  showCreditSwitches();
+  if ($('#setCreditsOn').checked && $('#setCredits').value === '') $('#setCredits').value = String(FIRST_CREDITS);
 });
 
 /** The form as settings, or null with a message (the server checks again). */
@@ -1668,13 +1712,14 @@ function readSettings() {
   const ghostOn = $('#setGhost').checked;
   const [ghostLo, ghostHi] = SETTINGS_LIMITS.ghostVoteMinutes;
   const ghostMin = Number($('#setGhostMin').value);
-  if (ghostOn && (!whole('#setGhostMin') || ghostMin < ghostLo || ghostMin > ghostHi)) {
+  if (ghostOn && $('#setUpMode').value !== 'off' && (!whole('#setGhostMin') || ghostMin < ghostLo || ghostMin > ghostHi)) {
     return fail(`Ghost 👍 minutes must be a whole number from ${ghostLo} to ${ghostHi}.`, '#setGhostMin');
   }
   const removeOk = whole('#setRemove') && remove >= remLo && remove <= remHi;
   // Greyed out under the score floor: a bad value there keeps the room's own (it never removes anyway).
   const removeAtScore = removeOk ? remove : (base.removeAtScore ?? DEFAULT_SETTINGS.removeAtScore);
-  if (!floor && !removeOk) return fail(`The remove score must be a whole number from ${remLo} to ${remHi}.`, '#setRemove');
+  // Shown only while 👎 is on and scores may go below 0 (adaptSettings); hidden, a bad box keeps the room's own.
+  if (!floor && $('#setDownMode').value !== 'off' && !removeOk) return fail(`The remove score must be a whole number from ${remLo} to ${remHi}.`, '#setRemove');
   if (words.length > SETTINGS_LIMITS.blocklistWords) return fail(`Up to ${SETTINGS_LIMITS.blocklistWords} blocked words.`, '#setWords');
   const long = words.find((w) => w.length > SETTINGS_LIMITS.blocklistWordLength);
   if (long) return fail(`"${long}" is too long. Blocked words can be up to ${SETTINGS_LIMITS.blocklistWordLength} letters.`, '#setWords');

@@ -243,15 +243,18 @@ try {
   // Settings: the Credits switch is off, no number box, Priority jump greyed out with a note.
   await host.page.click('#settingsBtn');
   await host.page.waitForSelector('#settingsDlg[open]');
-  await reveal(host.page, '#setJump'); // the Credits tab, All settings (Priority jump is an advanced row)
+  await reveal(host.page, '#setCreditsOn'); // the Credits tab
+  await host.page.click('#levelAll'); // All settings: Priority jump is an advanced row
   check('settings: Credits switch off, no Starting credits box', !(await host.page.isChecked('#setCreditsOn'))
     && !(await visible(host, '#setCredits')) && (await host.page.getAttribute('#setCreditsOn', 'role')) === 'switch');
-  check('settings: Priority jump is off and greyed out, with "Turn credits on first."', !(await host.page.isChecked('#setJump'))
-    && (await host.page.isDisabled('#setJump')) && (await visible(host, '#jumpOffNote')) && (await text(host, '#jumpOffNote')).includes('Turn credits on first.'));
+  check('settings: Priority jump (off) hides while credits are off', !(await host.page.isChecked('#setJump'))
+    && !(await visible(host, '#setJump')) && !(await visible(host, '#jumpHelp')));
+  check('settings: the credits help says suggesting is free', (await text(host, '#creditsHelp')).trim() === 'Off: suggesting songs is free.');
   await host.page.click(await reveal(host.page, '#setCreditsOn'));
-  check('settings: switching Credits on shows Starting credits 3 and lets Priority jump be used', (await visible(host, '#setCredits'))
-    && (await host.page.inputValue('#setCredits')) === '3' && !(await host.page.isDisabled('#setJump')) && !(await visible(host, '#jumpOffNote')));
-  check('settings: the help says turning jump off keeps jumped songs in place', /does not move songs already jumped; they keep their place/.test(await text(host, '#jumpHelp')));
+  check('settings: switching Credits on shows Starting credits 3 and Priority jump', (await visible(host, '#setCredits'))
+    && (await host.page.inputValue('#setCredits')) === '3' && (await visible(host, '#setJump')) && !(await host.page.isDisabled('#setJump')));
+  check('settings: the credits help says what on does', (await text(host, '#creditsHelp')).startsWith('Each song a student suggests costs 1 credit.'));
+  check('settings: the help says turning jump off keeps jumped songs in place', /songs already jumped keep their place/.test(await text(host, '#jumpHelp')));
   await host.page.click('#cancelSettings');
 
   // Settings: Starting credits 2 (Credits on, Priority jump still off), no AI, room for several songs each.

@@ -196,7 +196,7 @@ try {
     && (await host.page.locator('label', { has: host.page.locator('#setDownMode') }).textContent()).includes('👎 votes'));
   check('Settings: the options', JSON.stringify(await host.page.$$eval('#setDownMode option', (os) => os.map((o) => o.textContent.trim())))
     === JSON.stringify(['Off', 'On, counts hidden', 'On, counts shown']));
-  check('Settings: the help', (await text(host, '#downModeHelp')).includes('Off: students only 👍, so every song gets its turn.'));
+  check('Settings: the help', (await text(host, '#downModeHelp')).trim() === 'Nobody can 👎. Every song gets its turn.', await text(host, '#downModeHelp'));
   check('Settings: the 👎 limit is hidden while off', !(await host.page.locator('#setMaxDown').isVisible()));
   await host.page.selectOption(modeSel, 'hidden');
   check('Settings: the 👎 limit shows once 👎 is on', await host.page.locator('#setMaxDown').isVisible());

@@ -154,13 +154,14 @@ try {
   const sw = await reveal(host.page, '#setGhost');
   check('Settings → Songs: "👻 Ghost 👍" is off', !(await host.page.isChecked(sw))
     && (await host.page.locator('label', { has: host.page.locator('#setGhost') }).textContent()).includes('👻 Ghost 👍'));
-  check('off: the minutes are greyed out (3)', (await host.page.isDisabled('#setGhostMin')) && (await host.page.inputValue('#setGhostMin')) === '3');
-  check('the help text', (await text(host, '#ghostHelp')).trim() === "Gives a waiting song a quiet +1 👍 after 3 minutes so every song gets some love. Students can't tell it apart. Nothing while 👍 is off.",
-    await text(host, '#ghostHelp'));
+  check('off: the minutes box hides (keeping 3)', !(await host.page.isVisible('#setGhostMin')) && (await host.page.inputValue('#setGhostMin')) === '3');
+  check('off: the help says what off does', (await text(host, '#ghostHelp')).trim() === 'Off: songs only get the 👍 students give them.', await text(host, '#ghostHelp'));
   await host.page.setChecked(sw, true);
-  check('on: the minutes can be changed', !(await host.page.isDisabled('#setGhostMin')));
+  check('on: the minutes box shows', await host.page.isVisible('#setGhostMin'));
+  check('on: the help says what on does', (await text(host, '#ghostHelp')).trim()
+    === 'A song that waits 3 minutes gets 1 free 👍, so every song gets some love. Students cannot tell.', await text(host, '#ghostHelp'));
   await host.page.fill('#setGhostMin', '1');
-  check('the help follows the minutes', (await text(host, '#ghostHelpMin')) === '1');
+  check('the help follows the minutes', (await text(host, '#ghostHelp')).includes('waits 1 minute gets'), await text(host, '#ghostHelp'));
 
   // Song A (0 votes) from a socket student before the setting is applied: its clock runs from addedAt.
   const maya = await studentSock(roomId, code, 'ghost-test-maya-000001', 'Maya');

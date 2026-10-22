@@ -151,17 +151,17 @@ try {
   const [A, B] = [item(pool[0]).id, item(pool[1]).id];
   const byId = (id) => lastState(host)?.queue.find((q) => q.id === id);
 
-  // Settings → Songs: the switch, off; the remove score enabled. Turn it on: greyed with the note.
+  // Settings → Songs: the switch, off; the remove score shows. Turn it on: the remove score hides (adaptive).
   await hostSettings(host, async () => {
     const sw = await reveal(host.page, '#setScoreFloor');
     check('Settings → Songs: "Scores never go below 0" is off', !(await host.page.isChecked(sw))
       && (await host.page.locator('label', { has: host.page.locator('#setScoreFloor') }).textContent()).includes('Scores never go below 0'));
-    check('Settings: the help text', (await text(host, '#scoreFloorHelp')).trim() === "Votes never remove a song, so every student's song gets to play. 👎 can push a song down. Only you can veto.");
-    check('floor off: the remove score is enabled, no note', !(await host.page.isDisabled('#setRemove')) && !(await host.page.locator('#removeOffNote').isVisible()));
+    check('floor off: the help says what off does', (await text(host, '#scoreFloorHelp')).trim() === 'Off: a song with too many 👎 leaves the line (the number below).', await text(host, '#scoreFloorHelp'));
+    check('floor off: the remove score shows, with its number in the help', await host.page.isVisible('#setRemove')
+      && (await text(host, '#removeHelp')).trim() === 'A song leaves the line once it has 3 more 👎 than 👍.', await text(host, '#removeHelp'));
     await host.page.setChecked(sw, true);
-    check('floor on: the remove score is greyed out with a note', (await host.page.isDisabled('#setRemove'))
-      && await host.page.locator('#removeOffNote').isVisible()
-      && (await host.page.$eval('#removeRow', (el) => Number(getComputedStyle(el).opacity))) < 1);
+    check('floor on: the remove score hides and the help says what on does', !(await host.page.isVisible('#setRemove'))
+      && (await text(host, '#scoreFloorHelp')).trim() === "Votes never take a song out of line, so every student's song gets to play. Only you can remove a song.");
   });
   check('Use in this room: the floor is on', Boolean(await until(() => lastState(host)?.settings.scoreFloor === true)));
 
@@ -196,9 +196,9 @@ try {
 
   // Turn it off: nothing removed at once, the real score shows again.
   await hostSettings(host, async () => {
-    check('Settings reopened: the switch is on and the remove score greyed', (await host.page.isChecked(await reveal(host.page, '#setScoreFloor'))) && (await host.page.isDisabled('#setRemove')));
+    check('Settings reopened: the switch is on and the remove score hidden', (await host.page.isChecked(await reveal(host.page, '#setScoreFloor'))) && !(await host.page.isVisible('#setRemove')));
     await host.page.setChecked('#setScoreFloor', false);
-    check('switch off: the remove score is enabled again', !(await host.page.isDisabled('#setRemove')) && (await host.page.inputValue('#setRemove')) === '-3');
+    check('switch off: the remove score shows again, still -3', (await host.page.isVisible('#setRemove')) && (await host.page.inputValue('#setRemove')) === '-3');
   });
   check('floor off in the room', Boolean(await until(() => lastState(host)?.settings.scoreFloor === false)));
   await wait(400);

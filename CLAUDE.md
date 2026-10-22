@@ -592,6 +592,12 @@ Claude account).
    need it every class. ⚙️ More options on the open-room form opens the same dialog on All for the
    teacher's SAVED DEFAULTS (settingsForRoom false: only Save as my default; the quick choices follow).
    Browser tests reach advanced rows through ui.mjs reveal(), which clicks All settings first.
+   ADAPTIVE (Dalton, 2026-10-21: "plain explanations anyone can understand"): host.js adaptSettings runs
+   after every input/change in the form and on fill: each help line says what the CURRENT choice does, in
+   plain words with the picked numbers, and rows that do nothing with the other choices hide (👍 off → 👍
+   limit + ghost; 👎 off → 👎 limit, score floor, remove score; floor on → remove score; ghost off →
+   minutes; credits off → starting credits, jump, coupons; recap music off → volume). Hidden values are
+   kept and saved as they are; readSettings only rejects a bad box that is showing.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

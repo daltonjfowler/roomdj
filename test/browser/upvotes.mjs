@@ -146,7 +146,7 @@ try {
   const downOptions = await host.page.$$eval('#setMaxDown option', (os) => os.map((o) => o.textContent));
   check('"👍 per student per class": 1 / 2 / 3 / 5 / Unlimited, the same as 👎', upOptions.join() === '1,2,3,5,Unlimited' && upOptions.join() === downOptions.join(), upOptions.join());
   check('it shows the saved 3', (await host.page.inputValue('#setMaxUp')) === '3');
-  check('All: the score floor row shows', await shown(host, '#setScoreFloor'));
+  check('All: the vote counts row shows', await shown(host, '#setHideCounts'));
   await host.page.selectOption('#setMaxUp', '2');
   await host.page.click('#saveDefault');
   const saved = await until(async () => {
@@ -168,15 +168,15 @@ try {
   check('Settings: Simple at first', (await host.page.getAttribute('#levelSimple', 'aria-pressed')) === 'true' && await shown(host, '#levelNote'));
   check('Simple: the main rows show (👍, 👎, songs waiting, blocked words)', await shown(host, '#setUpMode') && await shown(host, '#setMaxUp') && await shown(host, '#setDownMode')
     && await shown(host, '#setMax') && await shown(host, '#setWords'));
-  check('Simple: advanced rows and the Shortcuts tab hide', !(await shown(host, '#setScoreFloor')) && !(await shown(host, '#setGhost'))
+  check('Simple: advanced rows and the Shortcuts tab hide', !(await shown(host, '#setHideCounts')) && !(await shown(host, '#setGhost'))
     && !(await shown(host, '#tabKeys')) && await shown(host, '#applySettings'));
   await host.page.screenshot({ path: `${OUT}settings-simple.png` });
   await host.page.click('#levelAll');
-  check('All settings: they show', await shown(host, '#setScoreFloor') && await shown(host, '#tabKeys') && !(await shown(host, '#levelNote')));
+  check('All settings: they show', await shown(host, '#setHideCounts') && await shown(host, '#tabKeys') && !(await shown(host, '#levelNote')));
   await host.page.screenshot({ path: `${OUT}settings-all.png` });
   await host.page.click('#cancelSettings');
   await host.page.click('#settingsBtn');
-  check('All settings is remembered', (await host.page.getAttribute('#levelAll', 'aria-pressed')) === 'true' && await shown(host, '#setScoreFloor'));
+  check('All settings is remembered', (await host.page.getAttribute('#levelAll', 'aria-pressed')) === 'true' && await shown(host, '#setHideCounts'));
   await host.page.click('#levelSimple');
   await host.page.click('#cancelSettings');
 

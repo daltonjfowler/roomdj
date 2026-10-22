@@ -433,13 +433,13 @@
           <small id="hideCountsHelp" class="switch-help" data-adv>Students and the board see the order, not the numbers, so nobody piles on. You still see every vote.</small>
           <label id="removeRow" class="inline-row" for="setRemove" data-adv>Remove a song when its score falls to
             <input id="setRemove" class="text num" type="number" required aria-describedby="removeHelp"></label>
-          <small id="removeHelp" class="switch-help" data-adv><span id="removeOffNote">Off while scores never go below 0. </span>Score is 👍 minus 👎. For example −3 removes a song with three more 👎 than 👍.</small>
+          <small id="removeHelp" class="switch-help" data-adv>Score is 👍 minus 👎. For example −3 removes a song with three more 👎 than 👍.</small>
           <!-- 👻 Ghost 👍 (protocol.js GHOST VOTE) -->
           <label class="check switch-row" data-adv><input id="setGhost" class="switch" type="checkbox" role="switch" aria-describedby="ghostHelp">
             <span>👻 Ghost 👍</span><span class="switch-state" aria-hidden="true"></span></label>
           <label id="ghostMinRow" class="inline-row" for="setGhostMin" data-adv>Give a waiting song +1 after
             <input id="setGhostMin" class="text num" type="number" inputmode="numeric" required aria-describedby="ghostHelp"> minutes</label>
-          <small id="ghostHelp" class="switch-help" data-adv>Gives a waiting song a quiet +1 👍 after <span id="ghostHelpMin">3</span> minutes so every song gets some love. Students can't tell it apart. Nothing while 👍 is off.</small>
+          <small id="ghostHelp" class="switch-help" data-adv>Gives a waiting song a quiet +1 👍 after 3 minutes so every song gets some love. Students can't tell it apart. Nothing while 👍 is off.</small>
         </fieldset>
         <fieldset class="field set-group">
           <legend>Song check</legend>
@@ -494,12 +494,12 @@
           </div>
           <label class="check switch-row" data-adv><input id="setJump" class="switch" type="checkbox" role="switch" aria-describedby="jumpHelp">
             <span>Priority jump</span><span class="switch-state" aria-hidden="true"></span></label>
-          <small id="jumpHelp" class="switch-help" data-adv><span id="jumpOffNote">Turn credits on first. </span>On: a student can spend 2 credits on ⚡ Jump to make a song play next. Turning it off later does not move songs already jumped; they keep their place.</small>
+          <small id="jumpHelp" class="switch-help" data-adv>On: a student can spend 2 credits on ⚡ Jump to make a song play next. Turning it off later does not move songs already jumped; they keep their place.</small>
           <!-- 🎟 Coupons (shared/coupon.js COUPONS): shown only while the server takes coupons (GET /api/config) -->
           <span id="couponsSetting" data-adv hidden>
             <label class="check switch-row"><input id="setCoupons" class="switch" type="checkbox" role="switch" aria-describedby="couponsHelp">
               <span>🎟️ Coupons</span><span class="switch-state" aria-hidden="true"></span></label>
-            <small id="couponsHelp" class="switch-help"><span id="couponsOffNote">Turn credits on first. </span>On: a student can use a coupon earned in another class tool (like teachChat points) for 1 credit. Each coupon works once.</small>
+            <small id="couponsHelp" class="switch-help">On: a student can use a coupon earned in another class tool (like teachChat points) for 1 credit. Each coupon works once.</small>
           </span>
         </fieldset>
       </div>
