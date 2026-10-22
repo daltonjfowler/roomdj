@@ -380,7 +380,7 @@ export const DOWNVOTE_CHOICES = Object.freeze([1, 2, 3, 5]);
 //   - The teacher (TEACHER_DEVICE) is unlimited and never counted. Lowering the limit removes no 👍.
 //   Snapshot: `upvotes` (on/off, everyone); you.upvotesLeft (null = unlimited or off); the host's
 //   students[].upvotes (used). The host offers UPVOTE_CHOICES (+ Unlimited).
-export const UPVOTE_CHOICES = Object.freeze([1, 2, 3, 5, 10]);
+export const UPVOTE_CHOICES = DOWNVOTE_CHOICES; // the same choices as 👎 (Dalton, 2026-10-21: "match")
 
 // DOWNVOTE MODE (Dalton, 2026-10-08: "Set default to not show dislikes and 0 is floor. So all student
 //   songs will get to play"; shared/queue.js voteRules/itemScore/itemView, shared/highlights.js):

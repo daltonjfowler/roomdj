@@ -583,7 +583,9 @@ Claude account).
    comes back (votes are final); over → error 'upvotes'; off → error 'upvotes_off' for everyone, the
    teacher too (⏫ Play next stays), 👍 already cast stay and count, ghost 👍 gives nothing. TEACHER_DEVICE
    is never limited or counted. Saved settings without them read on / 3; migrateRoomState gives an OLD
-   ROOM on / unlimited. Host Settings: one "👍 per student per class" select (Off, UPVOTE_CHOICES, Unlimited).
+   ROOM on / unlimited. Host Settings: the same two boxes as 👎: "👍 votes" Off / On, then "👍 per student per class"
+   (UPVOTE_CHOICES = DOWNVOTE_CHOICES, + Unlimited; hidden while Off). Count visibility for 👍 is the
+   "Hide vote counts from students" switch (HIDDEN COUNTS).
 37. Settings levels (Dalton, 2026-10-21: "simple and advanced like a 3D printer slicer"): the Settings
    dialog has Simple / All settings (host.js setLevel; remembered in localStorage cq.settingsLevel). Simple
    hides every `[data-adv]` row, group and tab (host.css); a new setting is Simple only if most teachers

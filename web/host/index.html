@@ -404,10 +404,16 @@
           <legend>Votes and the queue</legend>
           <label class="inline-row" for="setMax">Songs each student may have waiting
             <input id="setMax" class="text num" type="number" inputmode="numeric" required></label>
-          <!-- 👍 votes (protocol.js UPVOTE LIMIT): Off, a number per student, or Unlimited in one box -->
-          <label class="inline-row" for="setUp">👍 per student per class
-            <select id="setUp" class="text" aria-describedby="upHelp"></select></label>
-          <small id="upHelp" class="switch-help">Off: nobody can 👍, so songs play in the order they came in (unless 👎 is on). Your own votes never count.</small>
+          <!-- 👍 votes (protocol.js UPVOTE LIMIT): the same two boxes as 👎 (Dalton, 2026-10-21) -->
+          <label class="inline-row" for="setUpMode">👍 votes
+            <select id="setUpMode" class="text" aria-describedby="upModeHelp">
+              <option value="off">Off</option>
+              <option value="on">On</option>
+            </select></label>
+          <small id="upModeHelp" class="switch-help">Off: nobody can 👍, so songs play in the order they came in (unless 👎 is on). On: students 👍 the songs they want.</small>
+          <label id="maxUpRow" class="inline-row" for="setMaxUp">👍 per student per class
+            <select id="setMaxUp" class="text" aria-describedby="maxUpHelp"></select></label>
+          <small id="maxUpHelp" class="switch-help">Votes are final: a 👍 stays used. Your own votes never count.</small>
           <!-- 👎 votes (protocol.js DOWNVOTE MODE) -->
           <label class="inline-row" for="setDownMode">👎 votes
             <select id="setDownMode" class="text" aria-describedby="downModeHelp">

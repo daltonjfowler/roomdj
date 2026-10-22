@@ -7,7 +7,7 @@
 // settings while it runs (put back at the end). Searches hit the real iTunes API (through the host page).
 // Covers: ⚙️ More options (every setting, Save only, saved for the next room), Simple hides the
 // advanced rows and the Shortcuts tab, All settings is remembered, "👍 per student per class"
-// (Off / 1 / 2 / 3 / 5 / 10 / Unlimited), "👍 2 left", a third 👍 explained and not sent, the server
+// "👍 votes" Off / On and "👍 per student per class" (1 / 2 / 3 / 5 / Unlimited, like 👎), "👍 2 left", a third 👍 explained and not sent, the server
 // refusing a forced 👍 (upvotes, upvotes_off), the host's "👍 2/2", 👍 Off (no 👍 buttons anywhere).
 
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -140,11 +140,14 @@ try {
   check('More options: All settings (the Shortcuts tab shows)', (await host.page.getAttribute('#levelAll', 'aria-pressed')) === 'true' && await shown(host, '#tabKeys'));
   check('More options: no "Use in this room", only Save', !(await shown(host, '#applySettings')) && await shown(host, '#saveDefault'));
   await host.page.click('#tabSongs');
-  const upOptions = await host.page.$$eval('#setUp option', (os) => os.map((o) => o.textContent));
-  check('"👍 per student per class": Off / 1 / 2 / 3 / 5 / 10 / Unlimited', upOptions.join() === 'Off: no 👍,1,2,3,5,10,Unlimited', upOptions.join());
-  check('it shows the saved 3', (await host.page.inputValue('#setUp')) === '3');
+  const modeOptions = await host.page.$$eval('#setUpMode option', (os) => os.map((o) => o.textContent.trim()));
+  check('"👍 votes": Off / On, showing On', modeOptions.join() === 'Off,On' && (await host.page.inputValue('#setUpMode')) === 'on', modeOptions.join());
+  const upOptions = await host.page.$$eval('#setMaxUp option', (os) => os.map((o) => o.textContent));
+  const downOptions = await host.page.$$eval('#setMaxDown option', (os) => os.map((o) => o.textContent));
+  check('"👍 per student per class": 1 / 2 / 3 / 5 / Unlimited, the same as 👎', upOptions.join() === '1,2,3,5,Unlimited' && upOptions.join() === downOptions.join(), upOptions.join());
+  check('it shows the saved 3', (await host.page.inputValue('#setMaxUp')) === '3');
   check('All: the score floor row shows', await shown(host, '#setScoreFloor'));
-  await host.page.selectOption('#setUp', '2');
+  await host.page.selectOption('#setMaxUp', '2');
   await host.page.click('#saveDefault');
   const saved = await until(async () => {
     const s = await (await api('/api/teacher/settings')).json();
@@ -163,7 +166,7 @@ try {
   await host.page.waitForSelector('#settingsDlg[open]');
   await host.page.click('#tabSongs');
   check('Settings: Simple at first', (await host.page.getAttribute('#levelSimple', 'aria-pressed')) === 'true' && await shown(host, '#levelNote'));
-  check('Simple: the main rows show (👍, 👎, songs waiting, blocked words)', await shown(host, '#setUp') && await shown(host, '#setDownMode')
+  check('Simple: the main rows show (👍, 👎, songs waiting, blocked words)', await shown(host, '#setUpMode') && await shown(host, '#setMaxUp') && await shown(host, '#setDownMode')
     && await shown(host, '#setMax') && await shown(host, '#setWords'));
   check('Simple: advanced rows and the Shortcuts tab hide', !(await shown(host, '#setScoreFloor')) && !(await shown(host, '#setGhost'))
     && !(await shown(host, '#tabKeys')) && await shown(host, '#applySettings'));
@@ -231,7 +234,10 @@ try {
   check('server: a forced third 👍 is refused (upvotes)', refused?.error === 'upvotes' && refused.message === "You've used your 👍 for this class.", JSON.stringify(refused));
 
   // 👍 Off: no 👍 buttons anywhere; a forced 👍 is refused; the 👍 already cast stay.
-  await hostSettings(host, async () => host.page.selectOption(await reveal(host.page, '#setUp'), 'off'));
+  await hostSettings(host, async () => {
+    await host.page.selectOption(await reveal(host.page, '#setUpMode'), 'off');
+    check('👍 Off: the per-student box hides', !(await shown(host, '#setMaxUp')));
+  });
   check('👍 Off: the room says so', Boolean(await until(() => lastState(host)?.upvotes === false)));
   check('👍 Off: the student page has no 👍 buttons and no counter', Boolean(await until(async () => (await ava.page.locator('#queue .vote.up:visible').count()) === 0))
     && !(await shown(ava, '#upLeft')));
@@ -245,7 +251,11 @@ try {
   await ava.page.screenshot({ path: `${OUT}upvotes-off.png` });
 
   // Unlimited: no counter, 👍 work again.
-  await hostSettings(host, async () => host.page.selectOption(await reveal(host.page, '#setUp'), 'unlimited'));
+  await hostSettings(host, async () => {
+    await host.page.selectOption(await reveal(host.page, '#setUpMode'), 'on');
+    check('👍 On again: it remembers 2', (await host.page.inputValue('#setMaxUp')) === '2');
+    await host.page.selectOption('#setMaxUp', 'off');
+  });
   check('Unlimited: on, no limit', Boolean(await until(() => lastState(host)?.upvotes === true && lastState(host)?.settings.maxUpvotes === null)));
   check('Unlimited: 👍 buttons back, no counter', Boolean(await until(async () => (await ava.page.locator('#queue .vote.up:visible').count()) === 4))
     && !(await shown(ava, '#upLeft')));

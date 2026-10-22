@@ -730,7 +730,7 @@ function upRoom(settings = {}, n = 6) {
 test('👍 limit: default on, 3 a student; over the limit is refused with upvotes; the teacher is never counted', () => {
   assert.equal(DEFAULT_SETTINGS.upvotes, true);
   assert.equal(DEFAULT_SETTINGS.maxUpvotes, 3);
-  assert.deepEqual(UPVOTE_CHOICES, [1, 2, 3, 5, 10]);
+  assert.deepEqual(UPVOTE_CHOICES, [1, 2, 3, 5]);
   const { s, items } = upRoom({ maxUpvotes: 2 });
   assert.equal(snapshotFor(s, A).upvotes, true);
   assert.equal(snapshotFor(s, A).you.upvotesLeft, 2);

@@ -1546,12 +1546,13 @@ function fillSettings(s) {
   const downChoices = [...new Set([...DOWNVOTE_CHOICES, ...(down === null ? [] : [down])])].sort((a, b) => a - b);
   $('#setMaxDown').innerHTML = [...downChoices.map((n) => `<option value="${n}">${n}</option>`), '<option value="off">Unlimited</option>'].join('');
   $('#setMaxDown').value = down === null ? 'off' : String(down);
-  // 👍 (protocol.js UPVOTE LIMIT): Off, the choices (plus a saved number that is not one), Unlimited.
+  // 👍 votes and 👍 per student (protocol.js UPVOTE LIMIT), the same two boxes as 👎.
+  $('#setUpMode').value = s.upvotes === false ? 'off' : 'on';
   const up = Number.isInteger(s.maxUpvotes) ? s.maxUpvotes : null;
   const upChoices = [...new Set([...UPVOTE_CHOICES, ...(up === null ? [] : [up])])].sort((a, b) => a - b);
-  $('#setUp').innerHTML = ['<option value="off">Off: no 👍</option>', ...upChoices.map((n) => `<option value="${n}">${n}</option>`),
-    '<option value="unlimited">Unlimited</option>'].join('');
-  $('#setUp').value = s.upvotes === false ? 'off' : up === null ? 'unlimited' : String(up);
+  $('#setMaxUp').innerHTML = [...upChoices.map((n) => `<option value="${n}">${n}</option>`), '<option value="off">Unlimited</option>'].join('');
+  $('#setMaxUp').value = up === null ? 'off' : String(up);
+  showUpMode();
   $('#setAi').checked = s.aiCheck !== false;
   $('#setUnknown').checked = s.blockUnknownSongs !== false;
   $('#setWords').value = (s.blocklist ?? []).join('\n');
@@ -1607,6 +1608,14 @@ function showDownMode() {
   $('#maxDownHelp').hidden = off;
 }
 $('#setDownMode').addEventListener('change', showDownMode);
+
+/** 👍 votes Off (protocol.js UPVOTE LIMIT): the 👍-per-student limit does not matter, so it hides. */
+function showUpMode() {
+  const off = $('#setUpMode').value === 'off';
+  $('#maxUpRow').hidden = off;
+  $('#maxUpHelp').hidden = off;
+}
+$('#setUpMode').addEventListener('change', showUpMode);
 
 /** 👻 Ghost 👍 off: the minutes are greyed out (kept for when it comes back on). */
 function showGhost() {
@@ -1699,10 +1708,8 @@ function readSettings() {
     ghostVoteMinutes: whole('#setGhostMin') && ghostMin >= ghostLo && ghostMin <= ghostHi
       ? ghostMin : (base.ghostVoteMinutes ?? DEFAULT_SETTINGS.ghostVoteMinutes),
     maxDownvotes: $('#setMaxDown').value === 'off' ? null : Number($('#setMaxDown').value),
-    // 👍 Off keeps the limit it had, for when it comes back on.
-    upvotes: $('#setUp').value !== 'off',
-    maxUpvotes: $('#setUp').value === 'off' ? (base.maxUpvotes === undefined ? DEFAULT_SETTINGS.maxUpvotes : base.maxUpvotes)
-      : $('#setUp').value === 'unlimited' ? null : Number($('#setUp').value),
+    upvotes: $('#setUpMode').value !== 'off',
+    maxUpvotes: $('#setMaxUp').value === 'off' ? null : Number($('#setMaxUp').value),
     blocklist: words,
     ...(testAiOff ? { aiCheck: $('#setAi').checked, blockUnknownSongs: $('#setUnknown').checked } : {}),
     maxSongMinutes: songs.maxSongMinutes,
