@@ -1,5 +1,6 @@
 // The content filter. Layers run cheapest first and the first "no" wins:
 //   1. explicit flag from the catalog ('explicit' blocked; 'cleaned' and 'notExplicit' pass)
+//   1b. not music for class: the built-in meme / noise / sound-effect word list (notMusicHit)
 //   2. the teacher's blocklist (whole words, on title, artist and album)
 //   3. the ban list (song ids the teacher banned for good, and every version of them: banKey)
 //   4. the AI theme check (Workers AI, verdict cached in KV per song id and per song: banKey)
@@ -59,6 +60,9 @@ export const approvedKey = (idOrKey) => `approved:${kvId(idOrKey)}`;
  * lyrics prompt shares RULE_LINES; its verdicts live under the same versioned keys, so
  * LYRICS_PROMPT_VERSION stays.
  */
+// The not-music line (2026-10-23) did NOT bump the version on purpose: every song was just checked
+// again for v7, and the obvious ones are caught by the built-in word list (notMusicHit) for every
+// song, cached or not. New checks use the line; a teacher's ban covers what slips.
 export const PROMPT_VERSION = 7;
 /** Older verdicts: never used as answers; an INAPPROPRIATE among them is the fallback while the AI is down. */
 export const OLDER_VERDICT_VERSIONS = Object.freeze([6, 5, 4]);
@@ -91,6 +95,32 @@ export function hasWholeWord(text, phrase) {
   const p = normalizeWords(phrase);
   if (!p) return false;
   return ` ${normalizeWords(text)} `.includes(` ${p} `);
+}
+
+// NOT MUSIC (Dalton, 2026-10-23: "blocks for annoying meme songs like phonk, please speed I need this,
+// white noise, annoying fart noises, ... dogs barking, things that aren't songs"): built in, for every
+// teacher, no AI call, so it also works on search and on songs checked before. Whole words/phrases.
+// Anywhere (title, artist, album, genre):
+const NOT_MUSIC_ANYWHERE = [
+  'phonk', 'brainrot', 'skibidi', 'meme', 'nyan cat', 'nightcore', 'sped up', 'slowed', 'bass boosted', 'earrape', 'ear rape', 'asmr',
+  'fart', 'farts', 'farting', 'please speed i need this', 'dog barking', 'dogs barking', 'barking dog', 'barking dogs',
+  'singing dogs', 'dogs singing', 'rain sounds', 'sleep sounds', 'nature sounds', 'ocean sounds', 'sound effects',
+  'white noise sleep', 'white noise for', 'deep sleep',
+];
+// Only as the artist or album (a song may be called "White Noise", Disclosure's is a real one):
+const NOT_MUSIC_SOURCE = ['white noise', 'brown noise', 'pink noise', 'baby sleep'];
+// Apple's genre, the whole genre (Ambient, New Age and Comedy stay: Enya, Weird Al):
+const NOT_MUSIC_GENRES = ['spoken word', 'sound effects', 'meditation'];
+// Real titles that contain a word above: taken out before looking.
+const NOT_MUSIC_OK = ['slowed down'];
+const notMusicText = (text) => NOT_MUSIC_OK.reduce((t, ok) => ` ${t} `.replaceAll(` ${ok} `, ' '), normalizeWords(text));
+/** The not-music word or phrase this song matches, or null (NOT MUSIC above). */
+export function notMusicHit(song) {
+  const anywhere = [song?.title, song?.artist, song?.album, song?.genre].map(notMusicText);
+  for (const w of NOT_MUSIC_ANYWHERE) if (anywhere.some((t) => hasWholeWord(t, w))) return w;
+  for (const w of NOT_MUSIC_SOURCE) if ([song?.artist, song?.album].some((t) => hasWholeWord(t, w))) return w;
+  const genre = normalizeWords(song?.genre);
+  return NOT_MUSIC_GENRES.find((g) => g === genre) ?? null;
 }
 
 /** The first blocklist entry found in any of the texts, or null. */
@@ -137,6 +167,7 @@ export function mainArtist(artist) {
  */
 export function quickCheck(song, { blocklist = [], banned = [] } = {}) {
   if (song.explicit === 'explicit') return 'explicit';
+  if (notMusicHit(song)) return 'notmusic';
   if (blocklistHit([song.title, song.artist, song.album], blocklist)) return 'blocklist';
   const ban = banned instanceof Set ? banned : new Set(banned);
   if (ban.has(song.id) || ban.has(banKey(song))) return 'banned';
@@ -174,7 +205,8 @@ const RULE_LINES = [
   '- any reference to smoking or vaping: cigarettes, cigars, vapes, weed (even a single passing line)',
   '- violence or weapons glorified',
   '- self-harm or suicide',
-  '- hate speech or slurs',
+  '- hate speech or slurs, or a song that mocks a race, religion or group (including joke versions of holiday or children\'s songs)',
+  '- not music for class: meme and troll tracks (phonk and brainrot edits, Please Speed I Need This), sped-up, nightcore or bass-boosted meme edits, noise and sound effects (white noise, rain or sleep sounds, fart or burp noises, dogs barking or other animal noises), AI-generated novelty songs, and anything that is not really a song (speeches, podcasts, ringtones, ASMR)',
   '- school shootings',
   '- heavy profanity',
   "Clean, radio and edited versions are judged by the ORIGINAL song's lyrics and themes: removing swear words does not make a song OK.",
@@ -183,11 +215,11 @@ const RULE_LINES = [
   'Words in the title, the artist name or the album name alone never make a song inappropriate: judge what the song is actually about.',
   'A widely known hidden meaning about sex or drugs counts, even when the words hide it. A rumour the songwriters denied does not count.',
   'INAPPROPRIATE needs a specific reason from the list above that is really in this song. "Mature themes", "mature relationship themes", "dark themes", "suggestive" or "aggressive tone" are not reasons on their own.',
-  'A song is OK if none of these apply. Love songs, sad songs, angry songs and dance songs are OK.',
+  'A song is OK if none of these apply. Love songs, sad songs, angry songs and dance songs are OK. Instrumental music is music: classical, jazz, lofi, film and video game soundtracks are OK.',
 ];
-const CATEGORY_LINE = 'Also give the category of the main problem: drugs, alcohol, sexual, violence, selfharm, hate, swearing, or other. Smoking and vaping are drugs. For OK or UNKNOWN use other.';
+const CATEGORY_LINE = 'Also give the category of the main problem: drugs, alcohol, sexual, violence, selfharm, hate, swearing, notmusic, or other. Smoking and vaping are drugs. Memes, noise, sound effects and things that are not songs are notmusic. For OK or UNKNOWN use other.';
 // "instrumental" FIRST (CLAUDE.md invariant 13: asking it last flipped a borderline verdict).
-const JSON_LINE = 'Reply with strict JSON only, no other text: {"instrumental":true|false|"unknown","verdict":"OK"|"INAPPROPRIATE"|"UNKNOWN","category":"drugs"|"alcohol"|"sexual"|"violence"|"selfharm"|"hate"|"swearing"|"other","evidence":"<at most 15 words>"}';
+const JSON_LINE = 'Reply with strict JSON only, no other text: {"instrumental":true|false|"unknown","verdict":"OK"|"INAPPROPRIATE"|"UNKNOWN","category":"drugs"|"alcohol"|"sexual"|"violence"|"selfharm"|"hate"|"swearing"|"notmusic"|"other","evidence":"<at most 15 words>"}';
 const songData = (song) => JSON.stringify({ title: promptTitle(song.title), artist: song.artist, album: song.album });
 
 /** Chat messages for the AI theme check. Song details are data, never instructions. */
@@ -271,6 +303,7 @@ const CATEGORY_WORDS = {
   'self harm': 'selfharm', suicide: 'selfharm',
   slurs: 'hate', 'hate speech': 'hate',
   profanity: 'swearing', 'heavy profanity': 'swearing', swear: 'swearing',
+  'not music': 'notmusic', meme: 'notmusic', noise: 'notmusic', 'sound effects': 'notmusic',
 };
 
 /** A category from the model → one of AI_CATEGORIES; anything else is 'other'. */
@@ -652,6 +685,7 @@ export async function filterSong(song, { settings, banned = [], env, scope, lyri
   if (quick === 'blocklist') {
     return { ok: false, reason: quick, ai: null, word: blocklistHit([song.title, song.artist, song.album], settings.blocklist) };
   }
+  if (quick === 'notmusic') return { ok: false, reason: quick, ai: null, word: notMusicHit(song) };
   if (quick) return { ok: false, reason: quick, ai: null };
   const instrumentalOnly = settings.instrumentalsOnly === true;
   if (!settings.aiCheck && !instrumentalOnly) return { ok: true, ai: null };

@@ -1146,6 +1146,7 @@ export const FILTER_REASONS = Object.freeze({
   theme: 'That song does not seem right for school.',
   review: 'Your teacher needs to check that song first. It joins the queue if they say yes.',
   not_instrumental: 'Your teacher wants instrumental music right now: songs with no singing.',
+  notmusic: 'That one is a meme, noise or sound effect, not a song for class.',
 });
 
 // REASONS (Dalton, 2026-10-05): every "no" carries why = { id, evidence? }. The single list of
@@ -1173,6 +1174,7 @@ export const REASONS = Object.freeze({
   violence: { emoji: '🔪', student: 'Violence or weapons', teacher: 'Violence or weapons' },
   selfharm: { emoji: '💔', student: 'Self-harm', teacher: 'Self-harm' },
   hate: { emoji: '🚫', student: 'Hate or slurs', teacher: 'Hate or slurs' },
+  notmusic: { emoji: '🙉', student: 'Not music for class', teacher: 'Not music (meme, noise, sound effects)' },
   swearing: { emoji: '🤬', student: 'Heavy swearing', teacher: 'Heavy swearing' },
   blocked_word: { emoji: '📝', student: 'Blocked word', teacher: 'Blocked word' },
   banned: { emoji: '⛔', student: 'Banned by your teacher', teacher: 'Banned' },
@@ -1185,9 +1187,9 @@ export const REASONS = Object.freeze({
   other: { emoji: '', student: 'Other', teacher: 'Other' },
 });
 /** The categories the AI theme check may answer (shared/filter.js); anything else reads as 'other'. */
-export const AI_CATEGORIES = Object.freeze(['drugs', 'alcohol', 'sexual', 'violence', 'selfharm', 'hate', 'swearing', 'other']);
+export const AI_CATEGORIES = Object.freeze(['drugs', 'alcohol', 'sexual', 'violence', 'selfharm', 'hate', 'swearing', 'notmusic', 'other']);
 /** What the teacher's quick-pick offers for Veto, Remove and Ban (in this order). */
-export const TEACHER_REASONS = Object.freeze(['teacher', 'explicit', 'drugs', 'alcohol', 'sexual', 'violence', 'selfharm', 'hate', 'swearing', 'other']);
+export const TEACHER_REASONS = Object.freeze(['teacher', 'explicit', 'drugs', 'alcohol', 'sexual', 'violence', 'selfharm', 'hate', 'swearing', 'notmusic', 'other']);
 /** Longest teacher note (letters). */
 export const NOTE_MAX = 80;
 

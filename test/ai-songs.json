@@ -1,5 +1,5 @@
 {
-  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js). group g (2026-10-22, Dalton: most complaints are mild songs that SEEM inappropriate, e.g. Bruno Mars) = mild songs the live verdict cache blocked, expected OK, next to the same artists' songs that really are not for class (must stay inappropriate). v7 (2026-10-23, Dalton): ANY alcohol, drugs (metaphors too) or smoking/vaping blocks, even one passing line. group h (2026-10-23) = a held-out check of v7 on songs the prompt was never tuned on: one passing line of alcohol, drugs, smoking or sex next to clean school favourites.",
+  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js). group g (2026-10-22, Dalton: most complaints are mild songs that SEEM inappropriate, e.g. Bruno Mars) = mild songs the live verdict cache blocked, expected OK, next to the same artists' songs that really are not for class (must stay inappropriate). v7 (2026-10-23, Dalton): ANY alcohol, drugs (metaphors too) or smoking/vaping blocks, even one passing line. group h (2026-10-23) = a held-out check of v7 on songs the prompt was never tuned on: one passing line of alcohol, drugs, smoking or sex next to clean school favourites. group i (2026-10-23) = not music for class: meme, noise and sound tracks the word list cannot see, next to real instrumental music that must stay OK.",
   "songs": [
     {
       "group": "a",
@@ -1278,6 +1278,104 @@
       "artist": "Lady Gaga",
       "expected": "ok",
       "why": "love at the end of the world, 2024"
+    },
+    {
+      "group": "i",
+      "title": "METAMORPHOSIS",
+      "artist": "INTERWORLD",
+      "expected": "inappropriate",
+      "why": "phonk meme track (title has no giveaway word)"
+    },
+    {
+      "group": "i",
+      "title": "Sahara",
+      "artist": "Hensonn",
+      "expected": "inappropriate",
+      "why": "phonk meme track"
+    },
+    {
+      "group": "i",
+      "title": "Murder In My Mind",
+      "artist": "Kordhell",
+      "expected": "inappropriate",
+      "why": "phonk"
+    },
+    {
+      "group": "i",
+      "title": "Nyan Cat",
+      "artist": "daniwell",
+      "expected": "inappropriate",
+      "why": "internet meme loop"
+    },
+    {
+      "group": "i",
+      "title": "Jingle Bells",
+      "artist": "The Singing Dogs",
+      "expected": "inappropriate",
+      "why": "dogs barking a tune"
+    },
+    {
+      "group": "i",
+      "title": "I Have a Dream",
+      "artist": "Martin Luther King Jr.",
+      "expected": "inappropriate",
+      "why": "a speech, not a song (fine in a lesson, not the music queue)"
+    },
+    {
+      "group": "i",
+      "title": "Axel F",
+      "artist": "Crazy Frog",
+      "expected": "either",
+      "why": "meme ringtone song"
+    },
+    {
+      "group": "i",
+      "title": "What Does the Fox Say?",
+      "artist": "Ylvis",
+      "expected": "either",
+      "why": "novelty song"
+    },
+    {
+      "group": "i",
+      "title": "The Duck Song",
+      "artist": "Bryant Oden",
+      "expected": "either",
+      "why": "kids' novelty song"
+    },
+    {
+      "group": "i",
+      "title": "Never Gonna Give You Up",
+      "artist": "Rick Astley",
+      "expected": "ok",
+      "why": "a real song (also a meme)"
+    },
+    {
+      "group": "i",
+      "title": "Mii Channel",
+      "artist": "Nintendo Sound Team",
+      "expected": "ok",
+      "why": "video game music is music"
+    },
+    {
+      "group": "i",
+      "title": "Megalovania",
+      "artist": "Toby Fox",
+      "expected": "ok",
+      "why": "video game music is music"
+    },
+    {
+      "group": "i",
+      "title": "Married Life",
+      "artist": "Michael Giacchino",
+      "expected": "ok",
+      "why": "film score"
+    },
+    {
+      "group": "i",
+      "title": "Who Let the Dogs Out",
+      "artist": "Baha Men",
+      "expected": "either",
+      "why": "a real song with barking in it"
     }
   ]
 }

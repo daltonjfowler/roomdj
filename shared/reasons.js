@@ -38,6 +38,7 @@ const CATEGORY_EVIDENCE = {
   selfharm: 'The lyrics are about self-harm.',
   hate: 'The lyrics have hateful words.',
   swearing: 'The lyrics have a lot of swearing.',
+  notmusic: 'Memes, noise and sound effects are not on the playlist.',
 };
 export function categoryEvidence(category) {
   return CATEGORY_EVIDENCE[category] ?? THEME_FALLBACK;
@@ -87,6 +88,11 @@ export function filterWhy(song, verdict, { banNote = '' } = {}) {
       return {
         why: { id: 'blocked_word', evidence: BLOCKED_WORD_EVIDENCE },
         detail: verdict.word ? `Blocked word: "${verdict.word}"` : 'A blocked word',
+      };
+    case 'notmusic': // the built-in word list (shared/filter.js notMusicHit)
+      return {
+        why: { id: 'notmusic', evidence: CATEGORY_EVIDENCE.notmusic },
+        detail: verdict.word ? `Not music for class: "${verdict.word}"` : 'Not music for class',
       };
     case 'banned':
       return { why: banNote ? { id: 'banned', evidence: banNote } : { id: 'banned' }, detail: banNote ? `Your ban note: ${banNote}` : 'On your ban list' };

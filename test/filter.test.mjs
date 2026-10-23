@@ -4,7 +4,8 @@ import { DEFAULT_SETTINGS, QUERY_MAX } from '../shared/protocol.js';
 import {
   PROMPT_VERSION, THEME_MODEL, aiThemeCheck, approveSong, buildThemePrompt, filterSong, hasWholeWord, parseThemeVerdict, quickCheck,
 } from '../shared/filter.js';
-import { baseTitle } from '../shared/filter.js';
+import { baseTitle, notMusicHit, themeCategory } from '../shared/filter.js';
+import { filterWhy } from '../shared/reasons.js';
 import { toSong } from '../src/itunes.js';
 import { isCleanVersionOf } from '../src/catalog.js';
 import { cleanQuery } from '../src/catalog-base.js';
@@ -198,4 +199,49 @@ test('ban list: another version of a banned song (single, album, compilation, fe
   assert.equal(quickCheck(song({ id: 'it:98', title: 'HAPPY - Radio Edit', artist: 'Pharrell Williams feat. Someone' }), { banned }), 'banned');
   assert.equal(quickCheck(song({ id: 'it:97', title: 'Happy Song' }), { banned }), null);
   assert.equal(quickCheck(song({ id: 'it:96', artist: 'Someone Else' }), { banned }), null);
+});
+
+test('not music (2026-10-23): memes, noise and sound effects are refused before the AI, for every teacher', async () => {
+  const s = (title, artist = 'Someone', album = 'Album', genre = 'Pop') => ({ id: 'it:1', title, artist, album, genre, explicit: 'notExplicit' });
+  for (const [song, word] of [
+    [s('Please Speed I Need This'), 'please speed i need this'],
+    [s('Murder In My Mind', 'Kordhell', 'Phonk Hits'), 'phonk'],
+    [s('Close Eyes', 'DVRST', 'Single', 'Phonk'), 'phonk'],
+    [s('Espresso (Sped Up)'), 'sped up'],
+    [s('Believer (Nightcore)'), 'nightcore'],
+    [s('Funny Fart Noises', 'Sound FX Kids'), 'fart'],
+    [s('Jingle Bells', 'Dogs Barking Christmas'), 'dogs barking'],
+    [s('Deep Sleep 10 Hours', 'White Noise Baby Sleep'), 'deep sleep'],
+    [s('Hush 10 Hours', 'White Noise Baby Sleep'), 'white noise'],
+    [s('Track 1', 'Relax', 'Rain Sounds for Sleep'), 'rain sounds'],
+    [s('Skibidi Toilet Song'), 'skibidi'],
+    [s('Whisper ASMR Tapping'), 'asmr'],
+    [s('Brazilian Phonk Montagem (Slowed)', 'DJ X'), 'phonk'],
+    [s('Funky Town (Ultra Slowed)'), 'slowed'],
+    [s('Nyan Cat Theme', 'Nyan Cat', 'Single', 'Comedy'), 'nyan cat'],
+    [s('Jingle Bells (Single Version)', 'Don Charles & The Singing Dogs', 'Single', 'Holiday'), 'singing dogs'],
+    [s('Rain Sounds', 'Derrol', 'Single', 'Ambient'), 'rain sounds'],
+    [s('Music Box and White Noise Sleep', 'Sleepy Nuts', 'Single', 'Instrumental'), 'white noise sleep'],
+    [s('I Have a Dream - Washington DC 8/28/63', 'Martin Luther King Jr.', 'Speeches', 'Spoken Word'), 'spoken word'],
+    [s('Dog Barking', 'Pro Audio', 'Single', 'Sound Effects'), 'dog barking'],
+    [s('Om Chant', 'Calm', 'Single', 'Meditation'), 'meditation'],
+  ]) {
+    assert.equal(notMusicHit(song), word, song.title);
+    assert.equal(quickCheck(song), 'notmusic', song.title);
+  }
+  // Real songs stay: a title that only names noise, and words inside other words.
+  for (const song of [s('White Noise', 'Disclosure', 'Settle', 'Dance'), s('Speed of Sound', 'Coldplay'), s('Fartlek Run'), s('Clair de Lune', 'Debussy', 'Piano', 'Classical'),
+    s('Slowed Down', 'Someone'), s('Orinoco Flow', 'Enya', 'Watermark', 'New Age'), s('White & Nerdy', 'Weird Al Yankovic', 'Straight Outta Lynwood', 'Comedy'),
+    s('An Ending (Ascent)', 'Brian Eno', 'Apollo', 'Ambient')]) {
+    assert.equal(notMusicHit(song), null, song.title);
+  }
+  // filterSong: refused with the word for the teacher, a plain sentence for the student; no AI call.
+  const r = await filterSong(s('Please Speed I Need This'), { settings: { ...DEFAULT_SETTINGS }, env: { AI: { run: async () => assert.fail('no AI call') } } });
+  assert.deepEqual([r.ok, r.reason, r.word], [false, 'notmusic', 'please speed i need this']);
+  const w = filterWhy(s('x'), r);
+  assert.deepEqual(w.why, { id: 'notmusic', evidence: 'Memes, noise and sound effects are not on the playlist.' });
+  assert.equal(w.detail, 'Not music for class: "please speed i need this"');
+  assert.equal(themeCategory('notmusic'), 'notmusic');
+  assert.equal(themeCategory('meme'), 'notmusic');
+  assert.ok(buildThemePrompt(s('x'))[0].content.includes('not music for class'));
 });
