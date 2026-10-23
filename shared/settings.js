@@ -206,6 +206,7 @@ export function validateSettings(input, { testAiOff = false } = {}) {
     maxDownvotes: maxDownvotes(errors, pick('maxDownvotes')),
     upvotes: bool(errors, '👍 votes', pick('upvotes')),
     maxUpvotes: maxUpvotes(errors, pick('maxUpvotes')),
+    hideUpvoteCounts: bool(errors, 'Hide 👍 counts from students', pick('hideUpvoteCounts')),
     scoreFloor: bool(errors, 'Scores never go below 0', pick('scoreFloor')),
     downvoteMode: downvoteMode(errors, pick('downvoteMode')),
     ghostVote: bool(errors, 'Ghost 👍', pick('ghostVote')),

@@ -1,5 +1,5 @@
 {
-  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js).",
+  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js). group g (2026-10-22, Dalton: most complaints are mild songs that SEEM inappropriate, e.g. Bruno Mars) = mild songs the live verdict cache blocked, expected OK, next to the same artists' songs that really are not for class (must stay inappropriate).",
   "songs": [
     {
       "group": "a",
@@ -494,6 +494,293 @@
       "artist": "Stone Temple Pilots",
       "expected": "either",
       "why": "Dalton asked 2026-10-07: often described as about hiding heroin use from a partner"
+    },
+    {
+      "group": "g",
+      "title": "Treasure",
+      "artist": "Bruno Mars",
+      "expected": "ok",
+      "why": "love song; calling her a sexy lady is a compliment, not sex (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Uptown Funk",
+      "artist": "Mark Ronson",
+      "expected": "ok",
+      "why": "school-dance staple, bragging and dancing"
+    },
+    {
+      "group": "g",
+      "title": "Marry You",
+      "artist": "Bruno Mars",
+      "expected": "ok",
+      "why": "spontaneous wedding; one passing 'dancing juice' line is not a drinking theme"
+    },
+    {
+      "group": "g",
+      "title": "Just the Way You Are",
+      "artist": "Bruno Mars",
+      "expected": "ok",
+      "why": "love song"
+    },
+    {
+      "group": "g",
+      "title": "Grenade",
+      "artist": "Bruno Mars",
+      "expected": "ok",
+      "why": "love song with violent metaphors (catch a grenade for ya)"
+    },
+    {
+      "group": "g",
+      "title": "Heat Waves",
+      "artist": "Glass Animals",
+      "expected": "ok",
+      "why": "missing someone (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Levitating",
+      "artist": "Dua Lipa",
+      "expected": "ok",
+      "why": "disco love song (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Ditto",
+      "artist": "NewJeans",
+      "expected": "ok",
+      "why": "K-pop crush song (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Cupid",
+      "artist": "FIFTY FIFTY",
+      "expected": "ok",
+      "why": "K-pop, wanting to fall in love (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Glue Song",
+      "artist": "beabadoobee",
+      "expected": "ok",
+      "why": "sweet love song (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Hello",
+      "artist": "Martin Solveig",
+      "expected": "ok",
+      "why": "dance pop, meeting someone (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Feel So Close",
+      "artist": "Calvin Harris",
+      "expected": "ok",
+      "why": "dance pop love song (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Nothin' on You",
+      "artist": "B.o.B",
+      "expected": "ok",
+      "why": "love song (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Work Song",
+      "artist": "Hozier",
+      "expected": "ok",
+      "why": "love and devotion (live cache: blocked sexual)"
+    },
+    {
+      "group": "g",
+      "title": "Down Under",
+      "artist": "Men at Work",
+      "expected": "ok",
+      "why": "Australian travel song; a beer in passing is not a drinking theme (live cache: blocked alcohol)"
+    },
+    {
+      "group": "g",
+      "title": "Chicken Fried",
+      "artist": "Zac Brown Band",
+      "expected": "ok",
+      "why": "simple country life; cold beer in passing (live cache: blocked alcohol)"
+    },
+    {
+      "group": "g",
+      "title": "Take Me Home, Country Roads",
+      "artist": "John Denver",
+      "expected": "ok",
+      "why": "home; moonshine in passing"
+    },
+    {
+      "group": "g",
+      "title": "Feel It Still",
+      "artist": "Portugal. The Man",
+      "expected": "ok",
+      "why": "rebel nostalgia, no drugs (live cache: blocked drugs)"
+    },
+    {
+      "group": "g",
+      "title": "Faint",
+      "artist": "Linkin Park",
+      "expected": "ok",
+      "why": "angry tone, no violence (live cache: blocked violence)"
+    },
+    {
+      "group": "g",
+      "title": "Drop Dead",
+      "artist": "Olivia Rodrigo",
+      "expected": "ok_or_unknown",
+      "why": "2025 breakup song; violent words only in the title (live cache: blocked violence)"
+    },
+    {
+      "group": "g",
+      "title": "Have a Cigar",
+      "artist": "Pink Floyd",
+      "expected": "ok",
+      "why": "satire of the music industry (live cache: blocked other)"
+    },
+    {
+      "group": "g",
+      "title": "Puff, the Magic Dragon",
+      "artist": "Peter, Paul and Mary",
+      "expected": "ok",
+      "why": "childhood; the drug rumor is not what the song is about"
+    },
+    {
+      "group": "g",
+      "title": "Counting Stars",
+      "artist": "OneRepublic",
+      "expected": "ok",
+      "why": "clean pop"
+    },
+    {
+      "group": "g",
+      "title": "That's What I Like",
+      "artist": "Bruno Mars",
+      "expected": "inappropriate",
+      "why": "a line about sex by the fire at night"
+    },
+    {
+      "group": "g",
+      "title": "Locked Out of Heaven",
+      "artist": "Bruno Mars",
+      "expected": "inappropriate",
+      "why": "'your sex takes me to paradise'"
+    },
+    {
+      "group": "g",
+      "title": "Versace on the Floor",
+      "artist": "Bruno Mars",
+      "expected": "inappropriate",
+      "why": "undressing, seduction"
+    },
+    {
+      "group": "g",
+      "title": "Leave the Door Open",
+      "artist": "Silk Sonic",
+      "expected": "inappropriate",
+      "why": "an invitation to bed"
+    },
+    {
+      "group": "g",
+      "title": "Shape of You",
+      "artist": "Ed Sheeran",
+      "expected": "inappropriate",
+      "why": "a hookup, bodies and bedsheets"
+    },
+    {
+      "group": "g",
+      "title": "Watermelon Sugar",
+      "artist": "Harry Styles",
+      "expected": "inappropriate",
+      "why": "well-known sexual innuendo"
+    },
+    {
+      "group": "g",
+      "title": "Closer",
+      "artist": "The Chainsmokers",
+      "expected": "inappropriate",
+      "why": "sex in the back seat"
+    },
+    {
+      "group": "g",
+      "title": "Into You",
+      "artist": "Ariana Grande",
+      "expected": "inappropriate",
+      "why": "sexual"
+    },
+    {
+      "group": "g",
+      "title": "Crank That (Soulja Boy)",
+      "artist": "Soulja Boy Tell 'Em",
+      "expected": "inappropriate",
+      "why": "sexual slang"
+    },
+    {
+      "group": "g",
+      "title": "Last Friday Night (T.G.I.F.)",
+      "artist": "Katy Perry",
+      "expected": "inappropriate",
+      "why": "drunk party night is the whole song"
+    },
+    {
+      "group": "g",
+      "title": "The A Team",
+      "artist": "Ed Sheeran",
+      "expected": "inappropriate",
+      "why": "crack cocaine, sounds gentle"
+    },
+    {
+      "group": "g",
+      "title": "Under the Bridge",
+      "artist": "Red Hot Chili Peppers",
+      "expected": "inappropriate",
+      "why": "heroin use"
+    },
+    {
+      "group": "g",
+      "title": "Smokin Out the Window",
+      "artist": "Silk Sonic",
+      "expected": "either",
+      "why": "heartbreak and a cigarette, but the original has profanity"
+    },
+    {
+      "group": "g",
+      "title": "24K Magic",
+      "artist": "Bruno Mars",
+      "expected": "either",
+      "why": "party bragging; the original has some profanity"
+    },
+    {
+      "group": "g",
+      "title": "Mr. Brightside",
+      "artist": "The Killers",
+      "expected": "either",
+      "why": "jealousy; she takes off her dress"
+    },
+    {
+      "group": "g",
+      "title": "Don't Stop Me Now",
+      "artist": "Queen",
+      "expected": "either",
+      "why": "joyful, but 'a sex machine ready to reload'"
+    },
+    {
+      "group": "g",
+      "title": "APT.",
+      "artist": "ROSÉ",
+      "expected": "either",
+      "why": "named after a drinking game, lyrics are a flirty invitation"
+    },
+    {
+      "group": "g",
+      "title": "It Will Rain",
+      "artist": "Bruno Mars",
+      "expected": "either",
+      "why": "heartbreak; asks for morphine as a painkiller metaphor"
     }
   ]
 }

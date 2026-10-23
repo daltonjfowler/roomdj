@@ -141,7 +141,7 @@ try {
   check('More options: no "Use in this room", only Save', !(await shown(host, '#applySettings')) && await shown(host, '#saveDefault'));
   await host.page.click('#tabSongs');
   const modeOptions = await host.page.$$eval('#setUpMode option', (os) => os.map((o) => o.textContent.trim()));
-  check('"👍 votes": Off / On, showing On', modeOptions.join() === 'Off,On' && (await host.page.inputValue('#setUpMode')) === 'on', modeOptions.join());
+  check('"👍 votes": Off / On, counts hidden / On, counts shown, showing counts shown', modeOptions.join() === 'Off,On, counts hidden,On, counts shown' && (await host.page.inputValue('#setUpMode')) === 'shown', modeOptions.join());
   const upOptions = await host.page.$$eval('#setMaxUp option', (os) => os.map((o) => o.textContent));
   const downOptions = await host.page.$$eval('#setMaxDown option', (os) => os.map((o) => o.textContent));
   check('"👍 per student per class": 1 / 2 / 3 / 5 / Unlimited, the same as 👎', upOptions.join() === '1,2,3,5,Unlimited' && upOptions.join() === downOptions.join(), upOptions.join());
@@ -252,7 +252,7 @@ try {
 
   // Unlimited: no counter, 👍 work again.
   await hostSettings(host, async () => {
-    await host.page.selectOption(await reveal(host.page, '#setUpMode'), 'on');
+    await host.page.selectOption(await reveal(host.page, '#setUpMode'), 'shown');
     check('👍 On again: it remembers 2', (await host.page.inputValue('#setMaxUp')) === '2');
     await host.page.selectOption('#setMaxUp', 'off');
   });
@@ -261,6 +261,20 @@ try {
     && !(await shown(ava, '#upLeft')));
   await ava.page.click(up(items[3]));
   check('Unlimited: a third 👍 counts', Boolean(await until(() => upCount(items[3]) === 1)));
+
+  // 👍 On, counts hidden (protocol.js UPVOTE COUNTS): buttons stay, students see no 👍 numbers, the host does.
+  const upNumbers = () => ava.page.$$eval('#queue .vote.up .n', (ns) => ns.map((n) => n.textContent).join(''));
+  check('counts shown: the student sees 👍 numbers', Boolean(await until(async () => (await upNumbers()) !== '')));
+  await hostSettings(host, async () => {
+    await host.page.selectOption(await reveal(host.page, '#setUpMode'), 'hidden');
+    check('counts hidden: the help says only you see them', (await text(host, '#upModeHelp')).includes('Only you see how many 👍'), await text(host, '#upModeHelp'));
+  });
+  check('counts hidden: saved as upvotes on + hideUpvoteCounts', Boolean(await until(() => lastState(host)?.upvotes === true && lastState(host)?.settings.hideUpvoteCounts === true)));
+  check('counts hidden: 👍 buttons stay, with no numbers', Boolean(await until(async () => (await upNumbers()) === ''))
+    && (await ava.page.locator('#queue .vote.up:visible').count()) === 4);
+  check('counts hidden: the student state has no 👍 numbers', wsState(zed)?.upvoteCounts === false && wsState(zed).queue.every((q) => q.up === 0));
+  check('counts hidden: the host still has them', upCount(items[3]) === 1);
+  await ava.page.screenshot({ path: `${OUT}upvotes-hidden.png` });
 
   for (const p of pages) check(`${p.name}: no page errors`, p.errors.length === 0, p.errors.join(' | '));
   // Close the room (a closed tab alone leaves it open until `until`).

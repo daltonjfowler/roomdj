@@ -85,13 +85,14 @@ async function changeFreeTeacher(env, id, body) {
 async function stats(env) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
-  const [list, links, own, sessions, use, verdicts, prewarm] = await Promise.all([
+  const [list, links, own, sessions, use, verdicts, olderVerdicts, prewarm] = await Promise.all([
     ensureProfiles(env),
     listAll(env, 'link:v1:', 1),
     listAll(env, 'prof:v1:'),
     listAll(env, 'sess:v1:'),
     listAll(env, 'use:v1:'),
-    listAll(env, 'verdict:v5:', 20),
+    listAll(env, 'verdict:v6:', 20),
+    listAll(env, 'verdict:v5:', 20), // shared/filter.js OLDER_VERDICT_VERSIONS: still used
     env.CLASS_KV.get(`prewarm:v1:state:${today}`, 'json'),
   ]);
   const linked = new Set(await Promise.all(links.keys.map((k) => env.CLASS_KV.get(k.name))));
@@ -111,8 +112,10 @@ async function stats(env) {
   }
   const todayUse = use.keys.filter((k) => k.name.endsWith(`:${today}`)).map((k) => k.metadata ?? {});
   const sum = (k) => todayUse.reduce((n, u) => n + (u[k] ?? 0), 0);
-  // A verdict is kept per catalog id (a number, or sp:…) AND once per song (title + artist).
-  const songs = verdicts.keys.filter((k) => !/^verdict:v5:(\d+|sp:.*)$/.test(k.name)).length;
+  // A verdict is kept per catalog id (a number, or sp:…) AND once per song (title + artist); a song
+  // checked under v5 and again under v6 counts once.
+  const songs = new Set([...verdicts.keys, ...olderVerdicts.keys].map((k) => k.name.replace(/^verdict:v\d+:/, ''))
+    .filter((k) => !/^(\d+|sp:.*)$/.test(k))).size;
   return {
     at: now,
     teachers,

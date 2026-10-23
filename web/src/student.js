@@ -759,6 +759,9 @@ const upOn = () => state?.upvotes !== false;
 
 /** False while the teacher hides vote numbers (protocol.js HIDDEN COUNTS): buttons with no counts. */
 const countsOn = () => state?.voteCounts !== false;
+
+/** False while 👍 numbers are hidden (protocol.js HIDDEN COUNTS or UPVOTE COUNTS): 👍 buttons with no count. */
+const upCountsOn = () => countsOn() && state?.upvoteCounts !== false;
 const VOTE_FINAL = 'Votes are final. You already voted on this song.';
 
 /** The hint over the queue: what the votes do in this mode. Votes are final (protocol.js VOTES ARE FINAL). */
@@ -917,7 +920,7 @@ function renderQueue(queue) {
         // DOWNVOTE MODE: 'off' = no 👎 button at all; 'hidden' = a 👎 button with no count.
         if (act === 'down') btn.hidden = mode === 'off';
         else btn.hidden = !upOn(); // UPVOTE LIMIT: 👍 off = no 👍 button
-        const counted = countsOn() && (act === 'up' || mode === 'shown');
+        const counted = act === 'up' ? upCountsOn() : countsOn() && mode === 'shown';
         btn.setAttribute('aria-pressed', String(item.myVote === v));
         // All used: a new vote says why on click (never a dead button).
         const spent = item.myVote !== v && (act === 'down' ? left === 0 : ups === 0);
@@ -962,9 +965,9 @@ function sayVotes(id) {
     const item = state?.nowPlaying?.id === id ? state.nowPlaying : state?.queue.find((q) => q.id === id);
     if (!item) return;
     const mine = item.myVote ? `Your vote: thumbs ${item.myVote > 0 ? 'up' : 'down'}.` : 'You have no vote on it.';
-    if (!countsOn()) return announce(`${item.song.title}: ${mine}`);
-    const downs = downMode() === 'shown' ? `, ${votesLabel('thumbs down', item.down)}` : '';
-    announce(`${item.song.title}: ${votesLabel('thumbs up', item.up)}${downs}. ${mine}`);
+    const counts = [upCountsOn() ? votesLabel('thumbs up', item.up) : '',
+      countsOn() && downMode() === 'shown' ? votesLabel('thumbs down', item.down) : ''].filter(Boolean).join(', ');
+    announce(counts ? `${item.song.title}: ${counts}. ${mine}` : `${item.song.title}: ${mine}`);
   }, VOTE_SAY_MS);
 }
 
@@ -1017,8 +1020,8 @@ function renderNowVote(now) {
   btn.hidden = !upOn(); // UPVOTE LIMIT: 👍 off
   btn.setAttribute('aria-disabled', String(now.myVote !== 1 && upLeft() === 0));
   btn.setAttribute('aria-pressed', String(now.myVote === 1));
-  btn.setAttribute('aria-label', countsOn() ? votesLabel('Thumbs up for the song playing now', now.up) : 'Thumbs up for the song playing now');
-  btn.querySelector('.n').textContent = countsOn() ? now.up : '';
+  btn.setAttribute('aria-label', upCountsOn() ? votesLabel('Thumbs up for the song playing now', now.up) : 'Thumbs up for the song playing now');
+  btn.querySelector('.n').textContent = upCountsOn() ? now.up : '';
 }
 
 $('#nowPlaying').addEventListener('click', (e) => {

@@ -278,10 +278,11 @@ function render(s) {
   // The song playing takes 👍 too (protocol.js VOTES): its count, live.
   // HIDDEN COUNTS (protocol.js): the teacher hides vote numbers from the class, the board too.
   const counts = s.voteCounts !== false;
+  const upCounts = counts && s.upvoteCounts !== false; // UPVOTE COUNTS (protocol.js): no 👍 numbers
   const nowVotes = $('.now-votes');
-  if (nowVotes) nowVotes.hidden = !counts;
+  if (nowVotes) nowVotes.hidden = !upCounts;
   const nowUp = $('.now-votes .n');
-  if (counts && nowUp && now && nowUp.textContent !== String(now.up)) nowUp.textContent = now.up;
+  if (upCounts && nowUp && now && nowUp.textContent !== String(now.up)) nowUp.textContent = now.up;
   const empty = $('.now-empty');
   if (empty) empty.textContent = s.queue.length ? 'Up next soon.' : 'Waiting for songs. Students, suggest one!';
   if (host.player && (!anchor || anchor.id !== host.player.id)) setAnchor(host.player);
@@ -295,8 +296,9 @@ function render(s) {
       <span class="song-text"><span class="song-title">${esc(item.song.title)}</span>
         <span class="song-artist">${spotifyMark(item.song)}${esc(item.song.artist)}<span class="qby"> · by ${esc(byLabel(item))}</span>${item.jumped ? ` · <span class="jtag">⚡ Jumped by ${esc(item.jumped.by)}</span>` : ''}</span>
         ${item.pushed ? `<span class="ptag">${PUSH_TAG}</span>` : i === 0 && s.nextLocked ? '<span class="ptag">🔒 Locked in</span>' : ''}</span>
-      ${!counts ? '' : downs ? `<span class="score" title="👍 ${item.up}, 👎 ${item.down}"><b>${signed(item.score)}</b><small>👍 ${item.up} · 👎 ${item.down}</small></span>`
-    : `<span class="score" title="👍 ${item.up}"><b>👍 ${item.up}</b></span>`}
+      ${!counts ? '' : downs && upCounts ? `<span class="score" title="👍 ${item.up}, 👎 ${item.down}"><b>${signed(item.score)}</b><small>👍 ${item.up} · 👎 ${item.down}</small></span>`
+    : downs ? `<span class="score" title="👎 ${item.down}"><b>👎 ${item.down}</b></span>`
+      : upCounts ? `<span class="score" title="👍 ${item.up}"><b>👍 ${item.up}</b></span>` : ''}
     </li>`).join('');
 
   // Needs a look: the count only (the teacher decides on the teacher computer).

@@ -1544,7 +1544,7 @@ function fillSettings(s) {
   $('#setMaxDown').innerHTML = [...downChoices.map((n) => `<option value="${n}">${n}</option>`), '<option value="off">Unlimited</option>'].join('');
   $('#setMaxDown').value = down === null ? 'off' : String(down);
   // 👍 votes and 👍 per student (protocol.js UPVOTE LIMIT), the same two boxes as 👎.
-  $('#setUpMode').value = s.upvotes === false ? 'off' : 'on';
+  $('#setUpMode').value = s.upvotes === false ? 'off' : s.hideUpvoteCounts === true ? 'hidden' : 'shown'; // UPVOTE COUNTS
   const up = Number.isInteger(s.maxUpvotes) ? s.maxUpvotes : null;
   const upChoices = [...new Set([...UPVOTE_CHOICES, ...(up === null ? [] : [up])])].sort((a, b) => a - b);
   $('#setMaxUp').innerHTML = [...upChoices.map((n) => `<option value="${n}">${n}</option>`), '<option value="off">Unlimited</option>'].join('');
@@ -1602,7 +1602,8 @@ function adaptSettings() {
   const upOn = $('#setUpMode').value !== 'off';
   const downMode = $('#setDownMode').value;
   const downOn = downMode !== 'off';
-  say('#upModeHelp', upOn ? 'Students tap 👍 on the songs they want. The song with the most 👍 plays next.'
+  say('#upModeHelp', upOn ? `Students tap 👍 on the songs they want. The song with the most 👍 plays next. ${
+    $('#setUpMode').value === 'hidden' ? 'Only you see how many 👍 a song has.' : 'Everyone sees how many 👍 a song has.'}`
     : downOn ? 'Nobody can 👍. Songs play in the order they were suggested, and 👎 moves songs down.'
       : 'Nobody can 👍. Songs play in the order they were suggested.');
   showIf(upOn, '#maxUpRow', '#maxUpHelp');
@@ -1754,6 +1755,7 @@ function readSettings() {
       ? ghostMin : (base.ghostVoteMinutes ?? DEFAULT_SETTINGS.ghostVoteMinutes),
     maxDownvotes: $('#setMaxDown').value === 'off' ? null : Number($('#setMaxDown').value),
     upvotes: $('#setUpMode').value !== 'off',
+    hideUpvoteCounts: $('#setUpMode').value === 'hidden', // protocol.js UPVOTE COUNTS
     maxUpvotes: $('#setMaxUp').value === 'off' ? null : Number($('#setMaxUp').value),
     blocklist: words,
     ...(testAiOff ? { aiCheck: $('#setAi').checked, blockUnknownSongs: $('#setUnknown').checked } : {}),

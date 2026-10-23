@@ -313,6 +313,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   maxUpvotes: 3, // 👍 per student per class (UPVOTE LIMIT below; Dalton, 2026-10-21: "3 max"): a whole
   //                number 1..20, null = unlimited. Saved settings without it read as 3; ROOMS saved
   //                before it read as null (unlimited, as before: no change mid-period).
+  hideUpvoteCounts: false, // 👍 votes 'On, counts hidden' (UPVOTE COUNTS below; Dalton, 2026-10-22: "toggle the
+  //                          display of likes ... same dropdown as dislikes"). Saved settings and rooms without it read as false.
   scoreFloor: true, // scores never go below 0 (SCORE FLOOR below): 👎 can push a song down but never
   //                   remove it. Default on (Dalton, 2026-10-08: "0 is floor, so all student songs get
   //                   to play"). Saved settings without it read as true; ROOMS saved before the
@@ -381,6 +383,14 @@ export const DOWNVOTE_CHOICES = Object.freeze([1, 2, 3, 5]);
 //   Snapshot: `upvotes` (on/off, everyone); you.upvotesLeft (null = unlimited or off); the host's
 //   students[].upvotes (used). The host offers UPVOTE_CHOICES (+ Unlimited).
 export const UPVOTE_CHOICES = DOWNVOTE_CHOICES; // the same choices as 👎 (Dalton, 2026-10-21: "match")
+
+// UPVOTE COUNTS (Dalton, 2026-10-22; shared/queue.js voteRules/itemView): the host's 👍 votes box has
+//   the same three choices as 👎: Off (settings.upvotes false), On, counts hidden (upvotes true +
+//   hideUpvoteCounts true), On, counts shown (hideUpvoteCounts false). While counts are hidden,
+//   students and boards get `up` 0 and `score` 0 on every queue and now-playing QueueItem and
+//   `upvoteCounts: false` in the State, so the pages draw 👍 buttons with no number (👎 numbers
+//   still follow DOWNVOTE MODE). Order and `myVote` are unchanged; the host always gets the real
+//   numbers. Like HIDDEN COUNTS, the Top 5 and the recap (songs already played) keep their numbers.
 
 // DOWNVOTE MODE (Dalton, 2026-10-08: "Set default to not show dislikes and 0 is floor. So all student
 //   songs will get to play"; shared/queue.js voteRules/itemScore/itemView, shared/highlights.js):
@@ -591,7 +601,7 @@ export const CREDIT_GRANT_MAX = 100;
  *
  * State snapshot (server → client, message { t: 'state', state }).
  * @typedef {{ room: string, until: number, cleanupAt: number|null, cleanup: boolean, teacher: string|null,
- *   serverNow: number, bellOffsetSeconds: number, downvoteMode: 'off'|'hidden'|'shown', upvotes: boolean,
+ *   serverNow: number, bellOffsetSeconds: number, downvoteMode: 'off'|'hidden'|'shown', upvotes: boolean, upvoteCounts: boolean,
  *   profile?: string|null,
  *   open: boolean, locked: boolean, nowPlaying: QueueItem|null,
  *   queue: QueueItem[], settings: object, top5: Top5Item[],

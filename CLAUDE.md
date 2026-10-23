@@ -281,7 +281,7 @@ Claude account).
    after `kidEvidence` (the nickname word lists; quotes, i.e. possible lyrics, dropped; at most 15
    words); otherwise a plain sentence. Teacher notes: at most NOTE_MAX (80), one line, word-screened
    on the server (a refused note is dropped and the host told; the action still happens) and
-   escaped on every page. The AI prompt (v4, v5 adds "instrumental") asks for a category + evidence; a v3 OK/UNKNOWN is
+   escaped on every page. The AI prompt (v4, v5 adds "instrumental", v6 makes the rules less strict for mild songs: a v5/v4 OK/UNKNOWN is used, a v5/v4 INAPPROPRIATE is asked again) asks for a category + evidence; a v3 OK/UNKNOWN is
    still read, a v3 INAPPROPRIATE is asked again once (and still blocks if the AI is down); a
    cached verdict with no category reads as 'other'. Blocked today lives in the room's DO storage
    (key `blocked`, at most BLOCKED_MAX 100), is sent only to host sockets, and goes with the room

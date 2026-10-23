@@ -64,8 +64,8 @@ async function value(name) {
 const day = (ms) => new Date(ms).toISOString().slice(0, 10);
 const today = day(Date.now());
 
-const [list, linkKeys, ownKeys, sessKeys, useKeys, verdictKeys, prewarm] = await Promise.all([
-  value('profiles'), keys('link:v1:'), keys('prof:v1:'), keys('sess:v1:'), keys(`use:v1:`), keys('verdict:v5:'), value(`prewarm:v1:state:${today}`),
+const [list, linkKeys, ownKeys, sessKeys, useKeys, verdictKeys, olderVerdictKeys, prewarm] = await Promise.all([
+  value('profiles'), keys('link:v1:'), keys('prof:v1:'), keys('sess:v1:'), keys(`use:v1:`), keys('verdict:v6:'), keys('verdict:v5:'), value(`prewarm:v1:state:${today}`),
 ]);
 const links = new Set(Object.values(await values(linkKeys, 'text'))); // a link's value is a profile id
 const own = Object.values(await values(ownKeys)).filter(Boolean);
@@ -92,5 +92,6 @@ const sum = (k) => todayUse.reduce((n, u) => n + (u[k] ?? 0), 0);
 console.log(`Free teachers active today: ${todayUse.length} (rooms ${sum('rooms')}, new-song checks ${sum('ai')}, cover checks ${sum('art')})`);
 console.log(`Chart pre-check today: ${prewarm ? `${prewarm.used} AI checks, at song ${prewarm.cursor}` : 'not run yet today'}`);
 // A verdict is kept per catalog id (a number, or sp:…) AND once per song (title + artist): count those.
-const songs = verdictKeys.filter((k) => !/^verdict:v5:(\d+|sp:.*)$/.test(k)).length;
+// A song checked under v5 and again under v6 counts once.
+const songs = new Set([...verdictKeys, ...olderVerdictKeys].map((k) => k.replace(/^verdict:v\d+:/, '')).filter((k) => !/^(\d+|sp:.*)$/.test(k))).size;
 console.log(`Checked songs shared by everyone: ${songs} (none of these cost anything again)`);

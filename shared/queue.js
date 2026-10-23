@@ -133,6 +133,7 @@ export function migrateRoomState(state, { testAiOff = false } = {}) {
   // Rooms saved before the 👍 limit (protocol.js UPVOTE LIMIT): 👍 on and unlimited, as before.
   state.settings.upvotes ??= true;
   if (state.settings.maxUpvotes === undefined) state.settings.maxUpvotes = null;
+  state.settings.hideUpvoteCounts ??= false; // protocol.js UPVOTE COUNTS: shown, as before
   state.upvotes ??= {};
   // Rooms saved before the score floor (protocol.js SCORE FLOOR): off, as before. (The DEFAULT is
   // on now, but a room that was running keeps what it had.)
@@ -188,6 +189,7 @@ export function voteRules(state, isHost = true, now = Date.now()) {
   return {
     floor: floorOn(state), downs: mode !== 'off', hide: mode === 'off' || (mode === 'hidden' && !isHost),
     counts: isHost || !countsHidden(state), // HIDDEN COUNTS: students and boards get no numbers at all
+    upCounts: isHost || state?.settings?.hideUpvoteCounts !== true, // UPVOTE COUNTS: no 👍 numbers
     ghostMs: ghostMs(state), now,
   };
 }
@@ -760,8 +762,8 @@ function itemView(item, device, rules = { floor: false, downs: true, hide: false
   return {
     id: item.id,
     song: item.song,
-    score: rules.counts === false ? 0 : rules.hide ? up : score,
-    up: rules.counts === false ? 0 : up,
+    score: rules.counts === false || rules.upCounts === false ? 0 : rules.hide ? up : score,
+    up: rules.counts === false || rules.upCounts === false ? 0 : up,
     down: rules.counts === false || rules.hide ? 0 : down,
     by: item.by,
     mine: item.device === who,
@@ -802,6 +804,7 @@ export function snapshotFor(state, device, { online = new Set(), boards = 0, now
     serverNow: now, // SERVER CLOCK: pages correct their own clock with it
     downvoteMode: downvoteMode(state), // 👎 off / counts hidden / shown (protocol.js DOWNVOTE MODE)
     upvotes: upvotesOn(state), // 👍 on or off (protocol.js UPVOTE LIMIT)
+    upvoteCounts: rules.upCounts, // false: draw no 👍 numbers (protocol.js UPVOTE COUNTS)
     voteCounts: rules.counts, // false: draw no 👍/👎 numbers (protocol.js HIDDEN COUNTS)
     nextLocked: nextLockOf(state) !== null, // 🔒 the song up next is locked in (protocol.js NEXT LOCK)
     teacher: typeof state.profile?.name === 'string' ? state.profile.name : null, // "Ms Rivera's class"
