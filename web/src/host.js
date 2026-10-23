@@ -47,6 +47,7 @@ import { afterShow, holdForShow } from '../../shared/recap-music.js';
 import { initRecapAudio } from './recap-audio.js';
 import { closeMenu, menuButtonOf, openMenu, openMenuIn } from './menu.js';
 import { initTabs } from './tabs.js';
+import { mainArtistName, promptTitle } from '../../shared/filter.js';
 import { initLayout } from './layout.js';
 
 const HOST = 'cq.host';
@@ -1143,6 +1144,7 @@ function renderReview(review) {
       <span class="song-text"><span class="song-title">${esc(item.song.title)}</span>
         <span class="song-artist">${spotifyMark(item.song)}${esc(item.song.artist)} · by ${esc(byLabel(item))}</span>
         ${artNote(item.song)}
+        <a class="review-lyrics" href="${esc(lyricsLink(item.song))}" target="_blank" rel="noopener noreferrer" aria-label="${esc(`Lyrics for ${item.song.title}: a Google search, opens in a new tab`)}">📄 Lyrics</a>
         ${item.checked === 'lyrics' ? '<span class="review-checked">📄 Judged from lyrics: still not sure</span>'
     : item.checked === 'nolyrics' ? '<span class="review-checked">📄 Could not find the lyrics to double-check</span>' : ''}</span>
       <span class="item-tools">
@@ -1153,6 +1155,15 @@ function renderReview(review) {
       </span>
     </li>`).join('');
   });
+}
+
+/**
+ * Needs a look: a Google search for the song's lyrics, so the teacher can read them before deciding
+ * (Dalton, 2026-10-23). The teacher's own browser opens it; RoomDJ never fetches, keeps or shows
+ * lyrics on a page (CLAUDE.md invariant 17). Google, not a lyrics site: school filters often block those.
+ */
+function lyricsLink(song) {
+  return `https://www.google.com/search?${new URLSearchParams({ q: `${promptTitle(song.title)} ${mainArtistName(song.artist)} lyrics` })}`;
 }
 
 $('#review').addEventListener('click', async (e) => {

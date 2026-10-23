@@ -265,6 +265,7 @@ button.more { padding-inline: 8px; min-width: 32px; }
 .blocked-text .song-artist { font-weight: 400; color: var(--muted); }
 /* Needs a look: the AI read the lyrics and is still not sure (src/lyrics.js). */
 .review-checked { display: block; color: var(--muted); font-size: .82rem; }
+.review-lyrics { display: inline-block; margin-top: 2px; font-size: .82rem; font-weight: 600; }
 .blocked-why { font-weight: 650; }
 .blocked-detail { color: var(--ink); overflow-wrap: anywhere; }
 @media (max-width: 640px) {

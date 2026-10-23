@@ -300,6 +300,12 @@ try {
     return r.some((x) => x.song.id === SONGS.down.id) && r.some((x) => x.song.id === SONGS.slow.id) && r;
   });
   check('Needs a look: both there, with no lyrics note', Boolean(rev) && rev.every((x) => !x.checked), JSON.stringify(rev?.map((x) => [x.song.title, x.checked])));
+  const link = await host.locator(`#review li[data-id="${rev?.find((x) => x.song.id === SONGS.down.id)?.id}"] a.review-lyrics`).first();
+  const href = await link.getAttribute('href').catch(() => null);
+  check('Needs a look: a 📄 Lyrics link to a Google search for title + main artist, in a new tab',
+    href?.startsWith('https://www.google.com/search?') && new URL(href).searchParams.get('q') === `${SONGS.down.title} ${ARTIST} lyrics`
+    && (await link.getAttribute('target')) === '_blank' && /noopener/.test(await link.getAttribute('rel')), href);
+  await host.locator('#review').screenshot({ path: `${OUT}review-lyrics-link.png` }).catch(() => {});
   check('Needs a look page: no "Judged from lyrics" line', (await host.locator('#review').textContent()).includes(SONGS.down.title)
     && !/Judged from lyrics/.test(await host.locator('#review').textContent()));
   const vDown = JSON.parse(localKvGet(verdictKey(SONGS.down.id)) ?? '{}');
