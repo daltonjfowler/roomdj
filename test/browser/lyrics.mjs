@@ -19,6 +19,9 @@
 //   4. LRCLIB down (500) and LRCLIB too slow (past 4 s): the song waits in Needs a look as before,
 //      with no lyrics note, and nothing is marked in KV (looked up again next time).
 //   5. No lyric line reaches the student or the host page.
+//   6. The AI said OK from memory (seeded) and LRCLIB fails ONCE: the song waits in Needs a look
+//      ("Could not find the lyrics to double-check"); the room checks again by itself (Room.recheckReview,
+//      about 30 s): clean lyrics → it moves into the queue; a beer line → it is taken out, credit back.
 // Reads TEACHER_KEY from .dev.vars and never prints it. Screenshots of failures go to test/browser/.out/.
 
 import { spawnSync } from 'node:child_process';
@@ -91,6 +94,14 @@ const SONGS = {
   },
   quiet: { title: 'Lyrics Test Quiet Song', instrumental: true },
   down: { title: 'Lyrics Test Down Song', status: 500 },
+  flaky: {
+    title: 'Lyrics Test Flaky Song', failFirst: 1, seed: 'ok',
+    lyrics: 'Running through the meadow on a sunny afternoon\nPicking yellow flowers, humming a happy tune\nRiding bikes together all along the shore\nEvery day is brighter than the day before',
+  },
+  beer: {
+    title: 'Lyrics Test Beer Song', failFirst: 1, seed: 'ok',
+    lyrics: 'Driving down the highway with the windows open wide\nCracking open a cold beer with my best friend by my side\nSinging to the radio, the sun is going down\nNothing in the world beats a summer in this town',
+  },
   slow: { title: 'Lyrics Test Slow Song', delay: 5500 },
 };
 const lyricLines = Object.values(SONGS).flatMap((s) => (s.lyrics ?? '').split('\n')).filter(Boolean);
@@ -105,6 +116,8 @@ const fake = createServer((req, res) => {
   };
   if (url.pathname !== '/api/search' || !s) return send(200, []);
   if (s.status) return send(s.status, { name: 'UnknownError', statusCode: s.status });
+  s.asked = (s.asked ?? 0) + 1;
+  if (s.failFirst && s.asked <= s.failFirst) return send(500, { name: 'UnknownError', statusCode: 500 });
   const record = {
     id: 1, name: s.title, trackName: s.title, artistName: ARTIST, albumName: 'Test', duration: 200.4,
     instrumental: Boolean(s.instrumental), plainLyrics: s.instrumental ? null : s.lyrics, syncedLyrics: null,
@@ -142,7 +155,10 @@ function seedSong(kind) {
     id: `it:${trackId}`, title: SONGS[kind].title, artist: `${ARTIST} feat. Someone`, album: 'Test', artwork: '',
     durationMs: 200_000, explicit: 'notExplicit', previewUrl: 'https://audio-ssl.itunes.apple.com/test.m4a', genre: 'Pop',
   };
-  const unknown = JSON.stringify({ verdict: 'unknown', category: 'other', evidence: '', instrumental: 'unknown' });
+  // seed 'ok': the AI said OK from memory (no lyrics answer yet); else UNKNOWN (the AI did not know it).
+  const unknown = JSON.stringify(SONGS[kind].seed === 'ok'
+    ? { verdict: 'ok', category: 'other', evidence: 'fine', instrumental: false }
+    : { verdict: 'unknown', category: 'other', evidence: '', instrumental: 'unknown' });
   const keys = [verdictKey(song.id), verdictKey(banKey(song))];
   localKvBulk('put', [{ key: `song:${trackId}`, value: JSON.stringify(song) }, ...keys.map((key) => ({ key, value: unknown }))]);
   seeded.push(`song:${trackId}`, ...keys);
@@ -155,9 +171,12 @@ const api = (path, init = {}) =>
   fetch(new URL(path, BASE), { ...init, headers: { 'x-teacher-key': KEY, 'x-teacher-profile': T1, 'content-type': 'application/json', ...init.headers } });
 
 async function apiJoin(code, device) {
-  const r = await fetch(new URL('api/join', BASE), {
+  // One retry: the seeding before it blocks this process for seconds (spawnSync), and the server may
+  // have dropped the idle keep-alive connection fetch then tries to reuse ("fetch failed").
+  const join = () => fetch(new URL('api/join', BASE), {
     method: 'POST', headers: { 'x-device': device, 'content-type': 'application/json' }, body: JSON.stringify({ code }),
   });
+  const r = await join().catch(() => join());
   return r.status;
 }
 
@@ -195,6 +214,7 @@ const browser = await chromium.launch({ executablePath: CHROME, headless: true }
 const savedDefaults = await (await api('/api/teacher/settings')).json();
 let host = null;
 let raw = null;
+let raw2 = null;
 const hostMsgs = [];
 const errors = [];
 try {
@@ -285,10 +305,34 @@ try {
   const vDown = JSON.parse(localKvGet(verdictKey(SONGS.down.id)) ?? '{}');
   check('KV: LRCLIB trouble marks nothing (looked up again next time)', vDown.verdict === 'unknown' && vDown.lyrics === undefined, JSON.stringify(vDown));
 
+  // 6. An OK from memory whose lyrics lookup fails once: Needs a look, then the room checks again itself.
+  const flaky = await suggest('flaky');
+  check('OK from memory, LRCLIB fails: Needs a look', flaky?.reason === 'review', JSON.stringify(flaky));
+  const marked = await until(() => (lastState()?.review ?? []).find((x) => x.song.id === SONGS.flaky.id));
+  check('Needs a look: marked "could not find the lyrics" (nolyrics)', marked?.checked === 'nolyrics', JSON.stringify(marked));
+  check('Needs a look page: says it could not double-check', Boolean(await until(async () => /Could not find the lyrics to double-check/.test(await host.locator('#review').textContent()))));
+  // A second student (the first one is at the suggestion rate limit by now).
+  const device2 = `lyrics-test-device-${Math.random().toString(36).slice(2, 10)}`;
+  check('second student: joins', (await apiJoin(code, device2)) === 200);
+  raw2 = await rawStudent(roomId, device2, 'Max');
+  const beer = await raw2.ask({ t: 'suggest', song: SONGS.beer.id }, (m) => m.t === 'suggested' && m.song === SONGS.beer.id);
+  check('second OK-from-memory song also waits', beer?.reason === 'review', JSON.stringify(beer));
+  const queued = await until(() => (lastState()?.queue ?? []).some((x) => x.song.id === SONGS.flaky.id)
+    && !(lastState()?.review ?? []).some((x) => x.song.id === SONGS.flaky.id), { timeout: 70_000, every: 500 });
+  check('recheck: lyrics confirm it, it moves into the queue by itself', Boolean(queued));
+  check('recheck: the student is told it was allowed', raw.msgs.some((m) => m.t === 'reviewed' && m.song === SONGS.flaky.id && m.allowed === true));
+  const gone = await until(() => !(lastState()?.review ?? []).some((x) => x.song.id === SONGS.beer.id)
+    && !(lastState()?.queue ?? []).some((x) => x.song.id === SONGS.beer.id), { timeout: 70_000, every: 500 });
+  check('recheck: a beer line in the lyrics takes it out', Boolean(gone));
+  const told = raw2.msgs.find((m) => m.t === 'reviewed' && m.song === SONGS.beer.id);
+  check('recheck: the student is told no, with 🍺', told?.allowed === false && told.why?.id === 'alcohol', JSON.stringify(told));
+  check('recheck: it is in Blocked today', Boolean(await until(() => (lastBlocked() ?? []).find((b) => b.song.id === SONGS.beer.id))));
+
   // 5. No lyric line anywhere a page can see.
-  check('student: never got a lyric', !raw.raw.some(hasLyricLine));
+  check('student: never got a lyric', !raw.raw.some(hasLyricLine) && !raw2.raw.some(hasLyricLine));
   check('host: never got a lyric', !hostMsgs.some(hasLyricLine) && !hasLyricLine(await host.content()));
-  check('LRCLIB: asked once per song', ['sunny', 'party', 'quiet', 'down', 'slow'].every((k) => requests.filter((r) => r.track === SONGS[k].title).length === 1),
+  check('LRCLIB: asked once per song (twice for the ones that failed once)', ['sunny', 'party', 'quiet', 'down', 'slow'].every((k) => requests.filter((r) => r.track === SONGS[k].title).length === 1)
+    && ['flaky', 'beer'].every((k) => requests.filter((r) => r.track === SONGS[k].title).length === 2),
     JSON.stringify(requests.map((r) => r.track)));
   check('no console errors on the host page', errors.length === 0, errors.join(' | '));
 
@@ -301,6 +345,7 @@ try {
   await host?.screenshot({ path: `${OUT}lyrics-crash.png` }).catch(() => {});
 } finally {
   raw?.ws.close();
+  raw2?.ws.close();
   const r = await api('/api/teacher/settings', { method: 'PUT', body: JSON.stringify(savedDefaults) });
   if (!r.ok) console.log('FAIL could not put the saved teacher settings back');
   try {

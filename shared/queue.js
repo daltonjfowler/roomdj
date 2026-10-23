@@ -264,7 +264,7 @@ export function sortQueue(state, now = Date.now()) {
 }
 
 /** Rooms saved before the review list existed have no `review`. */
-function reviewList(state) {
+export function reviewList(state) {
   state.review ??= [];
   return state.review;
 }

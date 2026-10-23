@@ -65,7 +65,7 @@ import { ADMITTED_MAX, DEVICE_ID_PATTERN, FILTER_REASONS, NICK_MAX, QUERY_MAX } 
 import { TEACHER_DEVICE, TEACHER_SEARCH_RATE, TEACHER_SUGGEST_RATE } from '../shared/protocol.js';
 import {
   addSuggestion, addToReview, allowBlocked, lockNext, allowReview, applyBlocklist, kickDevice, migrateRoomState, newRoomState,
-  nextIsFor, nextSong, nickTaken, refusalMessage, snapshotFor, suggestRefusal, takeReview, veto, vote, VOTE_MESSAGES,
+  nextIsFor, nextSong, nickTaken, refusalMessage, reviewList, snapshotFor, suggestRefusal, takeReview, veto, vote, VOTE_MESSAGES,
 } from '../shared/queue.js';
 import { PUSH_MESSAGES, nextGhostAt, playNowSong, pushSong, sortQueue } from '../shared/queue.js';
 import {
@@ -213,6 +213,8 @@ const PICK_NICK = 'Please pick a different nickname.';
 const PICK_NICK_TYPED = PICK_NICK;
 const TOO_LONG = 'That song is longer than your teacher allows right now. Pick a shorter one.';
 const NICK_TAKEN = 'Someone in this room already has that nickname. Pick another one.';
+/** When a Needs a look song whose lyrics lookup failed for a passing reason is checked again (Room.scheduleRecheck). */
+const RECHECK_DELAYS_MS = [30_000, 90_000, 240_000, 600_000];
 
 export class Room extends DurableObject {
   constructor(ctx, env) {
@@ -433,6 +435,56 @@ export class Room extends DurableObject {
     this.sendStudent(item.device, {
       t: 'reviewed', song: item.song.id, title: item.song.title, allowed, ...(refunded ? { refunded } : {}), ...(why ? { why } : {}),
     });
+  }
+
+  /**
+   * Needs a look "Could not find the lyrics to double-check" (shared/filter.js unconfirmedOk) after a
+   * PASSING failure (the room's lyrics limit, LRCLIB busy or slow): the room runs the song check again
+   * by itself after each of RECHECK_DELAYS_MS (Dalton, 2026-10-23: too many songs, "some are old",
+   * waited for the teacher). Lyrics confirm it: into the queue, like Allow (but not remembered for the
+   * teacher's other rooms). Lyrics say no: out, as the filter's no (credit back, Blocked today).
+   * LRCLIB has no lyrics, or still not sure: it stays for the teacher. A timer lost with the room's
+   * memory only means the song waits for the teacher, as before.
+   */
+  scheduleRecheck(itemId, attempt = 0) {
+    const delay = RECHECK_DELAYS_MS[attempt];
+    if (delay === undefined) return;
+    setTimeout(() => {
+      this.recheckReview(itemId, attempt).catch((e) => console.error(JSON.stringify({ message: 'recheck failed', error: String(e) })));
+    }, delay);
+  }
+
+  async recheckReview(itemId, attempt) {
+    const waiting = () => (this.room?.open ? reviewList(this.room).find((i) => i.id === itemId && i.checked === 'nolyrics') : null);
+    const item = waiting();
+    if (!item) return; // the teacher already decided, or the room closed
+    const verdict = await filterSong(item.song, {
+      settings: this.room.settings, banned: await this.banned(), env: this.env, scope: this.scope, lyrics: this.lyrics, budget: () => this.spendFree('ai'),
+    });
+    if (!waiting()) return; // decided while the check ran
+    if (verdict.ok) {
+      const moved = allowReview(this.room, itemId);
+      if (!moved) return;
+      console.log(JSON.stringify({ message: 'recheck: lyrics confirmed, queued', song: moved.song.id }));
+      this.sendReviewed(moved, true);
+      return this.commit();
+    }
+    if (verdict.reason === 'review') {
+      if (verdict.unconfirmed && verdict.ai?.lyrics !== 'none') return this.scheduleRecheck(itemId, attempt + 1);
+      if (verdict.ai?.lyrics === 'found' && verdict.ai.verdict === 'unknown') {
+        item.checked = 'lyrics'; // read, still not sure: the teacher decides
+        return this.commit();
+      }
+      return;
+    }
+    // The lyrics (or a new blocked word, ban...) say no: the filter's answer, as on a suggestion.
+    const taken = takeReview(this.room, itemId);
+    if (!taken) return;
+    const { why, detail } = filterWhy(taken.song, verdict, { banNote: verdict.reason === 'banned' ? await this.banNote(taken.song) : '' });
+    console.log(JSON.stringify({ message: 'recheck: blocked', song: taken.song.id, reason: verdict.reason }));
+    this.sendReviewed(taken, false, refundItem(this.room, taken) !== null, why);
+    await this.addBlocked({ song: taken.song, device: taken.device, by: taken.by, why, detail, source: 'filter', action: 'suggest' });
+    return this.commit();
   }
 
   /** Tell a student their queued (or playing) song was taken out, and why. */
@@ -1536,6 +1588,8 @@ export class Room extends DurableObject {
         return no(held.reason, refusalMessage(this.room, held.reason, id, song));
       }
       if (!teacher) startRest(this.room, a.device); // 📚 the pick is in: back to work
+      // The lyrics lookup failed for a passing reason (a limit, LRCLIB busy): try again by itself.
+      if (checked === 'nolyrics' && verdict.ai?.lyrics !== 'none') this.scheduleRecheck(held.item.id);
       console.log(JSON.stringify({ message: 'suggestion waits for review', song: id, ai: verdict.ai?.reason }));
       const { why, detail } = filterWhy(song, verdict);
       this.send(ws, { t: 'suggested', ok: false, reason: 'review', message: FILTER_REASONS.review, song: id, why, ...(teacher && detail ? { detail } : {}) });
