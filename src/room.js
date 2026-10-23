@@ -90,7 +90,7 @@ import { HostRelay } from './host-relay.js';
 import { judgeFromLyrics } from './lyrics.js';
 import { lookupCatalog, roomCatalog } from './catalog.js';
 import { readBanned, searchAllowed } from './search.js';
-import { codeHash, codeInUse, deleteCodeRoute, putCodeRoute } from './codes.js';
+import { claimCode, codeHash, codeInUse, deleteCodeRoute, putCodeRoute, releaseCode } from './codes.js';
 import { YoutubeError, resolveVideo } from './youtube.js';
 import { VIDEO_ID_PATTERN } from '../shared/youtube-match.js';
 import { teacherKvKey, teacherScope } from './teacher-kv.js';
@@ -865,6 +865,7 @@ export class Room extends DurableObject {
     if (this.room?.codeHash) {
       console.log(JSON.stringify({ message: 'room closed', why }));
       await deleteCodeRoute(this.env, this.room.codeHash, this.room.room);
+      await releaseCode(this.env, this.room.codeHash, this.room.room);
     }
     if (this.room?.room) {
       const id = this.room.room;
@@ -1872,16 +1873,19 @@ export class Room extends DurableObject {
     if (!v.ok) return this.send(ws, { t: 'code', ok: false, error: 'invalid_code', message: v.message });
     const hash = await codeHash(v.code);
     if (hash !== this.room.codeHash) {
-      if (await codeInUse(this.env, hash, this.room.room)) {
+      if ((await codeInUse(this.env, hash, this.room.room)) || !(await claimCode(this.env, hash, this.room.room, this.room.until))) {
         return this.send(ws, { t: 'code', ok: false, error: 'code_taken', message: 'Another open room is using that class code. Pick a different one.' });
       }
-      if (!this.room?.open) return;
+      if (!this.room?.open) return releaseCode(this.env, hash, this.room?.room);
       await putCodeRoute(this.env, hash, this.room.room, this.room.until);
       const old = this.room.codeHash;
       this.room.codeHash = hash;
       this.room.codeShown = v.code;
       await this.save();
-      if (old) await deleteCodeRoute(this.env, old, this.room.room);
+      if (old) {
+        await deleteCodeRoute(this.env, old, this.room.room);
+        await releaseCode(this.env, old, this.room.room);
+      }
     }
     this.send(ws, { t: 'code', ok: true, code: v.code });
     await this.commit();
@@ -1894,7 +1898,10 @@ export class Room extends DurableObject {
     const v = validateTimes(shiftTimes({ until: msg.until, cleanupAt: msg.cleanupAt ?? null }, this.room?.settings?.bellOffsetSeconds ?? 0));
     if (!v.ok) return this.send(ws, { t: 'times', ok: false, error: v.error, message: v.message });
     const room = this.room;
-    if (v.until !== room.until && room.codeHash) await putCodeRoute(this.env, room.codeHash, room.room, v.until);
+    if (v.until !== room.until && room.codeHash) {
+      await putCodeRoute(this.env, room.codeHash, room.room, v.until);
+      await claimCode(this.env, room.codeHash, room.room, v.until); // the lock follows the class end
+    }
     if (!this.room?.open) return;
     room.until = v.until;
     room.cleanupAt = v.cleanupAt;
@@ -1913,7 +1920,10 @@ export class Room extends DurableObject {
     if (!room?.open || !Number.isSafeInteger(room.until)) return;
     room.until += deltaMs;
     if (!room.cleanup && Number.isSafeInteger(room.cleanupAt)) room.cleanupAt += deltaMs;
-    if (room.codeHash) await putCodeRoute(this.env, room.codeHash, room.room, room.until);
+    if (room.codeHash) {
+      await putCodeRoute(this.env, room.codeHash, room.room, room.until);
+      await claimCode(this.env, room.codeHash, room.room, room.until);
+    }
     await this.rescheduleAlarm();
     await this.listOpen(true);
   }

@@ -26,7 +26,7 @@ import { normalizeCode, validateCode, validateUntil } from '../shared/code.js';
 import { shiftTimes, validateTimes } from '../shared/classtime.js';
 import { sha256Hex } from './room.js';
 import { BOARD_CSP, BOARD_PERMISSIONS, COMMON_HEADERS, CONTENT_SECURITY_POLICY, PAGE_CSP } from './headers.js';
-import { codeHash, codeInUse, putCodeRoute, readCodeRoute } from './codes.js';
+import { claimCode, codeHash, codeInUse, putCodeRoute, readCodeRoute, releaseCode } from './codes.js';
 import { addressOf, lockout } from './lockout.js';
 import { readBanned } from './search.js';
 import { quickCheck } from '../shared/filter.js';
@@ -48,6 +48,7 @@ import { roomProfile } from '../shared/profiles.js';
 
 export { Room } from './room.js';
 export { CouponLedger } from './coupons.js';
+export { CodeLock } from './codelock.js';
 import { couponsOn } from './coupons.js';
 
 const KV_SETTINGS = 'settings';
@@ -243,11 +244,16 @@ async function createRoom(request, env) {
   const hostToken = makeHostToken();
   const hostHash = await sha256Hex(hostToken);
   const id = makeRoomId();
+  // The final say on the code (src/codelock.js): KV above can lag, the lock cannot.
+  if (!(await claimCode(env, hash, id, until))) {
+    return json(409, { error: 'code_taken', message: 'Another open room is using that class code. Pick a different one.' });
+  }
   const res = await roomStub(env, id).fetch('https://room/init', {
     method: 'POST',
     body: JSON.stringify({ id, codeHash: hash, until, cleanupAt, settings, hostHash, profile: roomProfile(profile), period, code: v.code }),
   });
   if (res.status !== 201) {
+    await releaseCode(env, hash, id);
     console.error(JSON.stringify({ message: 'room init failed', status: res.status }));
     return json(500, { error: 'server', message: 'Could not open a room. Try again.' });
   }

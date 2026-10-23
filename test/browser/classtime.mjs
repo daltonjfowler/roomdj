@@ -180,7 +180,8 @@ function seedSong({ title, durationMs = 200_000, verdict = null, version = PROMP
   seeded.push(...entries.map((e) => e.key));
   return song.id;
 }
-const OK = (instrumental) => ({ verdict: 'ok', category: 'other', evidence: '', ...(instrumental === undefined ? {} : { instrumental }) });
+// Confirmed from lyrics (shared/filter.js unconfirmedOk: an OK from memory alone waits for the teacher).
+const OK = (instrumental) => ({ verdict: 'ok', category: 'other', evidence: '', lyrics: 'found', lv: 1, source: 'lyrics', ...(instrumental === undefined ? {} : { instrumental }) });
 
 const devId = (n) => `classtime-device-${n}-${Math.random().toString(36).slice(2, 10)}`;
 const hm = (ms) => timeValue(ms);

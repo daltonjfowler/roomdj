@@ -131,7 +131,7 @@ Claude account).
   address bar AT IMPORT, before music.js), session in sessionStorage (+ localStorage only with
   "Stay signed in"). `src/profiles.js` `signedIn` (WeakMap request → session): `requestProfile`
   returns the session's profile, never a header/body one.
-- `src/codes.js`: class code → room id in KV (`room:<sha256 of the code>`, TTL until).
+- `src/codes.js`: class code → room id in KV (`room:<sha256 of the code>`, TTL until), and the CodeLock rule + calls. `src/codelock.js`: the CodeLock Durable Object (one per code hash, one holder).
 - `src/open-rooms.js`: each teacher's open rooms for the board's sign-in (KV
   teacherKvKey('openRooms', profile) = [{ room, until, at }], TTL the latest until; the signpost only,
   the room is the truth).
@@ -247,7 +247,7 @@ Claude account).
    its code: same trust, accepted.
 7. Class codes: stored only as hashes (KV and the room), compared in constant time IN THE ROOM
    (KV is only the signpost and can be a minute stale). Suggested codes stay at 2^28 or more; a
-   teacher's own may be anything with a letter or number (Dalton's choice, 2026-10-05). A code another open room has is refused.
+   teacher's own may be anything with a letter or number (Dalton's choice, 2026-10-05). A code another open room has is refused: KV codeInUse first, then the code's CodeLock Durable Object (src/codelock.js, src/codes.js lockDecision/claimCode/releaseCode; 2026-10-23), which only one room can hold, so KV lag between data centres cannot let two rooms share a code. Open, change code, change times and close all go through it; test: npm run test:coderace.
 8. Wrong codes: `JOIN_RATE_IP` (60 a minute) counts every try BEFORE the compare, then the
    per-device lockout (5 wrong: 5 s, doubling to 300 s; a locked device is refused without a
    compare). Never lock out by address: one student must never lock out the class or the teacher.

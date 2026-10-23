@@ -32,6 +32,7 @@
     "test:profiles": "node test/browser/profiles.mjs",
     "test:repeats": "node test/browser/repeats.mjs",
     "test:board": "node test/browser/board.mjs",
+    "test:coderace": "node test/browser/coderace.mjs",
     "test:board-signin": "node test/browser/board-signin.mjs",
     "test:lyrics": "node test/browser/lyrics.mjs",
     "test:teacher-suggest": "node test/browser/teacher-suggest.mjs",

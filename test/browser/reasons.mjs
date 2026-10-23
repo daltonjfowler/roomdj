@@ -292,7 +292,7 @@ try {
     drugs: { verdict: 'inappropriate', category: 'drugs', evidence: 'Sings about using crystal meth' },
     legacy: { verdict: 'inappropriate', reason: 'old reason text from before categories' },
     unknown: { verdict: 'unknown', category: 'other', evidence: 'reasons test', ...NO_LYRICS }, // no lyrics lookup: stays unknown
-    ok: { verdict: 'ok', category: 'other', evidence: 'reasons test' },
+    ok: { verdict: 'ok', category: 'other', evidence: 'reasons test', lyrics: 'found', lv: 1, source: 'lyrics' }, // confirmed (unconfirmedOk)
   };
   const t = {};
   async function pickAndSeed(p, q, kind) {
