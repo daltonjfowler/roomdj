@@ -7,7 +7,7 @@ import test from 'node:test';
 import { DEFAULT_SETTINGS } from '../shared/protocol.js';
 import {
   LYRICS_MAX_CHARS, LYRICS_PROMPT_VERSION, NO_LYRICS_TTL_SECONDS, PROMPT_VERSION, SETTLED_VERDICT_TTL_SECONDS, VERDICT_TTL_SECONDS,
-  aiThemeCheck, banKey, buildLyricsPrompt, buildThemePrompt, filterSong, quotesLyrics, readVerdict, verdictKey,
+  aiThemeCheck, banKey, buildLyricsPrompt, buildThemePrompt, filterSong, quotesLyrics, readVerdict, unconfirmedOk, verdictKey,
 } from '../shared/filter.js';
 import { LYRICS_USER_AGENT, lyricsRecordMatches, lyricsSearchUrl, pickLyrics, stripTimestamps, truncateLyrics } from '../shared/lyrics.js';
 import { categoryEvidence, filterWhy, kidEvidence, kidSafe, reviewDetail, THEME_FALLBACK } from '../shared/reasons.js';
@@ -393,6 +393,8 @@ test('never for Spotify songs, with the AI check off, for a known verdict or a t
   const env = { CLASS_KV: kv, AI: fakeAi({ instrumental: false, verdict: 'OK', category: 'other', evidence: 'fine' }) };
   await filterSong(song({ id: 'sp:4uLU6hMCjMI75M1A2tKUQC' }), { settings: DEFAULT_SETTINGS, env, lyrics });
   await filterSong(song({ id: 'it:7001' }), { settings: { ...DEFAULT_SETTINGS, aiCheck: false }, env, lyrics });
+  // A verdict whose lyrics were looked up already is never looked up again.
+  await kv.put(verdictKey('it:7002'), JSON.stringify({ verdict: 'ok', category: 'other', evidence: '', instrumental: false, lyrics: 'found', lv: LYRICS_PROMPT_VERSION, source: 'lyrics' }));
   await filterSong(song({ id: 'it:7002', title: 'Known Song' }), { settings: DEFAULT_SETTINGS, env, lyrics });
   await kv.put('approved:7003', '{}');
   await filterSong(song({ id: 'it:7003', title: 'Approved Song' }), { settings: { ...DEFAULT_SETTINGS, instrumentalsOnly: true }, env, lyrics });
@@ -408,7 +410,7 @@ test('Instrumentals only: lyrics settle "has singing" without an AI call; LRCLIB
   lyricsFrom.env = env;
   const sung = await filterSong(song(), { settings, env, lyrics: lyricsFrom(fakeFetch(jsonResponse([record()]))) });
   assert.equal(sung.reason, 'not_instrumental');
-  assert.equal(AI.calls.length, 1, 'no lyrics AI call: the theme was known');
+  assert.equal(AI.calls.length, 2, 'the theme OK is confirmed from the lyrics too (one more call)');
   assert.equal(filterWhy(song(), sung).detail, 'Instrumentals only: it has lyrics, so it has singing (judged from lyrics)');
   const AI2 = fakeAi({ instrumental: 'unknown', verdict: 'UNKNOWN', category: 'other', evidence: '' });
   const env2 = { CLASS_KV: fakeKv(), AI: AI2 };
@@ -459,4 +461,40 @@ test('filterSong: "sexual" judged from lyrics waits for the teacher (love songs)
   assert.equal((await filterSong(song(), { settings: { ...DEFAULT_SETTINGS, blockUnknownSongs: false }, env })).ok, true);
   seed('drugs');
   assert.equal((await filterSong(song(), { settings: DEFAULT_SETTINGS, env })).reason, 'theme');
+});
+
+test('err on blocking (2026-10-23): an OK from memory is confirmed from the lyrics; unconfirmed waits for the teacher', async () => {
+  const OK = { instrumental: false, verdict: 'OK', category: 'other', evidence: 'fine' };
+  const run = async (id, AI, fetchImpl, extra = {}) => {
+    resetLyricsMemory();
+    const env = { CLASS_KV: fakeKv(), AI };
+    lyricsFrom.env = env;
+    return filterSong(song({ id, ...extra }), { settings: DEFAULT_SETTINGS, env, lyrics: lyricsFrom(fakeFetch(fetchImpl)) });
+  };
+  // Lyrics confirm it: plays.
+  const fine = await run('it:6001', fakeAi(OK, OK), jsonResponse([record()]));
+  assert.deepEqual([fine.ok, fine.ai.source, fine.ai.lyrics], [true, 'lyrics', 'found']);
+  // The lyrics show a beer the model's memory missed: blocked.
+  const beer = await run('it:6002', fakeAi(OK, { instrumental: false, verdict: 'INAPPROPRIATE', category: 'alcohol', evidence: 'A beer in the second verse' }), jsonResponse([record()]));
+  assert.deepEqual([beer.ok, beer.reason, beer.ai.category], [false, 'theme', 'alcohol']);
+  // LRCLIB has no lyrics: Needs a look, marked unconfirmed.
+  const none = await run('it:6003', fakeAi(OK), jsonResponse([]));
+  assert.deepEqual([none.ok, none.reason, none.unconfirmed], [false, 'review', true]);
+  // LRCLIB down: Needs a look too, nothing marked (tried again next time).
+  const down = await quiet(() => run('it:6004', fakeAi(OK), new Response('busy', { status: 500 })));
+  assert.deepEqual([down.ok, down.reason, down.unconfirmed], [false, 'review', true]);
+  // The lyrics cannot tell: Needs a look (not the memory OK).
+  const unclear = await run('it:6005', fakeAi(OK, { instrumental: false, verdict: 'UNKNOWN', category: 'other', evidence: '' }), jsonResponse([record()]));
+  assert.deepEqual([unclear.ok, unclear.reason], [false, 'review']);
+  // Nobody sings: nothing to confirm, no lookup.
+  const AIi = fakeAi({ ...OK, instrumental: true });
+  const inst = await run('it:6006', AIi, jsonResponse([record()]));
+  assert.deepEqual([inst.ok, AIi.calls.length], [true, 1]);
+  // "Ask me first" off: an unconfirmed OK plays.
+  resetLyricsMemory();
+  const env = { CLASS_KV: fakeKv(), AI: fakeAi(OK) };
+  lyricsFrom.env = env;
+  const off = await filterSong(song({ id: 'it:6007' }), { settings: { ...DEFAULT_SETTINGS, blockUnknownSongs: false }, env, lyrics: lyricsFrom(fakeFetch(jsonResponse([]))) });
+  assert.equal(off.ok, true);
+  assert.equal(unconfirmedOk(song(), { verdict: 'ok', source: 'teacher' }), false, "a teacher's allow is confirmed");
 });

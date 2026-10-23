@@ -479,10 +479,14 @@ async function putVerdict(env, ids, r) {
 /**
  * What the lyrics could still settle about a verdict: { needTheme, needInstrumental }, or null.
  * Never twice for one song: a verdict with a `lyrics` answer has been looked up already.
+ * An OK is checked against the lyrics too (Dalton, 2026-10-23, "ensure the filter is effective"):
+ * the model judges from memory and misses single lines (Royals' Grey Goose, Cruel Summer's "drunk",
+ * Old Town Road's lean all came back OK; from their lyrics all were right, test/ai-songs.json group h).
  */
 function lyricsWanted(v, needInstrumental) {
   if (!v || v.lyrics || v.source === 'teacher') return null;
-  const needTheme = v.verdict === 'unknown';
+  // An OK the model says nobody sings in has no words to check.
+  const needTheme = v.verdict === 'unknown' || (v.verdict === 'ok' && v.instrumental !== true);
   const needInst = needInstrumental && v.verdict !== 'inappropriate' && v.instrumental !== true && v.instrumental !== false;
   return needTheme || needInst ? { needTheme, needInstrumental: needInst } : null;
 }
@@ -621,6 +625,13 @@ export async function aiThemeCheck(song, env, { instrumental = false, ask = true
   return fromLyrics ? { ...fromLyrics, cached: false } : { ...result, failed: false, cached: false };
 }
 
+/** True for an AI "OK" its lyrics have not confirmed (filterSong). A teacher's allow is always confirmed. */
+export function unconfirmedOk(song, ai) {
+  if (ai.source === 'teacher' || ai.source === 'lyrics') return false;
+  if (ai.lyrics === 'instrumental' || ai.instrumental === true || instrumentalHint(song) === true) return false;
+  return true;
+}
+
 /**
  * The full filter for a suggestion. (Max song length is checked before it, in the room: it costs
  * nothing.)
@@ -656,6 +667,13 @@ export async function filterSong(song, { settings, banned = [], env, scope, lyri
     const inst = instrumentalOf(song, ai.instrumental);
     if (inst === false) return { ok: false, reason: 'not_instrumental', ai };
     if (inst === 'unknown' && settings.blockUnknownSongs) return { ok: false, reason: 'review', ai, instrumental: 'unknown' };
+  }
+  // An OK from the model's memory alone is not enough (Dalton, 2026-10-23: "err on the side of
+  // blocking"): its lyrics must confirm it. No lyrics on LRCLIB, LRCLIB busy or down, or a rate limit:
+  // the song waits for the teacher (`unconfirmed`), and the lyrics are tried again next time.
+  // After Instrumentals only: "has singing" is a definite no and wins. Instrumentals (title words, or the model says nobody sings) have no words to check.
+  if (settings.aiCheck && ai.verdict === 'ok' && unconfirmedOk(song, ai)) {
+    return settings.blockUnknownSongs ? { ok: false, reason: 'review', ai, unconfirmed: true } : { ok: true, ai };
   }
   if (settings.aiCheck && ai.verdict === 'unknown' && settings.blockUnknownSongs) return { ok: false, reason: 'review', ai };
   return { ok: true, ai };

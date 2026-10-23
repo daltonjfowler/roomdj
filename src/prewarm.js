@@ -62,7 +62,7 @@ async function todaysSongs(env, day, fetchImpl) {
 }
 
 /** One cron run. → { checked, asked, used } (for the log and tests). */
-export async function prewarm(env, { now = Date.now(), fetchImpl = fetch } = {}) {
+export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyricsFetch } = {}) {
   if (!env.CLASS_KV || !env.AI) return { checked: 0, asked: 0, used: 0 };
   const day = new Date(now).toISOString().slice(0, 10);
   const stateKey = `prewarm:v1:state:${day}`;
@@ -78,6 +78,7 @@ export async function prewarm(env, { now = Date.now(), fetchImpl = fetch } = {})
   };
   const lyrics = (song, want) => judgeFromLyrics(song, env, {
     ...want,
+    fetchImpl: lyricsFetch, // tests only (undefined: the real fetch)
     allow: async () => (!env.LYRICS_RATE_ALL || (await env.LYRICS_RATE_ALL.limit({ key: 'everyone' })).success) && budget(),
   });
   while (state.cursor < songs.length && checked < PREWARM_PER_RUN && state.used < PREWARM_AI_PER_DAY) {

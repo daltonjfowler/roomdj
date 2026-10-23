@@ -403,7 +403,7 @@ export function addToReview(state, { device, nick, song, now = Date.now(), paid 
   if (review.length >= REVIEW_MAX) return { ok: false, reason: 'reviewFull' };
   const item = newItem(state, { device, nick, song, now });
   if (paid) item.paid = paid;
-  if (checked === 'lyrics') item.checked = checked;
+  if (checked === 'lyrics' || checked === 'nolyrics') item.checked = checked;
   review.push(item);
   countSuggestion(state, device, song, now);
   return { ok: true, item };

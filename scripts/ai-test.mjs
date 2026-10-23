@@ -174,7 +174,7 @@ if (withLyrics && models.length !== 1) {
   process.exit(2);
 }
 let lastLrclib = 0;
-/** The lyrics step the Worker does (src/lyrics.js judgeFromLyrics), for an UNKNOWN answer. */
+/** The lyrics step the Worker does (src/lyrics.js judgeFromLyrics), for an UNKNOWN or OK answer. */
 async function lyricsStep(creds, model, song) {
   const wait = lastLrclib + 600 - Date.now();
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
@@ -194,7 +194,10 @@ for (const entry of picked) {
   const quick = quickCheck(song);
   const results = [];
   for (const model of models) results.push(lyricsOnly ? { verdict: 'unknown', reason: '(theme call skipped: --lyrics-only)' } : await runModel(creds, model, song));
-  const lyr = withLyrics && song.found && results[0].verdict === 'unknown' ? await lyricsStep(creds, models[0], song) : null;
+  // As the Worker (shared/filter.js lyricsWanted, unconfirmedOk): UNKNOWN and OK are checked against
+  // the lyrics; an OK the lyrics cannot confirm (none found, unclear) waits for the teacher (unknown).
+  let lyr = withLyrics && song.found && ['unknown', 'ok'].includes(results[0].verdict) ? await lyricsStep(creds, models[0], song) : null;
+  if (lyr && results[0].verdict === 'ok' && lyr.lyrics === 'none' && results[0].instrumental === true) lyr = { ...lyr, verdict: 'ok' };
   rows.push({ entry, song, quick, results, lyr });
   const cells = results.map((r, i) => `${short(models[i])}: ${r.verdict} ${grade(entry.expected, r.verdict)}`).join(' | ');
   console.error(`${String(entry.n).padStart(2)} ${entry.title} - ${cells}${lyr ? ` → lyrics(${lyr.lyrics}): ${lyr.verdict} ${grade(entry.expected, lyr.verdict)}` : ''}`);
@@ -243,8 +246,8 @@ if (withLyrics) {
   const after = (r) => (r.lyr ? r.lyr.verdict : r.results[0].verdict);
   const of = (g) => rows.filter((r) => grade(r.entry.expected, after(r)) === g);
   console.log('');
-  console.log(`With lyrics (${models[0]}): ${tried.length} UNKNOWN songs looked up on LRCLIB; ${tried.filter((r) => r.lyr.lyrics === 'found').length} had lyrics, ${tried.filter((r) => r.lyr.lyrics === 'instrumental').length} instrumental, ${tried.filter((r) => r.lyr.lyrics === 'none').length} none, ${tried.filter((r) => r.lyr.lyrics === 'error').length} errors; ${tried.reduce((n, r) => n + r.lyr.calls, 0)} extra AI calls`);
-  console.log(`  moved from UNKNOWN to a right verdict: ${tried.filter((r) => grade(r.entry.expected, r.lyr.verdict) === 'ok').length}`);
+  console.log(`With lyrics (${models[0]}): ${tried.length} UNKNOWN or OK songs looked up on LRCLIB; ${tried.filter((r) => r.lyr.lyrics === 'found').length} had lyrics, ${tried.filter((r) => r.lyr.lyrics === 'instrumental').length} instrumental, ${tried.filter((r) => r.lyr.lyrics === 'none').length} none, ${tried.filter((r) => r.lyr.lyrics === 'error').length} errors; ${tried.reduce((n, r) => n + r.lyr.calls, 0)} extra AI calls`);
+  console.log(`  right after lyrics: ${tried.filter((r) => grade(r.entry.expected, r.lyr.verdict) === 'ok').length}`);
   console.log(`  after lyrics: ${of('MISS').length} misses, ${of('soft').length} still unknown, of ${rows.length}`);
   console.log(`    misses: ${of('MISS').map((r) => `${r.entry.n} ${r.entry.title} (${after(r)})`).join(', ') || 'none'}`);
   console.log(`    evidence that quoted 4+ lyric words (replaced): ${tried.filter((r) => r.lyr.quoted).map((r) => r.entry.title).join(', ') || 'none'}`);

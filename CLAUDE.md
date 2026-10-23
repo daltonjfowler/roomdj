@@ -377,7 +377,7 @@ Claude account).
    the teacher to the next room; a refused key goes back to the key step.
 
 17. Lyrics (Dalton, 2026-10-07; src/lyrics.js, shared/lyrics.js): the AI model does not know most
-   songs from 2024 on. ONLY for a song the theme check answered UNKNOWN (or, under Instrumentals
+   songs from 2024 on. For a song the theme check answered UNKNOWN or OK (since 2026-10-23, err on blocking: an OK from memory must be confirmed by its lyrics, else Needs a look "Could not find the lyrics to double-check"; shared/filter.js unconfirmedOk), (or, under Instrumentals
    only, could not say whether it has singing), only while the room's `aiCheck` is on and never for
    Spotify songs (invariant 10), the Worker searches LRCLIB (lrclib.net: free, no key; our
    User-Agent "RoomDJ (https://roomdj.com)"; Retry-After honoured) for the same recording and makes

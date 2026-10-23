@@ -1143,7 +1143,8 @@ function renderReview(review) {
       <span class="song-text"><span class="song-title">${esc(item.song.title)}</span>
         <span class="song-artist">${spotifyMark(item.song)}${esc(item.song.artist)} · by ${esc(byLabel(item))}</span>
         ${artNote(item.song)}
-        ${item.checked === 'lyrics' ? '<span class="review-checked">📄 Judged from lyrics: still not sure</span>' : ''}</span>
+        ${item.checked === 'lyrics' ? '<span class="review-checked">📄 Judged from lyrics: still not sure</span>'
+    : item.checked === 'nolyrics' ? '<span class="review-checked">📄 Could not find the lyrics to double-check</span>' : ''}</span>
       <span class="item-tools">
         <button type="button" data-act="allow" class="primary" aria-label="${esc(`Allow ${item.song.title}`)}" title="Put it in the queue">Allow</button>
         <button type="button" data-act="veto" aria-label="${esc(`Remove ${item.song.title}`)}" title="Not this time">Remove</button>

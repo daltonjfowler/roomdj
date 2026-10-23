@@ -36,19 +36,21 @@ test('prewarm: a few songs a run, verdicts cached; known songs cost nothing; dai
     AI: { run: async () => { asked++; return { response: '{"instrumental":false,"verdict":"OK","category":null,"evidence":""}' }; } },
   };
   const now = Date.UTC(2026, 9, 14, 12);
-  const one = await prewarm(env, { now, fetchImpl: feed(300) });
+  // LRCLIB has nothing for these test songs (never the real LRCLIB in a test).
+  const lyricsFetch = async () => new Response('[]', { headers: { 'content-type': 'application/json' } });
+  const one = await prewarm(env, { now, fetchImpl: feed(300), lyricsFetch });
   assert.equal(one.checked, PREWARM_PER_RUN);
-  assert.equal(one.asked, PREWARM_PER_RUN);
+  assert.equal(one.asked, PREWARM_PER_RUN * 2, 'each OK is also looked up on LRCLIB to confirm it (one budget step each)');
   assert.ok(env.CLASS_KV.map.has(verdictKey('it:1000', PROMPT_VERSION)), 'the verdict is cached for everyone');
   // The same songs again (a new day's list starting with them): no AI.
   const before = asked;
   env.CLASS_KV.map.delete('prewarm:v1:state:2026-10-15');
-  const again = await prewarm(env, { now: now + 86_400_000, fetchImpl: async () => Response.json({ feed: { results: Array.from({ length: PREWARM_PER_RUN }, (_, i) => entry(i)) } }) });
+  const again = await prewarm(env, { now: now + 86_400_000, lyricsFetch, fetchImpl: async () => Response.json({ feed: { results: Array.from({ length: PREWARM_PER_RUN }, (_, i) => entry(i)) } }) });
   assert.equal(again.asked, 0);
   assert.equal(asked, before, 'known songs: not asked');
   // The cap: runs until the day's AI calls are used.
   let last;
-  for (let i = 0; i < 100; i++) last = await prewarm(env, { now, fetchImpl: feed(300) });
+  for (let i = 0; i < 100; i++) last = await prewarm(env, { now, fetchImpl: feed(300), lyricsFetch });
   assert.equal(last.used, PREWARM_AI_PER_DAY);
   assert.equal(last.asked, 0, 'past the cap: nothing more');
 });

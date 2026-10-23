@@ -106,7 +106,8 @@ test('instrumental: the answer, title/album words, weak genre hints', () => {
 test('instrumentals: an OK with no instrumental answer is used as it is while Instrumentals only is off (no AI call)', async () => {
   const kv = fakeKv();
   const n = { n: 0 };
-  kv.map.set(verdictKey('it:42'), JSON.stringify({ verdict: 'ok', category: 'other', evidence: '' }));
+  // Confirmed from its lyrics (shared/filter.js unconfirmedOk), with no instrumental answer.
+  kv.map.set(verdictKey('it:42'), JSON.stringify({ verdict: 'ok', category: 'other', evidence: '', lyrics: 'found', lv: 1, source: 'lyrics' }));
   const env = { CLASS_KV: kv, AI: aiSays({ verdict: 'OK', instrumental: false }, n) };
   const r = await filterSong(song(), { settings: { ...DEFAULT_SETTINGS }, env });
   assert.deepEqual([r.ok, n.n], [true, 0]);

@@ -1525,7 +1525,9 @@ export class Room extends DurableObject {
       // The AI did not know it (or failed): the teacher decides. Queue rules are checked again.
       // The credit is held with it: Allow keeps it, Remove gives it back, Ban does not.
       // checked 'lyrics': the AI read its lyrics and is still not sure (the teacher sees it).
-      const checked = verdict.ai?.lyrics === 'found' && verdict.ai.verdict === 'unknown' ? 'lyrics' : null;
+      // 'nolyrics': the AI said OK but its lyrics could not be found or read to confirm it.
+      const checked = verdict.unconfirmed ? 'nolyrics'
+        : verdict.ai?.lyrics === 'found' && verdict.ai.verdict === 'unknown' ? 'lyrics' : null;
       const held = addToReview(this.room, { device: a.device, nick, song, paid, checked });
       if (!held.ok) {
         if (!(await giveBack()) && changed) await this.commit();

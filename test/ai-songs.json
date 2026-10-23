@@ -1,5 +1,5 @@
 {
-  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js). group g (2026-10-22, Dalton: most complaints are mild songs that SEEM inappropriate, e.g. Bruno Mars) = mild songs the live verdict cache blocked, expected OK, next to the same artists' songs that really are not for class (must stay inappropriate). v7 (2026-10-23, Dalton): ANY alcohol, drugs (metaphors too) or smoking/vaping blocks, even one passing line.",
+  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js). group g (2026-10-22, Dalton: most complaints are mild songs that SEEM inappropriate, e.g. Bruno Mars) = mild songs the live verdict cache blocked, expected OK, next to the same artists' songs that really are not for class (must stay inappropriate). v7 (2026-10-23, Dalton): ANY alcohol, drugs (metaphors too) or smoking/vaping blocks, even one passing line. group h (2026-10-23) = a held-out check of v7 on songs the prompt was never tuned on: one passing line of alcohol, drugs, smoking or sex next to clean school favourites.",
   "songs": [
     {
       "group": "a",
@@ -159,8 +159,8 @@
       "group": "b",
       "title": "Another One Bites the Dust",
       "artist": "Queen",
-      "expected": "ok",
-      "why": "breakup / defiance; played at school games"
+      "expected": "either",
+      "why": "breakup / defiance, but bullets and a machine gun in the lyrics"
     },
     {
       "group": "b",
@@ -202,8 +202,8 @@
       "group": "c",
       "title": "As It Was",
       "artist": "Harry Styles",
-      "expected": "ok",
-      "why": "clean pop, 2022"
+      "expected": "inappropriate",
+      "why": "v7: \"what kind of pills are you on?\" (any drug line counts)"
     },
     {
       "group": "c",
@@ -781,6 +781,503 @@
       "artist": "Bruno Mars",
       "expected": "inappropriate",
       "why": "v7: asks for morphine (drugs as a metaphor count)"
+    },
+    {
+      "group": "h",
+      "title": "Too Sweet",
+      "artist": "Hozier",
+      "expected": "inappropriate",
+      "why": "whiskey neat in the chorus"
+    },
+    {
+      "group": "h",
+      "title": "Royals",
+      "artist": "Lorde",
+      "expected": "inappropriate",
+      "why": "Grey Goose, trippin' in the bathroom"
+    },
+    {
+      "group": "h",
+      "title": "Cruel Summer",
+      "artist": "Taylor Swift",
+      "expected": "inappropriate",
+      "why": "drunk in the back of the car"
+    },
+    {
+      "group": "h",
+      "title": "Peaches",
+      "artist": "Justin Bieber",
+      "expected": "inappropriate",
+      "why": "gets his weed from California"
+    },
+    {
+      "group": "h",
+      "title": "Stay",
+      "artist": "The Kid LAROI",
+      "expected": "inappropriate",
+      "why": "I get drunk, wake up, I'm wasted still"
+    },
+    {
+      "group": "h",
+      "title": "7 Years",
+      "artist": "Lukas Graham",
+      "expected": "inappropriate",
+      "why": "smoking herbs and drinking burning liquor"
+    },
+    {
+      "group": "h",
+      "title": "TiK ToK",
+      "artist": "Kesha",
+      "expected": "inappropriate",
+      "why": "brush my teeth with a bottle of Jack"
+    },
+    {
+      "group": "h",
+      "title": "Hotel California",
+      "artist": "Eagles",
+      "expected": "inappropriate",
+      "why": "colitas, pink champagne, wine"
+    },
+    {
+      "group": "h",
+      "title": "Cigarette Daydreams",
+      "artist": "Cage the Elephant",
+      "expected": "inappropriate",
+      "why": "cigarettes in the chorus"
+    },
+    {
+      "group": "h",
+      "title": "I Gotta Feeling",
+      "artist": "Black Eyed Peas",
+      "expected": "inappropriate",
+      "why": "fill up my cup, drink"
+    },
+    {
+      "group": "h",
+      "title": "Piano Man",
+      "artist": "Billy Joel",
+      "expected": "inappropriate",
+      "why": "a bar full of drinkers"
+    },
+    {
+      "group": "h",
+      "title": "Don't Stop Believin'",
+      "artist": "Journey",
+      "expected": "either",
+      "why": "one line: the smell of wine and cheap perfume"
+    },
+    {
+      "group": "h",
+      "title": "Old Town Road",
+      "artist": "Lil Nas X",
+      "expected": "inappropriate",
+      "why": "lean in my bladder (drug slang)"
+    },
+    {
+      "group": "h",
+      "title": "Teenage Dream",
+      "artist": "Katy Perry",
+      "expected": "inappropriate",
+      "why": "hands on me in skin-tight jeans, all the way tonight"
+    },
+    {
+      "group": "h",
+      "title": "California Gurls",
+      "artist": "Katy Perry",
+      "expected": "inappropriate",
+      "why": "sex on the beach, suggestive"
+    },
+    {
+      "group": "h",
+      "title": "Despacito",
+      "artist": "Luis Fonsi",
+      "expected": "inappropriate",
+      "why": "sexual"
+    },
+    {
+      "group": "h",
+      "title": "Talk Dirty",
+      "artist": "Jason Derulo",
+      "expected": "inappropriate",
+      "why": "sexual"
+    },
+    {
+      "group": "h",
+      "title": "Starships",
+      "artist": "Nicki Minaj",
+      "expected": "inappropriate",
+      "why": "higher than a mother (profanity), party"
+    },
+    {
+      "group": "h",
+      "title": "Rockstar",
+      "artist": "Post Malone",
+      "expected": "inappropriate",
+      "why": "drugs, sex, profanity"
+    },
+    {
+      "group": "h",
+      "title": "Mask Off",
+      "artist": "Future",
+      "expected": "inappropriate",
+      "why": "Percocets and molly"
+    },
+    {
+      "group": "h",
+      "title": "Habits (Stay High)",
+      "artist": "Tove Lo",
+      "expected": "inappropriate",
+      "why": "drugs and drinking to cope"
+    },
+    {
+      "group": "h",
+      "title": "Thrift Shop",
+      "artist": "Macklemore & Ryan Lewis",
+      "expected": "inappropriate",
+      "why": "profanity, crude"
+    },
+    {
+      "group": "h",
+      "title": "Lovin On Me",
+      "artist": "Jack Harlow",
+      "expected": "inappropriate",
+      "why": "sexual"
+    },
+    {
+      "group": "h",
+      "title": "Paint The Town Red",
+      "artist": "Doja Cat",
+      "expected": "inappropriate",
+      "why": "profanity"
+    },
+    {
+      "group": "h",
+      "title": "Lunch",
+      "artist": "Billie Eilish",
+      "expected": "inappropriate",
+      "why": "sexual, 2024"
+    },
+    {
+      "group": "h",
+      "title": "Please Please Please",
+      "artist": "Sabrina Carpenter",
+      "expected": "inappropriate",
+      "why": "profanity in the original, 2024"
+    },
+    {
+      "group": "h",
+      "title": "Manchild",
+      "artist": "Sabrina Carpenter",
+      "expected": "inappropriate",
+      "why": "innuendo and profanity, 2025"
+    },
+    {
+      "group": "h",
+      "title": "Sports car",
+      "artist": "Tate McRae",
+      "expected": "inappropriate",
+      "why": "sexual innuendo, 2025"
+    },
+    {
+      "group": "h",
+      "title": "Back to friends",
+      "artist": "sombr",
+      "expected": "inappropriate",
+      "why": "sharing a bed, 2025"
+    },
+    {
+      "group": "h",
+      "title": "Shut Up and Drive",
+      "artist": "Rihanna",
+      "expected": "inappropriate",
+      "why": "car-as-sex innuendo"
+    },
+    {
+      "group": "h",
+      "title": "Roar",
+      "artist": "Katy Perry",
+      "expected": "ok",
+      "why": "self-empowerment"
+    },
+    {
+      "group": "h",
+      "title": "Cheerleader",
+      "artist": "OMI",
+      "expected": "ok",
+      "why": "love song"
+    },
+    {
+      "group": "h",
+      "title": "Riptide",
+      "artist": "Vance Joy",
+      "expected": "ok",
+      "why": "nervous crush"
+    },
+    {
+      "group": "h",
+      "title": "Ho Hey",
+      "artist": "The Lumineers",
+      "expected": "ok",
+      "why": "love song"
+    },
+    {
+      "group": "h",
+      "title": "Pompeii",
+      "artist": "Bastille",
+      "expected": "ok",
+      "why": "disaster imagery"
+    },
+    {
+      "group": "h",
+      "title": "Can't Stop the Feeling!",
+      "artist": "Justin Timberlake",
+      "expected": "ok",
+      "why": "dance pop"
+    },
+    {
+      "group": "h",
+      "title": "Best Day of My Life",
+      "artist": "American Authors",
+      "expected": "ok",
+      "why": "upbeat"
+    },
+    {
+      "group": "h",
+      "title": "Shake It Off",
+      "artist": "Taylor Swift",
+      "expected": "ok",
+      "why": "shrugging off haters"
+    },
+    {
+      "group": "h",
+      "title": "Love Story",
+      "artist": "Taylor Swift",
+      "expected": "ok",
+      "why": "love story"
+    },
+    {
+      "group": "h",
+      "title": "Viva la Vida",
+      "artist": "Coldplay",
+      "expected": "ok",
+      "why": "a fallen king"
+    },
+    {
+      "group": "h",
+      "title": "Africa",
+      "artist": "TOTO",
+      "expected": "ok",
+      "why": "travel and longing"
+    },
+    {
+      "group": "h",
+      "title": "Livin' On A Prayer",
+      "artist": "Bon Jovi",
+      "expected": "ok",
+      "why": "working couple"
+    },
+    {
+      "group": "h",
+      "title": "Eye of the Tiger",
+      "artist": "Survivor",
+      "expected": "ok",
+      "why": "fighting spirit metaphor"
+    },
+    {
+      "group": "h",
+      "title": "Walking On Sunshine",
+      "artist": "Katrina & The Waves",
+      "expected": "ok",
+      "why": "happy love"
+    },
+    {
+      "group": "h",
+      "title": "September",
+      "artist": "Earth, Wind & Fire",
+      "expected": "ok",
+      "why": "dancing memories"
+    },
+    {
+      "group": "h",
+      "title": "Dancing Queen",
+      "artist": "ABBA",
+      "expected": "ok",
+      "why": "dancing"
+    },
+    {
+      "group": "h",
+      "title": "Fireflies",
+      "artist": "Owl City",
+      "expected": "ok",
+      "why": "dreamy"
+    },
+    {
+      "group": "h",
+      "title": "Call Me Maybe",
+      "artist": "Carly Rae Jepsen",
+      "expected": "ok",
+      "why": "crush"
+    },
+    {
+      "group": "h",
+      "title": "Fight Song",
+      "artist": "Rachel Platten",
+      "expected": "ok",
+      "why": "self-empowerment"
+    },
+    {
+      "group": "h",
+      "title": "Brave",
+      "artist": "Sara Bareilles",
+      "expected": "ok",
+      "why": "speak up"
+    },
+    {
+      "group": "h",
+      "title": "I'm Still Standing",
+      "artist": "Elton John",
+      "expected": "ok",
+      "why": "resilience"
+    },
+    {
+      "group": "h",
+      "title": "Lean on Me",
+      "artist": "Bill Withers",
+      "expected": "ok",
+      "why": "friendship"
+    },
+    {
+      "group": "h",
+      "title": "Ain't No Mountain High Enough",
+      "artist": "Marvin Gaye & Tammi Terrell",
+      "expected": "ok",
+      "why": "devotion"
+    },
+    {
+      "group": "h",
+      "title": "Shotgun",
+      "artist": "George Ezra",
+      "expected": "ok",
+      "why": "riding shotgun on a road trip; weapon word only in the title"
+    },
+    {
+      "group": "h",
+      "title": "Budapest",
+      "artist": "George Ezra",
+      "expected": "ok",
+      "why": "love over riches"
+    },
+    {
+      "group": "h",
+      "title": "Hall of Fame",
+      "artist": "The Script",
+      "expected": "ok",
+      "why": "motivation"
+    },
+    {
+      "group": "h",
+      "title": "Titanium",
+      "artist": "David Guetta",
+      "expected": "ok",
+      "why": "resilience; shooting metaphor"
+    },
+    {
+      "group": "h",
+      "title": "Wake Me Up",
+      "artist": "Avicii",
+      "expected": "ok",
+      "why": "finding yourself"
+    },
+    {
+      "group": "h",
+      "title": "Yellow",
+      "artist": "Coldplay",
+      "expected": "ok",
+      "why": "love song"
+    },
+    {
+      "group": "h",
+      "title": "Fix You",
+      "artist": "Coldplay",
+      "expected": "ok",
+      "why": "comfort"
+    },
+    {
+      "group": "h",
+      "title": "Thunder",
+      "artist": "Imagine Dragons",
+      "expected": "ok",
+      "why": "ambition"
+    },
+    {
+      "group": "h",
+      "title": "Believer",
+      "artist": "Imagine Dragons",
+      "expected": "ok",
+      "why": "pain as growth"
+    },
+    {
+      "group": "h",
+      "title": "Happier",
+      "artist": "Marshmello",
+      "expected": "ok",
+      "why": "breakup, wishing them well"
+    },
+    {
+      "group": "h",
+      "title": "Golden Hour",
+      "artist": "JVKE",
+      "expected": "ok",
+      "why": "love song"
+    },
+    {
+      "group": "h",
+      "title": "Sunroof",
+      "artist": "Nicky Youre",
+      "expected": "ok",
+      "why": "summer crush"
+    },
+    {
+      "group": "h",
+      "title": "Running Up That Hill (A Deal With God)",
+      "artist": "Kate Bush",
+      "expected": "ok",
+      "why": "empathy"
+    },
+    {
+      "group": "h",
+      "title": "Birds of a Feather",
+      "artist": "Billie Eilish",
+      "expected": "ok",
+      "why": "devotion, 2024"
+    },
+    {
+      "group": "h",
+      "title": "Beautiful Things",
+      "artist": "Benson Boone",
+      "expected": "ok",
+      "why": "fear of losing what you love, 2024"
+    },
+    {
+      "group": "h",
+      "title": "We Don't Talk About Bruno",
+      "artist": "Encanto Cast",
+      "expected": "ok",
+      "why": "Disney"
+    },
+    {
+      "group": "h",
+      "title": "How Far I'll Go",
+      "artist": "Auli'i Cravalho",
+      "expected": "ok",
+      "why": "Disney"
+    },
+    {
+      "group": "h",
+      "title": "Die With A Smile",
+      "artist": "Lady Gaga",
+      "expected": "ok",
+      "why": "love at the end of the world, 2024"
     }
   ]
 }
