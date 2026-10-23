@@ -1,7 +1,7 @@
 // Checked songs pile up (Dalton, 2026-10-14: "keep building a large dataset of checked songs so it'll
 // cost less as we go"). A cron (wrangler.jsonc triggers) checks the songs classes are most likely to
 // suggest, Apple's most-played charts, BEFORE anyone suggests them, with the same theme check (and
-// lyrics follow-up) a suggestion gets. Verdicts are shared facts (verdict:v6:*, kept a year when
+// lyrics follow-up) a suggestion gets. Verdicts are shared facts (verdict:v7:*, kept a year when
 // settled), so a class later pays nothing for them.
 // Cheap by design: songs already known cost nothing (no AI call, not counted); at most
 // PREWARM_AI_PER_DAY AI calls a day (inside Workers AI's free daily allowance), PREWARM_PER_RUN songs

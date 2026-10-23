@@ -58,7 +58,7 @@ test('theme prompt: names the song as data, lists the topics, asks for strict JS
   assert.equal(messages.length, 2);
   const [system, user] = messages;
   assert.equal(system.role, 'system');
-  for (const topic of ['sexual', 'innuendo', 'illegal drugs', 'getting high', 'drinking', 'violence', 'self-harm', 'suicide', 'hate',
+  for (const topic of ['sexual', 'innuendo', 'reference to drugs', 'getting high', 'alcohol', 'smoking or vaping', 'violence', 'self-harm', 'suicide', 'hate',
     'school shootings', 'profanity', 'ORIGINAL', 'title alone', 'UNKNOWN', 'JSON']) {
     assert.ok(system.content.includes(topic), topic);
   }

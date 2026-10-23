@@ -49,7 +49,7 @@ test('REASONS: every preset has an emoji (but other), both labels; categories an
     if (id !== 'other') assert.ok(REASONS[id].emoji, id);
   }
   for (const id of [...AI_CATEGORIES, ...TEACHER_REASONS]) assert.ok(REASONS[id], id);
-  assert.equal(whyText({ id: 'drugs', evidence: 'Mentions getting high' }), '💊 Drug references: Mentions getting high');
+  assert.equal(whyText({ id: 'drugs', evidence: 'Mentions getting high' }), '💊 Drugs or smoking: Mentions getting high');
   assert.equal(whyText({ id: 'banned' }), '⛔ Banned by your teacher');
   assert.equal(whyText({ id: 'banned' }, 'teacher'), '⛔ Banned');
   assert.equal(whyText({ id: 'other', evidence: 'x' }), 'Other: x');
@@ -57,13 +57,13 @@ test('REASONS: every preset has an emoji (but other), both labels; categories an
   assert.equal(whyText(null), '');
 });
 
-test('theme prompt v6 asks for category, evidence and instrumental, never lyrics', () => {
-  assert.equal(PROMPT_VERSION, 6);
+test('theme prompt v7 asks for category, evidence and instrumental, never lyrics', () => {
+  assert.equal(PROMPT_VERSION, 7);
   const [system] = buildThemePrompt(song());
   for (const part of ['"category"', '"evidence"', '"instrumental"', 'never quote lyrics', 'at most 15 words', 'selfharm', 'swearing', 'alcohol']) {
     assert.ok(system.content.includes(part), part);
   }
-  assert.equal(verdictKey('it:42'), 'verdict:v6:42');
+  assert.equal(verdictKey('it:42'), 'verdict:v7:42');
   assert.equal(verdictKey('it:42', LEGACY_VERDICT_VERSION), 'verdict:v3:42');
 });
 
@@ -141,54 +141,37 @@ test('reason mapping: every filter path', () => {
   assert.deepEqual(filterWhy(song(), { reason: 'review', ai: { reason: 'never heard of it' } }).why, { id: 'unknown', evidence: UNKNOWN_EVIDENCE });
 });
 
-test('old cached verdicts: OK/UNKNOWN from v3 are used with no AI call; v3 INAPPROPRIATE is asked again once', async () => {
-  const kv = fakeKv();
-  let calls = 0;
-  const env = { CLASS_KV: kv, AI: { run: async () => (calls++, { response: '{"verdict":"INAPPROPRIATE","category":"alcohol","evidence":"About getting drunk"}' }) } };
-  kv.map.set('verdict:v3:42', JSON.stringify({ verdict: 'ok', reason: 'fine' }));
-  const ok = await aiThemeCheck(song(), env);
-  assert.deepEqual([ok.verdict, ok.legacy, calls], ['ok', true, 0]);
-  kv.map.set('verdict:v3:42', JSON.stringify({ verdict: 'inappropriate', reason: 'party song' }));
-  const again = await aiThemeCheck(song(), env);
-  assert.deepEqual([again.verdict, again.category, again.evidence, calls], ['inappropriate', 'alcohol', 'About getting drunk', 1]);
-  assert.deepEqual(JSON.parse(kv.map.get('verdict:v6:42')), { verdict: 'inappropriate', category: 'alcohol', evidence: 'About getting drunk', instrumental: 'unknown' });
-  const cached = await aiThemeCheck(song(), env);
-  assert.deepEqual([cached.category, cached.cached, calls], ['alcohol', true, 1]);
-  // A v3 "no" still blocks when the AI is down (fail closed), as category other.
-  const kv2 = fakeKv();
-  kv2.map.set('verdict:v3:42', JSON.stringify({ verdict: 'inappropriate', reason: 'party song' }));
-  const down = await quiet(() => aiThemeCheck(song(), { CLASS_KV: kv2, AI: { run: async () => { throw new Error('down'); } } }));
-  assert.deepEqual([down.verdict, down.category, down.reason, down.failed], ['inappropriate', 'other', 'party song', true]);
-  // An entry without a category (a test seed) reads as other.
-  const kv3 = fakeKv();
-  kv3.map.set('verdict:v6:42', JSON.stringify({ verdict: 'inappropriate', reason: 'seeded' }));
-  const seeded = await aiThemeCheck(song(), { CLASS_KV: kv3, AI: { run: async () => assert.fail('no AI call') } });
+test('v7 (any alcohol, drugs, smoking): every older verdict is asked again once; an older INAPPROPRIATE counts while the AI is down', async () => {
+  for (const version of [6, 5, 4, 3]) {
+    const kv = fakeKv();
+    let calls = 0;
+    let answer = '{"instrumental":false,"verdict":"INAPPROPRIATE","category":"alcohol","evidence":"A beer in the second verse"}';
+    const env = { CLASS_KV: kv, AI: { run: async () => (calls++, { response: answer }) } };
+    kv.map.set(`verdict:v${version}:42`, JSON.stringify({ verdict: 'ok', category: 'other', evidence: 'fine' }));
+    const again = await aiThemeCheck(song(), env);
+    assert.deepEqual([again.verdict, again.category, calls], ['inappropriate', 'alcohol', 1], `v${version} OK asked again`);
+    assert.equal(JSON.parse(kv.map.get('verdict:v7:42')).category, 'alcohol', 'cached under v7');
+    assert.deepEqual([(await aiThemeCheck(song(), env)).verdict, calls], ['inappropriate', 1], 'and used from then on');
+    // An older "no" is asked again too (v6 and before had other rules) ...
+    const kv2 = fakeKv();
+    let calls2 = 0;
+    answer = '{"instrumental":false,"verdict":"OK","category":"other","evidence":"A love song"}';
+    kv2.map.set(`verdict:v${version}:song:happy|pharrell williams`, JSON.stringify({ verdict: 'inappropriate', category: 'sexual', evidence: 'mature themes' }));
+    const ok = await aiThemeCheck(song(), { CLASS_KV: kv2, AI: { run: async () => (calls2++, { response: answer }) } });
+    assert.deepEqual([ok.verdict, calls2], ['ok', 1], `v${version} INAPPROPRIATE asked again`);
+    // ... and still blocks while the AI is down (fail closed).
+    const kv3 = fakeKv();
+    kv3.map.set(`verdict:v${version}:42`, JSON.stringify({ verdict: 'inappropriate', category: 'sexual', evidence: 'innuendo' }));
+    const down = await quiet(() => aiThemeCheck(song(), { CLASS_KV: kv3, AI: { run: async () => { throw new Error('down'); } } }));
+    assert.deepEqual([down.verdict, down.failed], ['inappropriate', true], `v${version} no kept when down`);
+  }
+  // A current entry without a category (a test seed) reads as other.
+  const kv4 = fakeKv();
+  kv4.map.set('verdict:v7:42', JSON.stringify({ verdict: 'inappropriate', reason: 'seeded' }));
+  const seeded = await aiThemeCheck(song(), { CLASS_KV: kv4, AI: { run: async () => assert.fail('no AI call') } });
   assert.deepEqual([seeded.category, seeded.evidence, seeded.reason], ['other', '', 'seeded']);
   assert.equal(readVerdict({ verdict: 'maybe' }), null);
   assert.equal(readVerdict(null), null);
-});
-
-test('v6 (rules less strict): a v5/v4 OK or UNKNOWN is used; a v5/v4 INAPPROPRIATE is asked again, kept if the AI is down', async () => {
-  for (const version of [5, 4]) {
-    const kv = fakeKv();
-    let calls = 0;
-    const env = { CLASS_KV: kv, AI: { run: async () => (calls++, { response: '{"instrumental":false,"verdict":"OK","category":"other","evidence":"A love song"}' }) } };
-    kv.map.set(`verdict:v${version}:42`, JSON.stringify({ verdict: 'ok', category: 'other', evidence: 'fine' }));
-    assert.deepEqual([(await aiThemeCheck(song(), env)).verdict, calls], ['ok', 0], `v${version} OK used`);
-    kv.map.set(`verdict:v${version}:42`, JSON.stringify({ verdict: 'unknown', category: 'other', evidence: '', lyrics: 'none', lv: 1 }));
-    assert.deepEqual([(await aiThemeCheck(song(), env)).verdict, calls], ['unknown', 0], `v${version} UNKNOWN used`);
-    kv.map.set(`verdict:v${version}:42`, JSON.stringify({ verdict: 'inappropriate', category: 'sexual', evidence: 'mature relationship themes' }));
-    const again = await aiThemeCheck(song(), env);
-    assert.deepEqual([again.verdict, calls], ['ok', 1], `v${version} INAPPROPRIATE asked again`);
-    assert.equal(JSON.parse(kv.map.get('verdict:v6:42')).verdict, 'ok', 'the new verdict is cached under v6');
-    assert.deepEqual([(await aiThemeCheck(song(), env)).verdict, calls], ['ok', 1], 'and used from then on');
-    // The AI is down: the old "no" still blocks (fail closed).
-    const kv2 = fakeKv();
-    kv2.map.set(`verdict:v${version}:song:happy|pharrell williams`, JSON.stringify({ verdict: 'inappropriate', category: 'sexual', evidence: 'innuendo' }));
-    kv2.map.set(`verdict:v${version}:42`, JSON.stringify({ verdict: 'ok', category: 'other', evidence: 'fine' }));
-    const down = await quiet(() => aiThemeCheck(song(), { CLASS_KV: kv2, AI: { run: async () => { throw new Error('down'); } } }));
-    assert.deepEqual([down.verdict, down.category, down.failed], ['inappropriate', 'sexual', true], 'one id said no: asked again, kept when down');
-  }
 });
 
 test('filterSong gives the blocked word to the room (teacher only)', async () => {

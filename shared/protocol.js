@@ -1160,7 +1160,7 @@ export const FILTER_REASONS = Object.freeze({
 // The teacher also sees `detail` (Blocked today): the blocked word, the AI's evidence in full.
 export const REASONS = Object.freeze({
   explicit: { emoji: '🔞', student: 'Explicit lyrics', teacher: 'Explicit lyrics' },
-  drugs: { emoji: '💊', student: 'Drug references', teacher: 'Drug references' },
+  drugs: { emoji: '💊', student: 'Drugs or smoking', teacher: 'Drugs or smoking' },
   alcohol: { emoji: '🍺', student: 'Alcohol or partying', teacher: 'Alcohol or partying' },
   sexual: { emoji: '💋', student: 'Sexual content or innuendo', teacher: 'Sexual content or innuendo' },
   violence: { emoji: '🔪', student: 'Violence or weapons', teacher: 'Violence or weapons' },

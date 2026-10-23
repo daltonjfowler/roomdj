@@ -316,7 +316,7 @@ try {
   const before = myCredits(ava);
   const dr = await suggest(ava, await pickAndSeed(ava, 'Semi-Charmed Life Third Eye Blind', 'drugs'));
   check('AI: why = category + the AI\'s own evidence', dr?.reason === 'theme' && dr.why?.id === 'drugs' && dr.why.evidence === 'Sings about using crystal meth', JSON.stringify(dr));
-  check('AI: the toast shows "💊 Drug references: ..."', Boolean(await toastHas(ava, '💊 Drug references: Sings about using crystal meth.')));
+  check('AI: the toast shows "💊 Drug references: ..."', Boolean(await toastHas(ava, '💊 Drugs or smoking: Sings about using crystal meth.')));
   check('AI: the credit came back', Boolean(await until(() => myCredits(ava) === before)), `${myCredits(ava)} vs ${before}`);
   check('AI: Why? on the refused result', Boolean(await until(() => visible(ava, `#results li[data-id="${t.drugs}"] button[data-act="why"]`))));
   const lg = await suggest(ben, await pickAndSeed(ben, 'Gin and Juice Snoop Dogg', 'legacy'));

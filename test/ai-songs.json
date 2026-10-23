@@ -1,5 +1,5 @@
 {
-  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js). group g (2026-10-22, Dalton: most complaints are mild songs that SEEM inappropriate, e.g. Bruno Mars) = mild songs the live verdict cache blocked, expected OK, next to the same artists' songs that really are not for class (must stay inappropriate).",
+  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js). group g (2026-10-22, Dalton: most complaints are mild songs that SEEM inappropriate, e.g. Bruno Mars) = mild songs the live verdict cache blocked, expected OK, next to the same artists' songs that really are not for class (must stay inappropriate). v7 (2026-10-23, Dalton): ANY alcohol, drugs (metaphors too) or smoking/vaping blocks, even one passing line.",
   "songs": [
     {
       "group": "a",
@@ -499,8 +499,8 @@
       "group": "g",
       "title": "Treasure",
       "artist": "Bruno Mars",
-      "expected": "ok",
-      "why": "love song; calling her a sexy lady is a compliment, not sex (live cache: blocked sexual)"
+      "expected": "either",
+      "why": "love song, but calls her a sexy lady (v7: sexy no longer exempt)"
     },
     {
       "group": "g",
@@ -513,8 +513,8 @@
       "group": "g",
       "title": "Marry You",
       "artist": "Bruno Mars",
-      "expected": "ok",
-      "why": "spontaneous wedding; one passing 'dancing juice' line is not a drinking theme"
+      "expected": "either",
+      "why": "spontaneous wedding; one 'dancing juice' line (v7: any alcohol counts, if the model knows it)"
     },
     {
       "group": "g",
@@ -597,22 +597,22 @@
       "group": "g",
       "title": "Down Under",
       "artist": "Men at Work",
-      "expected": "ok",
-      "why": "Australian travel song; a beer in passing is not a drinking theme (live cache: blocked alcohol)"
+      "expected": "inappropriate",
+      "why": "v7: beer flows, a den in Bombay (any alcohol counts)"
     },
     {
       "group": "g",
       "title": "Chicken Fried",
       "artist": "Zac Brown Band",
-      "expected": "ok",
-      "why": "simple country life; cold beer in passing (live cache: blocked alcohol)"
+      "expected": "inappropriate",
+      "why": "v7: cold beer on a Friday night (any alcohol counts)"
     },
     {
       "group": "g",
       "title": "Take Me Home, Country Roads",
       "artist": "John Denver",
-      "expected": "ok",
-      "why": "home; moonshine in passing"
+      "expected": "inappropriate",
+      "why": "v7: misty taste of moonshine (any alcohol counts)"
     },
     {
       "group": "g",
@@ -639,8 +639,8 @@
       "group": "g",
       "title": "Have a Cigar",
       "artist": "Pink Floyd",
-      "expected": "ok",
-      "why": "satire of the music industry (live cache: blocked other)"
+      "expected": "inappropriate",
+      "why": "v7: a cigar offered in the lyrics (any smoking counts)"
     },
     {
       "group": "g",
@@ -744,8 +744,8 @@
       "group": "g",
       "title": "Smokin Out the Window",
       "artist": "Silk Sonic",
-      "expected": "either",
-      "why": "heartbreak and a cigarette, but the original has profanity"
+      "expected": "inappropriate",
+      "why": "v7: smoking (any smoking counts), profanity in the original"
     },
     {
       "group": "g",
@@ -765,8 +765,8 @@
       "group": "g",
       "title": "Don't Stop Me Now",
       "artist": "Queen",
-      "expected": "either",
-      "why": "joyful, but 'a sex machine ready to reload'"
+      "expected": "inappropriate",
+      "why": "v7: 'a sex machine ready to reload' (one line about sex)"
     },
     {
       "group": "g",
@@ -779,8 +779,8 @@
       "group": "g",
       "title": "It Will Rain",
       "artist": "Bruno Mars",
-      "expected": "either",
-      "why": "heartbreak; asks for morphine as a painkiller metaphor"
+      "expected": "inappropriate",
+      "why": "v7: asks for morphine (drugs as a metaphor count)"
     }
   ]
 }

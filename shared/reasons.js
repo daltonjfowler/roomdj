@@ -31,7 +31,7 @@ export const SINGING_EVIDENCE = 'This song has singing.';
  * (it copied lyric words: src/lyrics.js). Never a lyric, never a word students may not read.
  */
 const CATEGORY_EVIDENCE = {
-  drugs: 'The lyrics talk about drugs.',
+  drugs: 'The lyrics talk about drugs or smoking.',
   alcohol: 'The lyrics are about drinking.',
   sexual: 'The lyrics have sexual content.',
   violence: 'The lyrics make violence look good.',

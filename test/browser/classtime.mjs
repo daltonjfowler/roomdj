@@ -14,7 +14,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { NO_LYRICS, PROMPT_VERSION, V4_VERDICT_VERSION, verdictKey } from '../../shared/filter.js';
+import { NO_LYRICS, PROMPT_VERSION, verdictKey } from '../../shared/filter.js';
 import { timeValue } from '../../shared/classtime.js';
 import { T1, pickTeacher } from './teacher-pick.mjs';
 import { reveal } from './ui.mjs';
@@ -342,7 +342,7 @@ try {
   const vocal = seedSong({ title: 'Classtime Vocal Song', verdict: OK(false) });
   const instr = seedSong({ title: 'Classtime Piano Song', verdict: OK(true) });
   const unsure = seedSong({ title: 'Classtime Mystery Song', verdict: { ...OK('unknown'), ...NO_LYRICS } }); // no LRCLIB lookup
-  const titled = seedSong({ title: 'Classtime Tune (Instrumental)', verdict: OK(), version: V4_VERDICT_VERSION });
+  const titled = seedSong({ title: 'Classtime Tune (Instrumental)', verdict: OK() });
   const credits0 = zed.state()?.you?.credits;
   const v = await zed.ask({ t: 'suggest', song: vocal }, (m) => m.t === 'suggested' && m.song === vocal);
   check('instrumentals: a song with singing is refused (🎹, "This song has singing.")', v?.reason === 'not_instrumental'

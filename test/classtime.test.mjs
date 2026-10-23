@@ -103,19 +103,19 @@ test('instrumental: the answer, title/album words, weak genre hints', () => {
   assert.equal(instrumentalOf(song({ genre: 'Pop' }), 'unknown'), 'unknown');
 });
 
-test('instrumentals: a v4 OK is used as it is while Instrumentals only is off (no AI call)', async () => {
+test('instrumentals: an OK with no instrumental answer is used as it is while Instrumentals only is off (no AI call)', async () => {
   const kv = fakeKv();
   const n = { n: 0 };
-  kv.map.set(verdictKey('it:42', 4), JSON.stringify({ verdict: 'ok', category: 'other', evidence: '' }));
+  kv.map.set(verdictKey('it:42'), JSON.stringify({ verdict: 'ok', category: 'other', evidence: '' }));
   const env = { CLASS_KV: kv, AI: aiSays({ verdict: 'OK', instrumental: false }, n) };
   const r = await filterSong(song(), { settings: { ...DEFAULT_SETTINGS }, env });
   assert.deepEqual([r.ok, n.n], [true, 0]);
 });
 
-test('instrumentals: a v4 OK without the field is asked once, then the v5 answer is cached', async () => {
+test('instrumentals: an OK without the field is asked once, then the answer is cached', async () => {
   const kv = fakeKv();
   const n = { n: 0 };
-  kv.map.set(verdictKey('it:42', 4), JSON.stringify({ verdict: 'ok', category: 'other', evidence: '' }));
+  kv.map.set(verdictKey('it:42'), JSON.stringify({ verdict: 'ok', category: 'other', evidence: '' }));
   const env = { CLASS_KV: kv, AI: aiSays({ verdict: 'OK', category: 'other', evidence: '', instrumental: false }, n) };
   const settings = { ...DEFAULT_SETTINGS, instrumentalsOnly: true };
   const r = await filterSong(song(), { settings, env });
@@ -133,7 +133,7 @@ test('instrumentals: title words need no AI call; unsure waits for a look; a the
   const n = { n: 0 };
   const settings = { ...DEFAULT_SETTINGS, instrumentalsOnly: true };
   const kv = fakeKv();
-  kv.map.set(verdictKey('it:7', 4), JSON.stringify({ verdict: 'ok', category: 'other', evidence: '' }));
+  kv.map.set(verdictKey('it:7'), JSON.stringify({ verdict: 'ok', category: 'other', evidence: '' }));
   const inst = await filterSong(song({ id: 'it:7', title: 'Some Song (Instrumental)' }), { settings, env: { CLASS_KV: kv, AI: aiSays({}, n) } });
   assert.deepEqual([inst.ok, n.n], [true, 0]);
   const unsure = await filterSong(song({ id: 'it:8', title: 'Obscure' }), { settings, env: { CLASS_KV: fakeKv(), AI: aiSays({ verdict: 'OK', instrumental: 'unknown' }, n) } });
