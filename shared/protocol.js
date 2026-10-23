@@ -210,11 +210,18 @@ export const SESSION_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 //   Music: Spotify and song previews only (no YouTube, no Apple Music).
 //   GET /api/teacher/usage → 200 { free: false } | { free: true, caps, used, left: { ai, art, rooms },
 //     resetsAt (ms, the next UTC midnight) }: the host page shows what is left (start screen, Settings).
+//   One teacher's own caps (Dalton, 2026-10-23: Betul hit the AI cap while the song checks are being
+//   rebuilt): KV freeCapsKey(profile) = e.g. { "ai": 250, "art": 250 }, set by hand, usually with an
+//   expiry (wrangler kv key put --ttl) so it ends by itself. Whole numbers 1..FREE_CAP_MAX replace
+//   that kind's cap; anything else is ignored (src/free.js capsFor).
 export const FREE_AI_PER_DAY = 150;
 export const FREE_ART_PER_DAY = 150;
 export const FREE_ROOMS_PER_DAY = 10;
 export const FREE_SIGNUPS_PER_DAY = 100;
 export const FREE_USE_TTL_S = 2 * 24 * 3600;
+export const FREE_CAP_MAX = 1000;
+/** KV key of one free teacher's own caps (FREE TEACHERS above). */
+export const freeCapsKey = (profileId) => `caps:v1:${profileId}`;
 /** The KV key of a free teacher's use on the UTC day of `now`. */
 export const freeUseKey = (profileId, now = Date.now()) => `use:v1:${profileId}:${new Date(now).toISOString().slice(0, 10)}`;
 /** True for a free (own-app) teacher's profile id. */

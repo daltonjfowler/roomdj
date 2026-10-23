@@ -175,7 +175,7 @@ test('refused: wrong redirect, bad client id, bad verifier, a Spotify user not o
 });
 
 // ---- Free teachers' caps, per Spotify account (protocol.js FREE TEACHERS) ----
-import { FREE_CAPS, spendFree } from '../src/free.js';
+import { FREE_CAPS, capsFor, freeUsage, spendFree } from '../src/free.js';
 import { aiThemeCheck } from '../shared/filter.js';
 import { FREE_SIGNUPS_PER_DAY, freeUseKey } from '../shared/protocol.js';
 
@@ -189,6 +189,15 @@ test('free caps: counted per teacher per day; RoomDJ\'s own app is never counted
   assert.equal(await spendFree(e, free, 'rooms', day + 24 * 3600_000), true, 'a new day');
   assert.equal(await spendFree(e, free, 'ai', day), true, 'ai counts apart from rooms');
   assert.equal(JSON.parse(e.CLASS_KV.map.get(freeUseKey('u-abc', day))).rooms, FREE_CAPS.rooms);
+  // One teacher's own caps (KV caps:v1:<profile>): only that kind, only that teacher; nonsense ignored.
+  e.CLASS_KV.map.set('caps:v1:u-abc', JSON.stringify({ rooms: FREE_CAPS.rooms + 2, ai: 'lots', art: 5000 }));
+  assert.equal(await spendFree(e, free, 'rooms', day), true, 'a raised cap lets more through');
+  assert.equal(await spendFree(e, free, 'rooms', day), true);
+  assert.equal(await spendFree(e, free, 'rooms', day), false, 'up to the raised cap');
+  assert.deepEqual(await capsFor(e, 'u-abc'), { ...FREE_CAPS, rooms: FREE_CAPS.rooms + 2 }, 'a word or a number over FREE_CAP_MAX is ignored');
+  assert.deepEqual(await capsFor(e, 'u-other'), FREE_CAPS);
+  const usage = await freeUsage(e, free, day);
+  assert.deepEqual([usage.caps.rooms, usage.left.rooms], [FREE_CAPS.rooms + 2, 0]);
   for (let i = 0; i < 500; i++) assert.equal(await spendFree(e, listed, 'ai', day), true);
   assert.equal([...e.CLASS_KV.map.keys()].some((k) => k.includes('teacher-1')), false, 'nothing stored for a list teacher');
 });
