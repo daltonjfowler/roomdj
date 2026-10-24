@@ -314,6 +314,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   artCheck: true, // 🖼 album art check (ALBUM ART below): covers are checked by an AI vision model before they show;
   //                 off = covers show without a check (the old behaviour). Saved settings without it read as true.
   hideAllArt: false, // 🖼 never show any album covers (🎵 tiles everywhere). Saved settings without it read as false.
+  blockNotMusic: true, // 🙉 memes, noise and sound effects are refused (shared/filter.js notMusicHit + the AI's
+  //                      'notmusic'; Dalton, 2026-10-24: a switch per teacher, on by default). Saved settings
+  //                      and rooms without it read as true. Browsing before joining (no room) always blocks.
   maxDownvotes: 3, // 👎 per student per class (DOWNVOTE LIMIT below): a whole number 1..20, null = unlimited.
   //                  Saved settings and rooms without it read as 3.
   upvotes: true, // 👍 votes on or off (UPVOTE LIMIT below). Saved settings and rooms without it read as true.
@@ -1175,6 +1178,7 @@ export const REASONS = Object.freeze({
   selfharm: { emoji: '💔', student: 'Self-harm', teacher: 'Self-harm' },
   hate: { emoji: '🚫', student: 'Hate or slurs', teacher: 'Hate or slurs' },
   notmusic: { emoji: '🙉', student: 'Not music for class', teacher: 'Not music (meme, noise, sound effects)' },
+  troll: { emoji: '🎭', student: 'Political or troll pick', teacher: 'Political or troll pick' },
   swearing: { emoji: '🤬', student: 'Heavy swearing', teacher: 'Heavy swearing' },
   blocked_word: { emoji: '📝', student: 'Blocked word', teacher: 'Blocked word' },
   banned: { emoji: '⛔', student: 'Banned by your teacher', teacher: 'Banned' },
@@ -1187,9 +1191,9 @@ export const REASONS = Object.freeze({
   other: { emoji: '', student: 'Other', teacher: 'Other' },
 });
 /** The categories the AI theme check may answer (shared/filter.js); anything else reads as 'other'. */
-export const AI_CATEGORIES = Object.freeze(['drugs', 'alcohol', 'sexual', 'violence', 'selfharm', 'hate', 'swearing', 'notmusic', 'other']);
+export const AI_CATEGORIES = Object.freeze(['drugs', 'alcohol', 'sexual', 'violence', 'selfharm', 'hate', 'swearing', 'troll', 'notmusic', 'other']);
 /** What the teacher's quick-pick offers for Veto, Remove and Ban (in this order). */
-export const TEACHER_REASONS = Object.freeze(['teacher', 'explicit', 'drugs', 'alcohol', 'sexual', 'violence', 'selfharm', 'hate', 'swearing', 'notmusic', 'other']);
+export const TEACHER_REASONS = Object.freeze(['teacher', 'explicit', 'drugs', 'alcohol', 'sexual', 'violence', 'selfharm', 'hate', 'swearing', 'troll', 'notmusic', 'other']);
 /** Longest teacher note (letters). */
 export const NOTE_MAX = 80;
 

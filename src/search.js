@@ -38,10 +38,10 @@ export async function readBanned(env, profile = null) {
  * 'spotify': the page shows Spotify's attribution). Throws CatalogError when the catalog is busy or down.
  * @returns {Promise<{ results: object[], catalog: 'itunes'|'spotify' }>}
  */
-export async function searchAllowed(q, env, { blocklist = [], banned = new Set(), catalog = ITUNES, fetchImpl } = {}) {
+export async function searchAllowed(q, env, { blocklist = [], banned = new Set(), notMusic = true, catalog = ITUNES, fetchImpl } = {}) {
   const found = await searchCatalog(q, env, { catalog, fetchImpl });
   const songs = found.songs;
-  const ctx = { blocklist, banned };
+  const ctx = { blocklist, banned, notMusic };
   const results = [];
   const seen = new Set();
   let cleanSearches = CLEAN_SEARCHES_PER_SEARCH;

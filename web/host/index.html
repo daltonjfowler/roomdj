@@ -452,6 +452,10 @@
             <label class="check switch-row"><input id="setUnknown" class="switch" type="checkbox" role="switch">
               <span>Test only: unknown songs wait for a look</span><span class="switch-state" aria-hidden="true"></span></label>
           </div>
+          <!-- 🙉 Not music for class (protocol.js blockNotMusic) -->
+          <label class="check switch-row"><input id="setNotMusic" class="switch" type="checkbox" role="switch" aria-describedby="notMusicHelp">
+            <span>🙉 Block memes, noise and sound effects</span><span class="switch-state" aria-hidden="true"></span></label>
+          <small id="notMusicHelp" class="switch-help">Phonk and other meme edits, white noise, animal and fart sounds, and things that are not songs.</small>
           <label class="field" for="setWords">Blocked words
             <textarea id="setWords" class="text" rows="3" spellcheck="false" aria-describedby="wordsHelp"></textarea></label>
           <small id="wordsHelp" class="note">One word or phrase per line. Songs and nicknames with these words are blocked.</small>

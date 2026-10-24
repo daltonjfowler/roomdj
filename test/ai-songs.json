@@ -1,5 +1,5 @@
 {
-  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js). group g (2026-10-22, Dalton: most complaints are mild songs that SEEM inappropriate, e.g. Bruno Mars) = mild songs the live verdict cache blocked, expected OK, next to the same artists' songs that really are not for class (must stay inappropriate). v7 (2026-10-23, Dalton): ANY alcohol, drugs (metaphors too) or smoking/vaping blocks, even one passing line. group h (2026-10-23) = a held-out check of v7 on songs the prompt was never tuned on: one passing line of alcohol, drugs, smoking or sex next to clean school favourites. group i (2026-10-23) = not music for class: meme, noise and sound tracks the word list cannot see, next to real instrumental music that must stay OK.",
+  "about": "Test list for the AI theme check (plan doc: Choosing the model). Run with scripts/ai-test.mjs. expected: ok | inappropriate | either (reasonable teachers could disagree; any verdict counts) | ok_or_unknown (clean but recent or obscure: the model may not know it). The rules got stricter in prompt v2: any drug reference, drinking as the main theme and even mild sexual innuendo are inappropriate, and clean or radio edits are judged by the original song. group a = inappropriate for school but not marked explicit, or with a clean version; b = innocent songs with alarming titles; c = clean popular, recent and obscure songs; group d = Instrumentals only (prompt v5): instrumental = true when nobody sings or raps in the recording, false when someone does; graded separately. group e = songs released 2024-2026, past the model's knowledge (it mostly answers UNKNOWN): the test of judging from LRCLIB lyrics (scripts/ai-test.mjs --group e --lyrics; src/lyrics.js). group g (2026-10-22, Dalton: most complaints are mild songs that SEEM inappropriate, e.g. Bruno Mars) = mild songs the live verdict cache blocked, expected OK, next to the same artists' songs that really are not for class (must stay inappropriate). v7 (2026-10-23, Dalton): ANY alcohol, drugs (metaphors too) or smoking/vaping blocks, even one passing line. group h (2026-10-23) = a held-out check of v7 on songs the prompt was never tuned on: one passing line of alcohol, drugs, smoking or sex next to clean school favourites. group i (2026-10-23) = not music for class: meme, noise and sound tracks the word list cannot see, next to real instrumental music that must stay OK. group k (2026-10-24) = political and troll picks (the teachers' own bans) next to real songs whose titles must not be read as trolling.",
   "songs": [
     {
       "group": "a",
@@ -1376,6 +1376,104 @@
       "artist": "Baha Men",
       "expected": "either",
       "why": "a real song with barking in it"
+    },
+    {
+      "group": "k",
+      "title": "Feminist",
+      "artist": "GENTS",
+      "expected": "inappropriate",
+      "why": "troll title (teacher banned 3 songs called Feminist)"
+    },
+    {
+      "group": "k",
+      "title": "Respect Women",
+      "artist": "KiL3X",
+      "expected": "inappropriate",
+      "why": "troll title (teacher ban)"
+    },
+    {
+      "group": "k",
+      "title": "Charlie Kirk (Remember Your Name)",
+      "artist": "Harrison Tinsley",
+      "expected": "inappropriate",
+      "why": "song about a political figure (teacher ban)"
+    },
+    {
+      "group": "k",
+      "title": "hey its me its obesity",
+      "artist": "Vault Uploads",
+      "expected": "inappropriate",
+      "why": "meme / troll title (teacher ban)"
+    },
+    {
+      "group": "k",
+      "title": "Jingle Bell Rock (Indian Christmas Remix)",
+      "artist": "Vindaloo Singh",
+      "expected": "inappropriate",
+      "why": "mocks a group with a holiday song (teacher ban)"
+    },
+    {
+      "group": "k",
+      "title": "Trump Song",
+      "artist": "Various",
+      "expected": "either",
+      "why": "named after a politician"
+    },
+    {
+      "group": "k",
+      "title": "Respect",
+      "artist": "Aretha Franklin",
+      "expected": "ok",
+      "why": "a classic: the title alone is not a troll pick"
+    },
+    {
+      "group": "k",
+      "title": "Imagine",
+      "artist": "John Lennon",
+      "expected": "either",
+      "why": "peace song; some call it political"
+    },
+    {
+      "group": "k",
+      "title": "Born in the U.S.A.",
+      "artist": "Bruce Springsteen",
+      "expected": "either",
+      "why": "a veteran's story; often called political"
+    },
+    {
+      "group": "k",
+      "title": "Man! I Feel Like a Woman!",
+      "artist": "Shania Twain",
+      "expected": "ok",
+      "why": "fun, not a troll pick"
+    },
+    {
+      "group": "k",
+      "title": "Shut up My Moms Calling",
+      "artist": "Hotel Ugly",
+      "expected": "either",
+      "why": "a real song with a joke title (teacher ban)"
+    },
+    {
+      "group": "k",
+      "title": "Jingle Bell Rock",
+      "artist": "Bobby Helms",
+      "expected": "ok",
+      "why": "the real holiday song"
+    },
+    {
+      "group": "k",
+      "title": "Feliz Navidad",
+      "artist": "José Feliciano",
+      "expected": "ok",
+      "why": "a real bilingual holiday song, not mocking"
+    },
+    {
+      "group": "k",
+      "title": "Sleigh Ride (Indian Christmas Remix)",
+      "artist": "Vindaloo Singh",
+      "expected": "inappropriate",
+      "why": "mocking-accent remix (teacher ban)"
     }
   ]
 }

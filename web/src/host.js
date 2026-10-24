@@ -1582,6 +1582,7 @@ function fillSettings(s) {
   $('#setRecapMusic').checked = s.recapMusic !== false;
   $('#setArtCheck').checked = s.artCheck !== false; // 🖼 ALBUM ART
   $('#setHideAllArt').checked = s.hideAllArt === true;
+  $('#setNotMusic').checked = s.blockNotMusic !== false; // 🙉 (protocol.js blockNotMusic)
   [$('#setRecapVolume').min, $('#setRecapVolume').max] = SETTINGS_LIMITS.recapVolume;
   $('#setRecapVolume').value = String(s.recapVolume ?? DEFAULT_SETTINGS.recapVolume);
   [$('#setPeriod').min, $('#setPeriod').max] = SETTINGS_LIMITS.periodMinutes;
@@ -1689,6 +1690,9 @@ function adaptSettings() {
   say('#artCheckHelp', $('#setHideAllArt').checked ? 'Not needed while all album covers are hidden.'
     : $('#setArtCheck').checked ? 'A computer checks each album cover first. A cover that is not right for school shows as a plain 🎵. You can still show it.'
       : 'Off: album covers show without a check.');
+  say('#notMusicHelp', $('#setNotMusic').checked
+    ? 'Phonk and other meme edits, white noise, animal and fart sounds, and things that are not songs are refused.'
+    : 'Off: memes, noise and sound effects can be suggested. The rest of the song check still runs.');
   say('#hideAllArtHelp', $('#setHideAllArt').checked ? 'No album covers anywhere, just plain 🎵 tiles. Music players may still show their own pictures.'
     : 'Off: album covers show (after the check above).');
   say('#showFavHelp', $('#setShowFav').checked ? 'Students see a list of songs your classes loved most and can suggest one with a tap. No names are shown.'
@@ -1788,6 +1792,7 @@ function readSettings() {
     recapVolume: Number($('#setRecapVolume').value),
     artCheck: $('#setArtCheck').checked,
     hideAllArt: $('#setHideAllArt').checked,
+    blockNotMusic: $('#setNotMusic').checked,
   };
 }
 

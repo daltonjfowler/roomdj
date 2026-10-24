@@ -723,7 +723,7 @@ export class Room extends DurableObject {
     if (this.room.settings.showFavorites !== false) {
       const [all, banned] = await Promise.all([this.favoriteList(), this.banned()]);
       if (!this.room) return;
-      list = studentFavorites(all, { blocklist: this.room.settings.blocklist, banned });
+      list = studentFavorites(all, { blocklist: this.room.settings.blocklist, banned, notMusic: this.room.settings.blockNotMusic !== false });
       await this.loadArt(list.map((f) => f.song));
     }
     const msg = { t: 'favorites', list };
@@ -1081,7 +1081,7 @@ export class Room extends DurableObject {
     const banned = await this.banned();
     try {
       const catalog = roomCatalog(this.room.service, this.env);
-      const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, catalog, fetchImpl: this.relay });
+      const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, notMusic: this.room?.settings.blockNotMusic !== false, catalog, fetchImpl: this.relay });
       await this.remember(found.results);
       await this.loadArt(found.results);
       return new Response(this.artText(found, 'student'), {
@@ -1110,7 +1110,7 @@ export class Room extends DurableObject {
     const banned = await this.banned();
     try {
       const catalog = roomCatalog(this.room?.service ?? null, this.env);
-      const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, catalog, fetchImpl: this.relay });
+      const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, notMusic: this.room?.settings.blockNotMusic !== false, catalog, fetchImpl: this.relay });
       await this.remember(found.results);
       await this.loadArt(found.results);
       return reply(found);

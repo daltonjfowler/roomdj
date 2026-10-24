@@ -39,6 +39,7 @@ const CATEGORY_EVIDENCE = {
   hate: 'The lyrics have hateful words.',
   swearing: 'The lyrics have a lot of swearing.',
   notmusic: 'Memes, noise and sound effects are not on the playlist.',
+  troll: 'Songs about politics, or picked for a joke title, are not for class.',
 };
 export function categoryEvidence(category) {
   return CATEGORY_EVIDENCE[category] ?? THEME_FALLBACK;

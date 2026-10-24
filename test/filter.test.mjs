@@ -5,6 +5,7 @@ import {
   PROMPT_VERSION, THEME_MODEL, aiThemeCheck, approveSong, buildThemePrompt, filterSong, hasWholeWord, parseThemeVerdict, quickCheck,
 } from '../shared/filter.js';
 import { baseTitle, notMusicHit, themeCategory } from '../shared/filter.js';
+import { validateSettings } from '../shared/settings.js';
 import { filterWhy } from '../shared/reasons.js';
 import { toSong } from '../src/itunes.js';
 import { isCleanVersionOf } from '../src/catalog.js';
@@ -256,4 +257,23 @@ test('not music (2026-10-23): memes, noise and sound effects are refused before 
   assert.equal(themeCategory('notmusic'), 'notmusic');
   assert.equal(themeCategory('meme'), 'notmusic');
   assert.ok(buildThemePrompt(s('x'))[0].content.includes('not music for class'));
+});
+
+test('🙉 switch (settings.blockNotMusic, on by default): off lets memes through, the rest of the check still runs', async () => {
+  const s = (title, explicit = 'notExplicit') => ({ id: 'it:2', title, artist: 'Someone', album: 'A', genre: 'Pop', explicit });
+  assert.equal(DEFAULT_SETTINGS.blockNotMusic, true);
+  assert.equal(validateSettings({}).settings.blockNotMusic, true);
+  assert.equal(quickCheck(s('Yara Yara Phonk')), 'notmusic');
+  assert.equal(quickCheck(s('Yara Yara Phonk'), { notMusic: false }), null);
+  assert.equal(quickCheck(s('Yara Yara Phonk', 'explicit'), { notMusic: false }), 'explicit', 'explicit still counts');
+  const aiSays = (answer) => ({ AI: { run: async () => ({ response: JSON.stringify(answer) }) } });
+  const off = { ...DEFAULT_SETTINGS, blockNotMusic: false, blockUnknownSongs: false };
+  const meme = { instrumental: true, verdict: 'INAPPROPRIATE', category: 'notmusic', evidence: 'a meme track' };
+  assert.equal((await filterSong(s('Funky Loop One'), { settings: { ...DEFAULT_SETTINGS }, env: aiSays(meme) })).reason, 'theme', 'on: the AI\'s not-music answer blocks');
+  assert.equal((await filterSong(s('Funky Loop Two'), { settings: off, env: aiSays(meme) })).ok, true, 'off: it does not');
+  const drugs = { instrumental: false, verdict: 'INAPPROPRIATE', category: 'drugs', evidence: 'drug use' };
+  assert.equal((await filterSong(s('Funky Loop Three'), { settings: off, env: aiSays(drugs) })).reason, 'theme', 'off: other problems still block');
+  assert.equal(themeCategory('troll'), 'troll');
+  assert.equal(themeCategory('political'), 'troll');
+  assert.ok(buildThemePrompt(s('x'))[0].content.includes('political or troll picks'));
 });

@@ -203,6 +203,7 @@ export function validateSettings(input, { testAiOff = false } = {}) {
     bellOffsetSeconds: bellOffsetSeconds(errors, pick('bellOffsetSeconds')),
     artCheck: bool(errors, 'Album art check', pick('artCheck')),
     hideAllArt: bool(errors, 'Hide all album art', pick('hideAllArt')),
+    blockNotMusic: bool(errors, 'Block memes, noise and sound effects', pick('blockNotMusic')),
     maxDownvotes: maxDownvotes(errors, pick('maxDownvotes')),
     upvotes: bool(errors, '👍 votes', pick('upvotes')),
     maxUpvotes: maxUpvotes(errors, pick('maxUpvotes')),

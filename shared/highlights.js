@@ -323,9 +323,9 @@ export function pinFavorite(list, id, on) {
  * What students see: the best FAVORITES_STUDENT songs that pass the room's filter without the AI
  * (explicit, blocked words, the ban list). Those are left out, never shown, like search results.
  */
-export function studentFavorites(list, { blocklist = [], banned = [] } = {}, now = Date.now()) {
+export function studentFavorites(list, { blocklist = [], banned = [], notMusic = true } = {}, now = Date.now()) {
   return rankFavorites(list, now)
-    .filter((e) => quickCheck(e.song, { blocklist, banned }) === null)
+    .filter((e) => quickCheck(e.song, { blocklist, banned, notMusic }) === null)
     .slice(0, FAVORITES_STUDENT)
     .map((e) => ({ song: e.song, pinned: e.pinned, top5: e.top5 }));
 }
