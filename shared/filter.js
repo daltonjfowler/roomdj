@@ -106,9 +106,13 @@ const NOT_MUSIC_ANYWHERE = [
   'fart', 'farts', 'farting', 'please speed i need this', 'dog barking', 'dogs barking', 'barking dog', 'barking dogs',
   'singing dogs', 'dogs singing', 'rain sounds', 'sleep sounds', 'nature sounds', 'ocean sounds', 'sound effects',
   'white noise sleep', 'white noise for', 'deep sleep',
+  // From the teachers' own bans (2026-10-24): Brazilian phonk, meme genres, animal noises, tones, baby songs.
+  'montagem', 'tamborzao', 'hardtekk', 'tung tung tung', 'uwu', 'meow', 'meows', 'meowing', 'cat sounds', 'animal sounds',
+  'sound effect', 'sound clip', 'ringtone', 'hz', 'hertz', 'test tone', 'pure tone', 'binaural', 'brown noise', 'pink noise',
+  'cocomelon', 'nursery rhyme', 'nursery rhymes',
 ];
 // Only as the artist or album (a song may be called "White Noise", Disclosure's is a real one):
-const NOT_MUSIC_SOURCE = ['white noise', 'brown noise', 'pink noise', 'baby sleep'];
+const NOT_MUSIC_SOURCE = ['white noise', 'baby sleep'];
 // Apple's genre, the whole genre (Ambient, New Age and Comedy stay: Enya, Weird Al):
 const NOT_MUSIC_GENRES = ['spoken word', 'sound effects', 'meditation'];
 // Real titles that contain a word above: taken out before looking.

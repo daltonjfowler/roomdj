@@ -225,6 +225,18 @@ test('not music (2026-10-23): memes, noise and sound effects are refused before 
     [s('I Have a Dream - Washington DC 8/28/63', 'Martin Luther King Jr.', 'Speeches', 'Spoken Word'), 'spoken word'],
     [s('Dog Barking', 'Pro Audio', 'Single', 'Sound Effects'), 'dog barking'],
     [s('Om Chant', 'Calm', 'Single', 'Meditation'), 'meditation'],
+    // The teachers' own bans (2026-10-24)
+    [s('MONTAGEM GGEZ', 'NZXT'), 'montagem'],
+    [s('Yara Yara (Tamborzão version)', 'Melofors'), 'tamborzao'],
+    [s('TRILLIUM HARDTEKK', 'S3RL'), 'hardtekk'],
+    [s('TUNG TUNG TUNG SAHUR FUNK'), 'tung tung tung'],
+    [s('UwU GIRL ANTHEM'), 'uwu'],
+    [s('Kitten Meowing to Attract Cats', 'Cat Sounds'), 'meowing'],
+    [s('Kitten Cat Meowing Loop 2', 'Z Ringtone'), 'meowing'],
+    [s('Brown Noise (305 Hz)', 'Sleepy Noises'), 'hz'],
+    [s('Pure Tone 10000 Hertz - High Signal Sound'), 'hertz'],
+    [s('Itsy Bitsy Spider', 'CoComelon'), 'cocomelon'],
+    [s('Kitty Meow (Music Box)', 'Baby Sleep Music & Nursery Rhymes'), 'meow'],
   ]) {
     assert.equal(notMusicHit(song), word, song.title);
     assert.equal(quickCheck(song), 'notmusic', song.title);
