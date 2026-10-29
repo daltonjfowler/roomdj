@@ -163,7 +163,7 @@ Claude account).
   ONE shared line to LRCLIB (turns 1 s apart, a Retry-After holds everyone). Hands out turns only:
   lyrics never pass through it; memory only, no storage (invariant 38).
 - `src/night.js`: the night shift (invariant 38): KV `lyricsq:v1:*` lists of songs to settle,
-  `nightShift` from the cron 04:00-10:00 UTC, NIGHT_AI_PER_DAY.
+  `nightShift` from the cron 10 pm-6 am Eastern (NIGHT_HOURS_ET), NIGHT_AI_PER_DAY.
 - `src/search.js`: the search students see (no explicit, blocklist, ban list; clean swaps; no AI).
 - `src/youtube.js`: YouTube Data API search for the host's YouTube player (secret
   `YOUTUBE_API_KEY`; KV `yt:<trackId>` for 30 days, `yt:quota` while the day's quota is used up).
@@ -626,7 +626,7 @@ Claude account).
    again: lyrics do not change) the bans from before that (night.js sweepBans, read only; KV
    night:v1:bans-swept, no expiry) so the night decides for everyone; that
    teacher's own ban always stays. Only song details, never a student,
-   nickname or room. The cron runs nightShift 04:00-10:00 UTC before the charts: NIGHT_PER_RUN songs that
+   nickname or room. The cron runs nightShift 10 pm-6 am Eastern (DST included) before the charts: NIGHT_PER_RUN songs that
    need the AI (NIGHT_SONGS_PER_RUN in all), at most NIGHT_AI_PER_DAY AI calls a day; settled songs cost
    only KV reads. iTunes songs only (invariant 10).
 39. ⏳ My checks (Dalton, 2026-10-28; protocol.js MY CHECKS, shared/checks.js): `you.checks` lists a

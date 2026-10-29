@@ -28,11 +28,18 @@ const lrclib = async (url) => {
   return Response.json([{ trackName: `Song ${n}`, artistName: `Artist ${n}`, duration: 200, instrumental: false, plainLyrics: LYRICS }]);
 };
 
-test('nightHours: 04:00 to 10:00 UTC only', () => {
-  assert.equal(nightHours(Date.UTC(2026, 9, 28, 3, 59)), false);
-  assert.equal(nightHours(Date.UTC(2026, 9, 28, 4, 0)), true);
-  assert.equal(nightHours(Date.UTC(2026, 9, 28, 9, 59)), true);
-  assert.equal(nightHours(Date.UTC(2026, 9, 28, 15)), false);
+test('nightHours: 10 pm to 6 am Eastern, daylight saving included', () => {
+  // October: EDT (UTC-4). 10 pm Eastern = 02:00 UTC, 6 am = 10:00 UTC.
+  assert.equal(nightHours(Date.UTC(2026, 9, 29, 1, 59)), false, '9:59 pm, clubs still on');
+  assert.equal(nightHours(Date.UTC(2026, 9, 29, 2, 0)), true, '10 pm');
+  assert.equal(nightHours(Date.UTC(2026, 9, 29, 9, 59)), true, '5:59 am');
+  assert.equal(nightHours(Date.UTC(2026, 9, 29, 10, 0)), false, '6 am');
+  assert.equal(nightHours(Date.UTC(2026, 9, 29, 15)), false, 'school day');
+  // December: EST (UTC-5). 10 pm Eastern = 03:00 UTC.
+  assert.equal(nightHours(Date.UTC(2026, 11, 2, 2, 30)), false, '9:30 pm EST');
+  assert.equal(nightHours(Date.UTC(2026, 11, 2, 3, 0)), true, '10 pm EST');
+  assert.equal(nightHours(Date.UTC(2026, 11, 2, 10, 30)), true, '5:30 am EST');
+  assert.equal(nightHours(Date.UTC(2026, 11, 2, 11, 0)), false, '6 am EST');
 });
 
 test('nightSong / nightWorthy: song details only; OK or UNKNOWN whose lyrics were never read; never Spotify', () => {

@@ -10,7 +10,7 @@
 //     that were rejected by other teachers that weren't checked yet ... make final decision for
 //     everyone. Still leave blocked for that teacher". The night's verdict is a shared fact; the
 //     teacher's own ban list is never touched.
-// The cron (src/prewarm.js) runs nightShift during NIGHT_HOURS_UTC before the chart songs: the same
+// The cron (src/worker.js) runs nightShift during NIGHT_HOURS_ET before the chart songs: the same
 // aiThemeCheck and patient lyrics lookup a suggestion gets, at most NIGHT_AI_PER_DAY AI calls a day.
 // A song already settled costs nothing. Only song details (title, artist, album, length...) are kept:
 // no student, nickname or room.
@@ -31,13 +31,18 @@ const BANS_PER_KEY = 50;
 export const NIGHT_KEYS_PER_RUN = 10;
 /** Searched songs a room keeps for the night list. */
 export const NIGHT_SEARCH_MAX = 40;
-/** 04:00-10:00 UTC: midnight to 6 am Eastern, 9 pm to 3 am Pacific. */
-export const NIGHT_HOURS_UTC = [4, 10];
+/**
+ * 10 pm to 6 am Eastern time, daylight saving included (Dalton, 2026-10-28: "when school is out/clubs
+ * are done, like 10pm est is fine"). [start, end) in New York hours; one night stays inside one UTC
+ * day (02:00-11:00 UTC), so the daily budget is one night's.
+ */
+export const NIGHT_HOURS_ET = [22, 6];
+const NEW_YORK_HOUR = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' });
 const DAY_TTL_S = 2 * 24 * 3600;
 
 export function nightHours(now) {
-  const h = new Date(now).getUTCHours();
-  return h >= NIGHT_HOURS_UTC[0] && h < NIGHT_HOURS_UTC[1];
+  const h = Number(NEW_YORK_HOUR.format(new Date(now)));
+  return h >= NIGHT_HOURS_ET[0] || h < NIGHT_HOURS_ET[1];
 }
 
 /** The song's details for the night list, or null (iTunes songs only: Spotify songs never go to the AI, filter.js). */
