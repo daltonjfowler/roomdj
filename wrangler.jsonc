@@ -14,18 +14,21 @@
   // connected sockets (WebSocket hibernation API) and deletes itself after the room closes.
   // COUPON_LEDGER: one tiny object per coupon id, so a coupon is good once everywhere (src/coupons.js).
   // CODE_LOCK: one tiny object per class code hash, so only one open room holds a code (src/codelock.js).
+  // LYRICS_GATE: one object ('lrclib'), the shared line to LRCLIB (src/lyrics-gate.js); memory only.
   // Coupons need the vars COUPONS = "on" and COUPON_PUBLIC_KEYS (vars below; live since 2026-10-20).
   "durable_objects": {
     "bindings": [
       { "name": "ROOMS", "class_name": "Room" },
       { "name": "COUPON_LEDGER", "class_name": "CouponLedger" },
-      { "name": "CODE_LOCK", "class_name": "CodeLock" }
+      { "name": "CODE_LOCK", "class_name": "CodeLock" },
+      { "name": "LYRICS_GATE", "class_name": "LyricsGate" }
     ]
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Room"] },
     { "tag": "v2", "new_sqlite_classes": ["CouponLedger"] },
-    { "tag": "v3", "new_sqlite_classes": ["CodeLock"] }
+    { "tag": "v3", "new_sqlite_classes": ["CodeLock"] },
+    { "tag": "v4", "new_sqlite_classes": ["LyricsGate"] }
   ],
   // This app's own namespace (title classqueue-CLASS_KV): teacher settings, ban list, filter
   // verdict cache, search cache. Never reuse a sibling site's namespace.

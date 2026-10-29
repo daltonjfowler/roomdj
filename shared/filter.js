@@ -522,10 +522,10 @@ async function putVerdict(env, ids, r) {
  * the model judges from memory and misses single lines (Royals' Grey Goose, Cruel Summer's "drunk",
  * Old Town Road's lean all came back OK; from their lyrics all were right, test/ai-songs.json group h).
  */
-function lyricsWanted(v, needInstrumental) {
+function lyricsWanted(v, needInstrumental, song) {
   if (!v || v.lyrics || v.source === 'teacher') return null;
-  // An OK the model says nobody sings in has no words to check.
-  const needTheme = v.verdict === 'unknown' || (v.verdict === 'ok' && v.instrumental !== true);
+  // An OK the model says nobody sings in has no words to check; nor has a kid-safe rewrite (kidSafeArtist).
+  const needTheme = v.verdict === 'unknown' || (v.verdict === 'ok' && v.instrumental !== true && !kidSafeArtist(song));
   const needInst = needInstrumental && v.verdict !== 'inappropriate' && v.instrumental !== true && v.instrumental !== false;
   return needTheme || needInst ? { needTheme, needInstrumental: needInst } : null;
 }
@@ -613,7 +613,7 @@ export async function aiThemeCheck(song, env, { instrumental = false, ask = true
   }
   // After a verdict (cached or new): what the lyrics settle, cached. null = nothing changed.
   const lyricsStep = async (base) => {
-    const want = ask && !spotify && !approved && typeof lyrics === 'function' ? lyricsWanted(base, needInstrumental) : null;
+    const want = ask && !spotify && !approved && typeof lyrics === 'function' ? lyricsWanted(base, needInstrumental, song) : null;
     if (!want) return null;
     const got = await withLyrics(song, base, want, lyrics);
     if (!got) return null;
@@ -664,11 +664,54 @@ export async function aiThemeCheck(song, env, { instrumental = false, ask = true
   return fromLyrics ? { ...fromLyrics, cached: false } : { ...result, failed: false, cached: false };
 }
 
+/**
+ * Artists whose records are rewritten for kids (Dalton, 2026-10-28: a Kidz Bop song waited because
+ * LRCLIB was busy). An AI OK for them needs no lyrics check; an AI no still blocks.
+ */
+const KID_SAFE_ARTISTS = new Set(['kidz bop kids', 'kidz bop']);
+export const kidSafeArtist = (song) => KID_SAFE_ARTISTS.has(mainArtist(song?.artist));
+
 /** True for an AI "OK" its lyrics have not confirmed (filterSong). A teacher's allow is always confirmed. */
 export function unconfirmedOk(song, ai) {
   if (ai.source === 'teacher' || ai.source === 'lyrics') return false;
   if (ai.lyrics === 'instrumental' || ai.instrumental === true || instrumentalHint(song) === true) return false;
-  return true;
+  return !kidSafeArtist(song);
+}
+
+/**
+ * Search's ✓ Checked (Dalton, 2026-10-28): what is already known lets this song straight into the
+ * queue, with no AI or LRCLIB call. `v`: the cached verdict (readVerdict) or null; `approved`: the
+ * teacher allowed it. Display only: a suggestion still goes through filterSong.
+ */
+export function readyToPlay(song, v, { approved = false, instrumentalsOnly = false } = {}) {
+  if (instrumentalsOnly && instrumentalOf(song, v?.instrumental ?? null) !== true) return false;
+  if (approved) return true;
+  return v?.verdict === 'ok' && !unconfirmedOk(song, v);
+}
+
+/**
+ * What a search result's tag says (Dalton, 2026-10-28: "a tag next to all songs that haven't been
+ * checked so a kid doesn't think CLEAN means good to go"): 'ready' (readyToPlay: ✓ Checked),
+ * 'teacher' (checked, and the checker had a question or said no: the teacher decides), or
+ * 'unchecked' (not checked yet: the check runs when it is suggested).
+ */
+export function checkStatus(song, v, opts = {}) {
+  if (readyToPlay(song, v, opts)) return 'ready';
+  return v && (v.verdict === 'inappropriate' || v.lyrics) ? 'teacher' : 'unchecked';
+}
+
+/**
+ * checkStatus from KV: the song's verdict and the teacher's approval, both under its banKey only
+ * (putVerdict and approveSong write that key for every version). Two reads.
+ */
+export async function checkFromKv(song, env, { scope = (k) => k, instrumentalsOnly = false } = {}) {
+  const key = banKey(song);
+  if (!key) return 'unchecked';
+  const [hit, approved] = await Promise.all([
+    kvJson(env, verdictKey(key), 'verdict cache'),
+    kvJson(env, scope(approvedKey(key)), 'approved'),
+  ]);
+  return checkStatus(song, readVerdict(hit), { approved: Boolean(approved), instrumentalsOnly });
 }
 
 /**

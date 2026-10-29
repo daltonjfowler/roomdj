@@ -50,6 +50,8 @@
 .status-row .waiting { margin: 0; }
 .status-row .waiting:empty { display: none; }
 #waiting.full { color: var(--warn); font-weight: 600; }
+.my-checks { list-style: none; margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--warn-soft); display: grid; gap: 4px; font-size: .9rem; }
+.my-checks[hidden] { display: none; }
 
 /* Credits (only while the teacher has them on): a pill with the balance, and what things cost. */
 .credits { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
@@ -124,6 +126,8 @@
 .suggest.status:disabled { opacity: 1; background: transparent; border-color: transparent; color: var(--muted); font-weight: 650; cursor: default; }
 .suggest.status { min-width: 0; max-width: 8.5em; padding-inline: 4px; text-align: right; }
 .tag { font-size: .75rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: var(--ok-soft); color: var(--ok); }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.unchecked-tag { background: var(--warn-soft); color: var(--warn); }
 
 /* Queue */
 .count { color: var(--muted); font-weight: 600; letter-spacing: 0; }

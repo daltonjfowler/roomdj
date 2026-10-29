@@ -4,7 +4,7 @@ import { DEFAULT_SETTINGS, QUERY_MAX } from '../shared/protocol.js';
 import {
   PROMPT_VERSION, THEME_MODEL, aiThemeCheck, approveSong, buildThemePrompt, filterSong, hasWholeWord, parseThemeVerdict, quickCheck,
 } from '../shared/filter.js';
-import { baseTitle, notMusicHit, themeCategory } from '../shared/filter.js';
+import { baseTitle, checkFromKv, checkStatus, kidSafeArtist, notMusicHit, readyToPlay, themeCategory } from '../shared/filter.js';
 import { validateSettings } from '../shared/settings.js';
 import { filterWhy } from '../shared/reasons.js';
 import { toSong } from '../src/itunes.js';
@@ -276,4 +276,53 @@ test('🙉 switch (settings.blockNotMusic, on by default): off lets memes throug
   assert.equal(themeCategory('troll'), 'troll');
   assert.equal(themeCategory('political'), 'troll');
   assert.ok(buildThemePrompt(s('x'))[0].content.includes('political or troll picks'));
+});
+
+test('Kidz Bop: an AI OK needs no lyrics check (kid-safe rewrites); an AI no still blocks', async () => {
+  const settings = { ...DEFAULT_SETTINGS, aiCheck: true, blockUnknownSongs: true };
+  const kid = song({ id: 'it:7', title: 'DJ Got Us Falling in Love', artist: 'KIDZ BOP Kids' });
+  const answer = (verdict) => ({ AI: { run: async () => ({ response: `{"instrumental":false,"verdict":"${verdict}","category":"alcohol","evidence":"x"}` }) } });
+  let looked = 0;
+  const lyrics = async () => { looked++; return { status: 'error', why: 'LRCLIB 503' }; };
+  const ok = await filterSong(kid, { settings, env: { CLASS_KV: fakeKv(), ...answer('OK') }, lyrics });
+  assert.equal(ok.ok, true);
+  assert.equal(looked, 0, 'no LRCLIB call for a Kidz Bop OK');
+  const no = await filterSong(kid, { settings, env: { CLASS_KV: fakeKv(), ...answer('INAPPROPRIATE') }, lyrics });
+  assert.equal(no.ok, false);
+  assert.equal(no.reason, 'theme');
+  // Anyone else's OK still waits for its lyrics.
+  const other = await filterSong(song({ id: 'it:8', artist: 'Kidz Bopper Band' }), { settings, env: { CLASS_KV: fakeKv(), ...answer('OK') }, lyrics });
+  assert.equal(other.reason, 'review');
+  assert.equal(kidSafeArtist(song({ artist: 'Kidz Bop Kids feat. Someone' })), true);
+});
+
+test('readyToPlay / checkStatus / checkFromKv: ✓ Checked only when the queue would take it with no AI or LRCLIB call', async () => {
+  const s = song();
+  assert.equal(readyToPlay(s, null), false);
+  assert.equal(readyToPlay(s, null, { approved: true }), true, 'the teacher allowed it');
+  assert.equal(readyToPlay(s, { verdict: 'ok', instrumental: false }), false, 'an OK from memory is not confirmed yet');
+  assert.equal(readyToPlay(s, { verdict: 'ok', instrumental: false, lyrics: 'none' }), false, 'no lyrics found: still Needs a look');
+  assert.equal(readyToPlay(s, { verdict: 'ok', instrumental: false, lyrics: 'found', source: 'lyrics' }), true);
+  assert.equal(readyToPlay(s, { verdict: 'unknown', lyrics: 'found', source: 'lyrics' }), false);
+  assert.equal(readyToPlay(s, { verdict: 'inappropriate', category: 'alcohol' }), false);
+  assert.equal(readyToPlay(s, { verdict: 'ok', instrumental: true }), true, 'nobody sings: nothing to confirm');
+  assert.equal(readyToPlay(s, { verdict: 'ok', lyrics: 'found', source: 'lyrics', instrumental: false }, { instrumentalsOnly: true }), false);
+  // From KV: the banKey verdict and the teacher's approval under its scope.
+  const env = { CLASS_KV: fakeKv() };
+  const key = 'song:happy|pharrell williams';
+  assert.equal(await checkFromKv(s, env), 'unchecked');
+  env.CLASS_KV.map.set(`verdict:v${PROMPT_VERSION}:${key}`, JSON.stringify({ verdict: 'ok', category: 'other', evidence: '', instrumental: false, lyrics: 'found', lv: 1, source: 'lyrics' }));
+  assert.equal(await checkFromKv(s, env), 'ready');
+  const env2 = { CLASS_KV: fakeKv() };
+  await approveSong(s, env2, (k) => `p:t1:${k}`);
+  assert.equal(await checkFromKv(s, env2, { scope: (k) => `p:t1:${k}` }), 'ready');
+  assert.equal(await checkFromKv(s, env2, { scope: (k) => `p:t2:${k}` }), 'unchecked', 'another teacher\'s allow does not count');
+  // The tag: "Not checked yet" vs "Needs teacher OK".
+  assert.equal(checkStatus(s, null), 'unchecked');
+  assert.equal(checkStatus(s, { verdict: 'ok', instrumental: false }), 'unchecked', 'an OK from memory is checked when suggested');
+  assert.equal(checkStatus(s, { verdict: 'unknown' }), 'unchecked');
+  assert.equal(checkStatus(s, { verdict: 'inappropriate', category: 'alcohol' }), 'teacher');
+  assert.equal(checkStatus(s, { verdict: 'ok', lyrics: 'none' }), 'teacher', 'no lyrics to confirm: Needs a look');
+  assert.equal(checkStatus(s, { verdict: 'unknown', lyrics: 'found', source: 'lyrics' }), 'teacher');
+  assert.equal(checkStatus(s, { verdict: 'ok', lyrics: 'found', source: 'lyrics', instrumental: false }), 'ready');
 });

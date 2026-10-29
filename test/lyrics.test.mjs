@@ -11,8 +11,9 @@ import {
 } from '../shared/filter.js';
 import { LYRICS_USER_AGENT, lyricsRecordMatches, lyricsSearchUrl, pickLyrics, stripTimestamps, truncateLyrics } from '../shared/lyrics.js';
 import { categoryEvidence, filterWhy, kidEvidence, kidSafe, reviewDetail, THEME_FALLBACK } from '../shared/reasons.js';
-import { fetchLyrics, judgeFromLyrics, lyricsBase, resetLyricsMemory } from '../src/lyrics.js';
+import { fetchLyrics, gateDecision, judgeFromLyrics, lyricsBase, resetLyricsMemory } from '../src/lyrics.js';
 import { addToReview, allowReview, newRoomState, snapshotFor } from '../shared/queue.js';
+import { checkText, checksOf } from '../shared/checks.js';
 
 const LYRICS = [
   'Sunshine on the playground, we are running free',
@@ -497,4 +498,76 @@ test('err on blocking (2026-10-23): an OK from memory is confirmed from the lyri
   const off = await filterSong(song({ id: 'it:6007' }), { settings: { ...DEFAULT_SETTINGS, blockUnknownSongs: false }, env, lyrics: lyricsFrom(fakeFetch(jsonResponse([]))) });
   assert.equal(off.ok, true);
   assert.equal(unconfirmedOk(song(), { verdict: 'ok', source: 'teacher' }), false, "a teacher's allow is confirmed");
+});
+
+test('gateDecision: turns 1 s apart for everyone, a backoff holds the line, too long a wait is refused', () => {
+  let line = { nextAt: 0, backoffUntil: 0 };
+  const a = gateDecision(line, 1000, 3000);
+  assert.deepEqual([a.ok, a.waitMs], [true, 0]);
+  line = a.line;
+  const b = gateDecision(line, 1200, 3000);
+  assert.deepEqual([b.ok, b.waitMs], [true, 800], 'the next turn waits for the spacing');
+  line = b.line;
+  const full = gateDecision(line, 1200, 500);
+  assert.deepEqual([full.ok, full.waitMs], [false, 1800]);
+  assert.equal(full.line, line, 'a refused turn changes nothing');
+  line = { ...line, backoffUntil: 10_000 };
+  assert.equal(gateDecision(line, 2000, 20_000).waitMs, 8000, 'LRCLIB\'s Retry-After counts for everyone');
+  assert.equal(gateDecision(line, 2000, -5).ok, false);
+});
+
+/** A LYRICS_GATE binding backed by gateDecision in memory (what src/lyrics-gate.js does). */
+function fakeGate() {
+  const state = { line: { nextAt: 0, backoffUntil: 0 }, turns: 0, backoffs: [] };
+  const obj = {
+    async turn(maxWaitMs) {
+      const d = gateDecision(state.line, Date.now(), maxWaitMs, 50);
+      state.line = d.line;
+      state.turns++;
+      return { ok: d.ok, waitMs: d.waitMs };
+    },
+    async backoff(s) {
+      state.backoffs.push(s);
+      state.line.backoffUntil = Math.max(state.line.backoffUntil, Date.now() + s * 1000);
+    },
+  };
+  return { state, binding: { idFromName: () => 'id', get: () => obj } };
+}
+
+test('fetchLyrics with the shared line: each call takes a turn; busy answers tried again while time allows', async () => {
+  resetLyricsMemory();
+  const gate = fakeGate();
+  let n = 0;
+  const f = async () => (++n < 3
+    ? jsonResponse({ name: 'ServerOverloaded' }, 503, { 'retry-after': '1' })
+    : jsonResponse([record()]));
+  assert.equal((await fetchLyrics(song(), { LYRICS_GATE: gate.binding }, { fetchImpl: f, timeoutMs: 8000 })).status, 'lyrics');
+  assert.equal(n, 3);
+  assert.equal(gate.state.turns, 3);
+  assert.deepEqual(gate.state.backoffs, [1, 1], 'each busy answer is told to the line');
+  // A long Retry-After: given up at once; the line holds everyone back, so the next lookup with no time refuses.
+  const long = fakeGate();
+  const r = await fetchLyrics(song(), { LYRICS_GATE: long.binding }, { fetchImpl: fakeFetch(new Response('', { status: 429, headers: { 'retry-after': '60' } })) });
+  assert.deepEqual(r, { status: 'error', why: 'LRCLIB 429' });
+  const ok = fakeFetch(jsonResponse([record()]));
+  assert.deepEqual(await fetchLyrics(song(), { LYRICS_GATE: long.binding }, { fetchImpl: ok }), { status: 'error', why: 'LRCLIB line is full' });
+  assert.equal(ok.calls.length, 0);
+  // The line itself failing never blocks a lookup.
+  const broken = { idFromName: () => 'id', get: () => ({ turn: async () => { throw new Error('gone'); }, backoff: async () => { throw new Error('gone'); } }) };
+  assert.equal((await fetchLyrics(song(), { LYRICS_GATE: broken }, { fetchImpl: fakeFetch(jsonResponse([record()])) })).status, 'lyrics');
+});
+
+test('MY CHECKS: a student sees only their own waiting songs, their place in line and how long', () => {
+  const review = [
+    { id: 's1', device: 'other', song: { id: 'it:1', title: 'Theirs' }, addedAt: 1000 },
+    { id: 's2', device: 'me', song: { id: 'it:2', title: 'Mine' }, addedAt: 2000, recheckAt: 70_000 },
+    { id: 's3', device: 'me', song: { id: 'it:3', title: 'Mine too' }, addedAt: 3000 },
+  ];
+  const mine = checksOf(review, 'me');
+  assert.deepEqual(mine.map((c) => [c.title, c.place, c.of]), [['Mine', 2, 3], ['Mine too', 3, 3]]);
+  assert.ok(!JSON.stringify(mine).includes('Theirs'), 'never another student\'s song');
+  assert.equal(checkText(mine[0], 30_000), 'RoomDJ is double-checking the words. Next try in 40 seconds. Suggested just now.');
+  assert.equal(checkText(mine[0], 75_000), 'RoomDJ is double-checking the words now. Waiting 1 minute so far.');
+  assert.equal(checkText(mine[0], 200_000), 'Waiting for your teacher to check it (number 2 in line). Waiting 3 minutes so far.', 'a try long past: the teacher\'s turn');
+  assert.equal(checkText({ ...mine[1], place: 1 }, 3000), 'Waiting for your teacher to check it (next in line). Suggested just now.');
 });

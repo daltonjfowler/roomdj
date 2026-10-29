@@ -20,6 +20,7 @@ import { couponFromHash } from '../../shared/coupon.js';
 import { tooLong } from '../../shared/classtime.js';
 import { mainArtist, mainArtistName } from '../../shared/filter.js';
 import { restingEvidence, restingUntilLabel, songKey } from '../../shared/repeats.js';
+import { checkText } from '../../shared/checks.js';
 import { displayCode, normalizeCode } from '../../shared/code.js';
 import { clockLeft } from '../../shared/backtowork.js';
 import { cleanQuery, isCleanItunesVersion, itunesSearchUrl, parseItunes, toSong } from '../../shared/itunes.js';
@@ -51,6 +52,19 @@ const sentence = (s) => (/[.!?]$/.test(s) ? s : `${s}.`);
 // Clean edits (Dalton, 2026-10-08): "Clean" read like "allowed", then the song check said no. A clean
 // edit only bleeps the swear words; the song is still about the same thing.
 const CLEAN_TIP = 'Swear words bleeped out. RoomDJ still checks what the song is about.';
+// The room's search tags every result (protocol.js SearchResult `check`), so "Clean edit" is never
+// read as "checked" (Dalton, 2026-10-28).
+const CHECK_TAGS = {
+  ready: ['ready-tag', '✓ Checked', 'Already checked: no wait when you suggest it.'],
+  unchecked: ['unchecked-tag', 'Not checked yet', "RoomDJ checks it when you suggest it. It may need your teacher's OK."],
+  teacher: ['unchecked-tag', 'Needs teacher OK', 'RoomDJ checked it and has a question. Your teacher decides.'],
+};
+const checkTag = (check) => {
+  const t = CHECK_TAGS[check];
+  return t ? `<span class="tag ${t[0]}" title="${esc(t[2])}" aria-label="${esc(`${t[1]}: ${t[2]}`)}">${esc(t[1])}</span>` : '';
+};
+/** A row's tags in its one tag column (a result row is song | tags | button). */
+const tagsHtml = (...tags) => (tags.filter(Boolean).length > 1 ? `<span class="tags">${tags.join('')}</span>` : tags.join(''));
 const cleanTag = () => `<span class="tag" title="${CLEAN_TIP}" aria-label="Clean edit: ${CLEAN_TIP}">Clean edit</span>`;
 const CLEAN_NO = 'Even the clean edit is not allowed: clean edits only bleep out swear words, and the song is still about the same thing.';
 const AI_WHY = new Set(AI_CATEGORIES);
@@ -614,6 +628,21 @@ function setNet(kind) {
 addEventListener('offline', () => { if (joined) setNet('offline'); });
 addEventListener('online', () => { if (conn?.isOpen) setNet(null); });
 
+// ---- ⏳ My songs being checked (protocol.js MY CHECKS): what each waits for, and how long ----
+let myChecks = [];
+let checksOffset = 0; // the server's clock minus this device's (a Chromebook clock can be minutes off)
+let checksTimer = 0;
+let checksHtml = '';
+function renderChecks() {
+  clearTimeout(checksTimer);
+  const list = $('#myChecks');
+  list.hidden = !myChecks.length;
+  const now = Date.now() + checksOffset;
+  const html = myChecks.map((c) => `<li>⏳ <b>${esc(c.title)}</b>: ${esc(checkText(c, now))}</li>`).join('');
+  if (html !== checksHtml) list.innerHTML = checksHtml = html;
+  if (myChecks.length) checksTimer = setTimeout(renderChecks, 5000);
+}
+
 // ---- Rendering ----
 /** blur: a list to pick from (search results, favorites): a cover not checked yet shows blurred. */
 function songHtml(song, size = 100, blur = false) {
@@ -686,6 +715,9 @@ function render(s) {
   const waiting = s.you?.waiting ?? 0;
   const inReview = s.you?.review ?? 0;
   if (!inReview) checking.clear(); // missed a 'reviewed' while offline
+  myChecks = s.you?.checks ?? [];
+  checksOffset = Number.isFinite(s.serverNow) ? s.serverNow - Date.now() : 0;
+  renderChecks();
   const full = Boolean(max) && waiting >= max;
   $('#waiting').textContent = max
     ? `Your songs waiting: ${waiting} of ${max}${inReview ? ` (${inReview} waiting for your teacher to check)` : ''}.${full && !s.locked ? ' When one plays, you can suggest another.' : ''}`
@@ -1234,7 +1266,7 @@ function resultHtml([song, label, kind, fav = null]) {
     : fav?.top5 ? `<span class="tag fav-tag" title="${esc(`In a class's Top 5 ${plural(fav.top5, 'time')}`)}">🏆 ${fav.top5}</span>` : '';
   return `<li class="result" data-id="${esc(song.id)}">
     <div class="song">${songHtml(song, 100, true)}</div>
-    ${song.explicit === 'cleaned' ? cleanTag() : favTag}
+    ${tagsHtml(song.explicit === 'cleaned' ? cleanTag() : favTag, checkTag(song.check))}
     ${why ? `<span class="refused">${button}<button type="button" class="why" data-act="why"
       aria-label="${esc(`Why is ${song.title} not allowed?`)}">Why?</button></span>` : button}
   </li>`;

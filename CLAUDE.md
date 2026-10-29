@@ -148,8 +148,10 @@ Claude account).
 - `src/catalog.js`: which catalog answers (iTunes; the Spotify catalog is dormant, see invariant 10).
   Lookup by the id's own catalog. Clean swaps.
 - `src/lyrics.js`: songs the AI does not know, judged from their lyrics (invariant 17): `fetchLyrics`
-  (LRCLIB `/api/search` from the Worker, our User-Agent, 4 s, Retry-After honoured, one retry of a
-  short 503; `LYRICS_TEST_BASE` loopback-only for tests) and `judgeFromLyrics` (one AI call; evidence
+  (LRCLIB `/api/search` from the Worker, our User-Agent, 4 s while a student waits or
+  `LYRICS_PATIENT_MS` 20 s for rechecks and the cron, a turn in the shared line for every call,
+  Retry-After honoured for everyone, short 429/503s tried again up to 4 calls; `gateDecision` is the
+  line's rule; `LYRICS_TEST_BASE` loopback-only for tests) and `judgeFromLyrics` (one AI call; evidence
   that copies 4+ lyric words becomes reasons.js `categoryEvidence`). The room passes it to the filter
   with its limits (10 a minute per room, `LYRICS_RATE_ALL` 30 a minute for everyone).
 - `src/itunes.js`: iTunes Search + lookup with a KV cache (search 1 day, song 7 days); the room
@@ -157,6 +159,11 @@ Claude account).
 - `src/spotify-catalog.js`: DORMANT (no `SPOTIFY_CLIENT_SECRET` = off). Spotify Web API search and
   `GET /v1/tracks/{id}` with a Client Credentials token, for rooms that play through Spotify.
   Kept, tested, but must stay off: invariant 10.
+- `src/lyrics-gate.js`: `LyricsGate` Durable Object ('lrclib', binding LYRICS_GATE, migration v4): the
+  ONE shared line to LRCLIB (turns 1 s apart, a Retry-After holds everyone). Hands out turns only:
+  lyrics never pass through it; memory only, no storage (invariant 38).
+- `src/night.js`: the night shift (invariant 38): KV `lyricsq:v1:*` lists of songs to settle,
+  `nightShift` from the cron 04:00-10:00 UTC, NIGHT_AI_PER_DAY.
 - `src/search.js`: the search students see (no explicit, blocklist, ban list; clean swaps; no AI).
 - `src/youtube.js`: YouTube Data API search for the host's YouTube player (secret
   `YOUTUBE_API_KEY`; KV `yt:<trackId>` for 30 days, `yt:quota` while the day's quota is used up).
@@ -598,6 +605,35 @@ Claude account).
    limit + ghost; 👎 off → 👎 limit, score floor, remove score; floor on → remove score; ghost off →
    minutes; credits off → starting credits, jump, coupons; recap music off → volume). Hidden values are
    kept and saved as they are; readSettings only rejects a bad box that is showing.
+38. LRCLIB's limit (Dalton, 2026-10-28: "improve the song search because of the limit we get on pulling
+   lyrics"; idea 5, keeping our own copy of LRCLIB's lyrics, was turned down: legal, and it would break
+   invariant 17's never-stored rule). Four parts:
+   (a) Kidz Bop (shared/filter.js kidSafeArtist: main artist "KIDZ BOP Kids"/"Kidz Bop"): an AI OK needs
+   no lyrics check (their records are rewritten for kids); an AI no still blocks; bans and word lists apply.
+   (b) Search tags in a room's search (student + teacher): Room.withReady reads each result's banKey
+   verdict and the teacher's banKey approval (filter.js checkFromKv/checkStatus: 2 KV reads a song, at
+   most 30 a search, kept in room memory) and sets `check`: 'ready' "✓ Checked" (first in the list),
+   'unchecked' "Not checked yet", 'teacher' "Needs teacher OK" (Dalton: so "Clean edit" is never read as
+   "good to go"; every result row has one). Display only, never the AI; browsing before joining is unchanged.
+   (c) One shared line (src/lyrics-gate.js): every LRCLIB call waits its turn while it fits its time
+   (4 s with a student waiting; LYRICS_PATIENT_MS for rechecks and the cron), busy answers are tried
+   again; the line failing never blocks a lookup. Still fails closed (Needs a look) when time runs out.
+   (d) Night shift (src/night.js): a suggestion held because its lyrics could not be read (nightWorthy:
+   OK/UNKNOWN with no `lyrics` answer, incl. a free teacher's used-up checks) goes on KV
+   lyricsq:v1:look:<banKey>; a room keeps up to 40 searched songs that were not ✓ Checked (top 10 of each
+   search, memory only) and writes them at close (lyricsq:v1:s:*); a song a teacher turned down (Remove in
+   Needs a look, Ban, Blocked today's Ban: Room.rejectedByTeacher, lyricsq:v1:t:<banKey>), and once a week
+   every teacher's ban list (night.js sweepBans, read only) so the night decides for everyone; that
+   teacher's own ban always stays. Only song details, never a student,
+   nickname or room. The cron runs nightShift 04:00-10:00 UTC before the charts: NIGHT_PER_RUN songs that
+   need the AI (NIGHT_SONGS_PER_RUN in all), at most NIGHT_AI_PER_DAY AI calls a day; settled songs cost
+   only KV reads. iTunes songs only (invariant 10).
+39. ⏳ My checks (Dalton, 2026-10-28; protocol.js MY CHECKS, shared/checks.js): `you.checks` lists a
+   student's OWN songs in Needs a look (title, since, place in the teacher's line of `of`, `recheckAt`
+   while Room.scheduleRecheck still tries by itself; kept on the item, dropped when it stops). The student
+   page (#myChecks) says "RoomDJ is double-checking the words. Next try in 40 seconds." or "Waiting for
+   your teacher to check it (number 2 in line)." plus how long it has waited (server clock). Other
+   students' waiting songs are never sent, only counted.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

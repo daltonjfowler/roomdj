@@ -159,7 +159,7 @@ test('snapshot: mine/myVote/you for students, students + aiStatus + blocklist fo
   const forA = snapshotFor(s, A, { online: new Set([A]) });
   assert.equal(forA.queue[0].mine, true);
   assert.equal(forA.queue[0].myVote, 1);
-  assert.deepEqual(forA.you, { nick: 'Ana', waiting: 1, review: 0, credits: null, downvotesLeft: 3, upvotesLeft: 2, ...NO_REST });
+  assert.deepEqual(forA.you, { nick: 'Ana', waiting: 1, review: 0, checks: [], credits: null, downvotesLeft: 3, upvotesLeft: 2, ...NO_REST });
   assert.equal(forA.students, undefined);
   assert.equal(forA.aiStatus, undefined);
   assert.equal(forA.settings.blocklist, undefined);
@@ -197,9 +197,9 @@ test('review: add, duplicate everywhere, counts toward the limit, students never
   assert.deepEqual(addToReview(s, { device: A, nick: 'Ana', song: song(4), now: 6 }), { ok: false, reason: 'limit' });
   assert.deepEqual(addSuggestion(s, { device: A, nick: 'Ana', song: song(4), now: 6 }), { ok: false, reason: 'limit' });
   const forA = snapshotFor(s, A);
-  assert.deepEqual(forA.you, { nick: 'Ana', waiting: 2, review: 1, credits: null, downvotesLeft: 3, upvotesLeft: 3, ...NO_REST });
+  assert.deepEqual(forA.you, { nick: 'Ana', waiting: 2, review: 1, checks: [{ id: 's1', song: 'it:1', title: 'Song 1', since: 1, place: 1, of: 1 }], credits: null, downvotesLeft: 3, upvotesLeft: 3, ...NO_REST });
   assert.equal(forA.review, undefined, 'students never get the review list');
-  assert.equal(JSON.stringify(forA).includes('Song 1'), false);
+  assert.equal(JSON.stringify(snapshotFor(s, B)).includes('Song 1'), false, 'other students never see a song waiting for a look (only its owner does: MY CHECKS)');
   const host = snapshotFor(s, null);
   assert.deepEqual(host.review.map((x) => [x.id, x.by, x.song.id]), [[r1.item.id, 'Ana', 'it:1']]);
   assert.equal(host.queue.some((q) => q.song.id === 'it:1'), false);
@@ -242,7 +242,7 @@ test('review: allow joins the queue credited to the student, even over the limit
   assert.equal(view.by, 'Ana');
   assert.equal(view.mine, true);
   assert.equal(view.addedAt, 50, 'its tie place counts from when it was allowed');
-  assert.deepEqual(snapshotFor(s, A).you, { nick: 'Ana', waiting: 2, review: 0, credits: null, downvotesLeft: 3, upvotesLeft: 3, ...NO_REST });
+  assert.deepEqual(snapshotFor(s, A).you, { nick: 'Ana', waiting: 2, review: 0, checks: [], credits: null, downvotesLeft: 3, upvotesLeft: 3, ...NO_REST });
   assert.equal(vote(s, B, held.id, 1).ok, true, 'votes work once it is queued');
   assert.equal(allowReview(s, held.id), null, 'allowing twice does nothing');
   assert.equal(allowReview(s, 'nope'), null);
@@ -278,7 +278,7 @@ test('review: rooms saved before the review list still work', () => {
   const s = room();
   delete s.review;
   assert.equal(suggestRefusal(s, A, 'it:1'), null);
-  assert.deepEqual(snapshotFor(s, A).you, { nick: 'Ana', waiting: 0, review: 0, credits: null, downvotesLeft: 3, upvotesLeft: 3, ...NO_REST });
+  assert.deepEqual(snapshotFor(s, A).you, { nick: 'Ana', waiting: 0, review: 0, checks: [], credits: null, downvotesLeft: 3, upvotesLeft: 3, ...NO_REST });
   assert.deepEqual(snapshotFor(s, null).review, []);
   assert.equal(addToReview(s, { device: A, nick: 'Ana', song: song(1) }).ok, true);
 });

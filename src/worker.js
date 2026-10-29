@@ -41,6 +41,7 @@ import { handleProfiles, readProfileList, requestProfile, signedIn } from './pro
 import { handleAuth, teacherSession } from './auth.js';
 import { FREE_CAPS, freeUsage, spendFree } from './free.js';
 import { prewarm } from './prewarm.js';
+import { nightHours, nightShift } from './night.js';
 import { handleAdmin } from './admin.js';
 import { cleanPath, robotsTag } from './seo.js';
 import { readOpenRooms, removeOpenRoom, updateOpenRooms } from './open-rooms.js';
@@ -49,6 +50,7 @@ import { roomProfile } from '../shared/profiles.js';
 export { Room } from './room.js';
 export { CouponLedger } from './coupons.js';
 export { CodeLock } from './codelock.js';
+export { LyricsGate } from './lyrics-gate.js';
 import { couponsOn } from './coupons.js';
 
 const KV_SETTINGS = 'settings';
@@ -626,8 +628,12 @@ export default {
     if (robots) page.headers.set('x-robots-tag', robots);
     return page;
   },
-  // The cron (wrangler.jsonc triggers): check chart songs before classes suggest them (src/prewarm.js).
+  // The cron (wrangler.jsonc triggers): at night, the songs classes could not settle (src/night.js);
+  // then chart songs before classes suggest them (src/prewarm.js).
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(prewarm(env).catch((e) => console.error(JSON.stringify({ message: 'prewarm failed', error: String(e) }))));
+    ctx.waitUntil((async () => {
+      if (nightHours(Date.now())) await nightShift(env).catch((e) => console.error(JSON.stringify({ message: 'night shift failed', error: String(e) })));
+      await prewarm(env).catch((e) => console.error(JSON.stringify({ message: 'prewarm failed', error: String(e) })));
+    })());
   },
 };

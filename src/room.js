@@ -76,7 +76,7 @@ import { ART_WAIT_MS, artFields, artJson, artKey, validArtKey } from '../shared/
 import { cachedArtVerdict, checkCover, putTeacherArtOk, teacherArtOk } from './art.js';
 import { backToWorkMessage, backToWorkOn, clearRests, letBackIn, restRefusal, startRest } from '../shared/backtowork.js';
 import { SPOTIFY, catalogOf, legacySong, songId } from '../shared/catalog.js';
-import { approveSong, banKey, filterSong } from '../shared/filter.js';
+import { approveSong, banKey, checkFromKv, filterSong } from '../shared/filter.js';
 import {
   BLOCKED_WORD_EVIDENCE, blockedView, canAllow, canBan, filterWhy, logBlocked, teacherWhy,
 } from '../shared/reasons.js';
@@ -87,7 +87,8 @@ import { validateCode } from '../shared/code.js';
 import { bellOffsetMs, cleanupDue, nextAlarmAt, shiftTimes, tooLong, validateTimes } from '../shared/classtime.js';
 import { CatalogError, cleanQuery } from './catalog-base.js';
 import { HostRelay } from './host-relay.js';
-import { judgeFromLyrics } from './lyrics.js';
+import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
+import { NIGHT_SEARCH_MAX, addToNight, nightSong, nightWorthy } from './night.js';
 import { lookupCatalog, roomCatalog } from './catalog.js';
 import { readBanned, searchAllowed } from './search.js';
 import { claimCode, codeHash, codeInUse, deleteCodeRoute, putCodeRoute, releaseCode } from './codes.js';
@@ -157,6 +158,9 @@ const ART_KEEP = 400;
 /** How long a room trusts a cover verdict it read from KV for a search (none found: a minute). */
 const ART_MEM_MS = 10 * 60_000;
 const ART_NONE_MS = 60_000;
+/** Search tags (Room.withReady): a ready song is remembered for the room's life, any other this long. */
+const READY_NONE_MS = 3 * 60_000;
+const READY_MAX_READS = 30;
 /** A cover whose check failed is not asked again for this long. */
 const ART_RETRY_MS = 60_000;
 /** A board socket that has not sent its token after this long is closed when the next one opens. */
@@ -239,9 +243,13 @@ export class Room extends DurableObject {
     /**
      * Songs the AI does not know, judged from their lyrics (src/lyrics.js; filter.js opts.lyrics).
      * At most LIMITS.lyrics a minute in this room and LYRICS_RATE_ALL for everyone together.
+     * patientLyrics: the same with LYRICS_PATIENT_MS for LRCLIB (a waiting song's recheck: no student waits on it).
      */
-    this.lyrics = (song, want) => judgeFromLyrics(song, this.env, {
+    this.lyrics = (song, want) => this.lyricsWithin(song, want);
+    this.patientLyrics = (song, want) => this.lyricsWithin(song, want, LYRICS_PATIENT_MS);
+    this.lyricsWithin = (song, want, timeoutMs) => judgeFromLyrics(song, this.env, {
       ...want,
+      timeoutMs,
       allow: async () => this.allow('lyrics', 'room')
         && (!this.env.LYRICS_RATE_ALL || (await this.env.LYRICS_RATE_ALL.limit({ key: 'everyone' })).success)
         && this.spendFree('ai'), // a free teacher's daily AI checks (protocol.js FREE TEACHERS)
@@ -258,6 +266,10 @@ export class Room extends DurableObject {
     /** Cover checks running now (one per key) and when a key's check last failed. */
     this.artFlight = new Map();
     this.artFailed = new Map();
+    /** Search tags read from KV: '<instrumentalsOnly>|<banKey>' → { check, until } (memory only). */
+    this.readyMem = new Map();
+    /** Searched songs not ✓ Checked yet, for the night list at close (src/night.js; memory only, best effort). */
+    this.nightSongs = new Map();
     ctx.blockConcurrencyWhile(async () => {
       this.room = migrateRoomState((await ctx.storage.get('state')) ?? null, { testAiOff: env.TEST_AI_OFF === 'on' });
       this.blocked = (this.room && (await ctx.storage.get('blocked'))) || [];
@@ -448,6 +460,10 @@ export class Room extends DurableObject {
    */
   scheduleRecheck(itemId, attempt = 0) {
     const delay = RECHECK_DELAYS_MS[attempt];
+    // The student sees when it tries next (protocol.js MY CHECKS); the caller saves and sends it.
+    const item = this.room?.open ? reviewList(this.room).find((i) => i.id === itemId) : null;
+    if (item && delay === undefined) delete item.recheckAt;
+    else if (item) item.recheckAt = Date.now() + delay;
     if (delay === undefined) return;
     setTimeout(() => {
       this.recheckReview(itemId, attempt).catch((e) => console.error(JSON.stringify({ message: 'recheck failed', error: String(e) })));
@@ -459,7 +475,7 @@ export class Room extends DurableObject {
     const item = waiting();
     if (!item) return; // the teacher already decided, or the room closed
     const verdict = await filterSong(item.song, {
-      settings: this.room.settings, banned: await this.banned(), env: this.env, scope: this.scope, lyrics: this.lyrics, budget: () => this.spendFree('ai'),
+      settings: this.room.settings, banned: await this.banned(), env: this.env, scope: this.scope, lyrics: this.patientLyrics, budget: () => this.spendFree('ai'),
     });
     if (!waiting()) return; // decided while the check ran
     if (verdict.ok) {
@@ -470,12 +486,13 @@ export class Room extends DurableObject {
       return this.commit();
     }
     if (verdict.reason === 'review') {
-      if (verdict.unconfirmed && verdict.ai?.lyrics !== 'none') return this.scheduleRecheck(itemId, attempt + 1);
-      if (verdict.ai?.lyrics === 'found' && verdict.ai.verdict === 'unknown') {
-        item.checked = 'lyrics'; // read, still not sure: the teacher decides
+      if (verdict.unconfirmed && verdict.ai?.lyrics !== 'none') {
+        this.scheduleRecheck(itemId, attempt + 1);
         return this.commit();
       }
-      return;
+      delete item.recheckAt; // no more tries by itself: the teacher decides
+      if (verdict.ai?.lyrics === 'found' && verdict.ai.verdict === 'unknown') item.checked = 'lyrics'; // read, still not sure
+      return this.commit();
     }
     // The lyrics (or a new blocked word, ban...) say no: the filter's answer, as on a suggestion.
     const taken = takeReview(this.room, itemId);
@@ -521,6 +538,33 @@ export class Room extends DurableObject {
       const t = v && v.verdict !== 'ok' ? await teacherArtOk(this.env, k, this.profile) : false;
       this.artMem.set(k, { v: v?.verdict ?? null, r: v?.reason ?? '', t, until: now + (v ? ART_MEM_MS : ART_NONE_MS) });
     }));
+  }
+
+  /**
+   * Search results tagged, ✓ Checked songs first (Dalton, 2026-10-28): each gets `check` ('ready' |
+   * 'teacher' | 'unchecked': filter.js checkStatus) from its cached verdict and the teacher's allow,
+   * so classes pick songs that cost no AI or LRCLIB call and a kid can tell "Clean edit" from
+   * "checked". KV only (checkFromKv), never the AI. Copies: the room's remembered songs stay plain.
+   */
+  async withReady(results) {
+    const now = Date.now();
+    const instrumentalsOnly = this.room?.settings.instrumentalsOnly === true;
+    if (this.readyMem.size > 3000) this.readyMem.clear();
+    const keys = new Map(results.map((s) => [s, banKey(s) && `${instrumentalsOnly ? 1 : 0}|${banKey(s)}`]));
+    const toRead = [...new Set([...keys.values()].filter((k) => k && !(this.readyMem.get(k)?.until > now)))].slice(0, READY_MAX_READS);
+    await Promise.all(toRead.map(async (k) => {
+      const song = results.find((s) => keys.get(s) === k);
+      const check = await checkFromKv(song, this.env, { scope: this.scope, instrumentalsOnly });
+      this.readyMem.set(k, { check, until: check === 'ready' ? Infinity : now + READY_NONE_MS });
+    }));
+    const marked = results.map((s) => ({ ...s, check: this.readyMem.get(keys.get(s))?.check ?? 'unchecked' }));
+    // The night shift checks the top ones the class looked at (src/night.js).
+    for (const s of marked.slice(0, 10)) {
+      if (this.nightSongs.size >= NIGHT_SEARCH_MAX) break;
+      if (s.check === 'unchecked' && nightSong(s)) this.nightSongs.set(banKey(s), s);
+    }
+    // Stable: ready songs first, each group in the catalog's order.
+    return [...marked.filter((s) => s.check === 'ready'), ...marked.filter((s) => s.check !== 'ready')];
   }
 
   /**
@@ -659,6 +703,15 @@ export class Room extends DurableObject {
     const key = banKey(song);
     const gone = await this.changeFavorites((fav) => removeFavorite(fav, (e) => e.song.id === song.id || (key && banKey(e.song) === key)) > 0);
     if (!gone) await this.sendFavorites();
+  }
+
+  /**
+   * The teacher turned this song down (Remove in Needs a look, Ban): the night shift settles it for
+   * everyone (src/night.js; a settled song costs nothing there). This teacher's own no stays.
+   */
+  rejectedByTeacher(song) {
+    const key = banKey(song);
+    return key ? addToNight(this.env, `t:${key}`, [song]) : null;
   }
 
   /** The teacher's note on the ban list for this song (any version), or ''. Never throws. */
@@ -913,6 +966,10 @@ export class Room extends DurableObject {
       const playing = this.room.nowPlaying ? this.room.history?.findLast((x) => x.id === this.room.nowPlaying.id) : null;
       if (playing && Date.now() - playing.at >= REPEAT_MIN_MS) notePlayed((this.room.restPending ??= {}), playing.song, Date.now());
       await this.flushRest(true);
+      if (this.nightSongs.size) {
+        await addToNight(this.env, `s:${Date.now()}-${crypto.randomUUID().slice(0, 8)}`, [...this.nightSongs.values()]);
+        this.nightSongs.clear();
+      }
     }
     if (this.room?.codeHash) {
       console.log(JSON.stringify({ message: 'room closed', why }));
@@ -1084,6 +1141,7 @@ export class Room extends DurableObject {
       const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, notMusic: this.room?.settings.blockNotMusic !== false, catalog, fetchImpl: this.relay });
       await this.remember(found.results);
       await this.loadArt(found.results);
+      found.results = await this.withReady(found.results);
       return new Response(this.artText(found, 'student'), {
         status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
       });
@@ -1113,6 +1171,7 @@ export class Room extends DurableObject {
       const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, notMusic: this.room?.settings.blockNotMusic !== false, catalog, fetchImpl: this.relay });
       await this.remember(found.results);
       await this.loadArt(found.results);
+      found.results = await this.withReady(found.results);
       return reply(found);
     } catch (e) {
       if (e instanceof CatalogError) return reply({ error: `search_${e.code}`, message: e.message });
@@ -1590,6 +1649,8 @@ export class Room extends DurableObject {
       if (!teacher) startRest(this.room, a.device); // 📚 the pick is in: back to work
       // The lyrics lookup failed for a passing reason (a limit, LRCLIB busy): try again by itself.
       if (checked === 'nolyrics' && verdict.ai?.lyrics !== 'none') this.scheduleRecheck(held.item.id);
+      // And at night, for everyone's next class, whatever the teacher decides now (src/night.js).
+      if (nightWorthy(song, verdict.ai)) await addToNight(this.env, `look:${banKey(song)}`, [song]);
       console.log(JSON.stringify({ message: 'suggestion waits for review', song: id, ai: verdict.ai?.reason }));
       const { why, detail } = filterWhy(song, verdict);
       this.send(ws, { t: 'suggested', ok: false, reason: 'review', message: FILTER_REASONS.review, song: id, why, ...(teacher && detail ? { detail } : {}) });
@@ -1714,6 +1775,7 @@ export class Room extends DurableObject {
         if (reviewed) this.sendReviewed(reviewed, false, refundItem(room, reviewed) !== null, why);
         else this.sendRemoved(item, why);
         await this.addBlocked({ song: item.song, device: item.device, by: item.by, why, detail, source: 'teacher', action: reviewed ? 'remove' : 'veto' });
+        if (reviewed) await this.rejectedByTeacher(item.song);
         return this.commit();
       }
       case 'allow': {
@@ -1743,6 +1805,7 @@ export class Room extends DurableObject {
           unplay(room, item.song);
         }
         await this.addBan(item.song, why);
+        await this.rejectedByTeacher(item.song);
         const entry = logBlocked(this.blocked, { song: item.song, device: item.device, by: item.by, why, detail, source: 'teacher', action: 'ban' });
         entry.status = 'banned';
         await this.saveBlocked();
@@ -1915,6 +1978,7 @@ export class Room extends DurableObject {
       this.sendReviewed(held, false, false, why);
     }
     await this.addBan(entry.song, why);
+    await this.rejectedByTeacher(entry.song);
     entry.status = 'banned';
     await this.saveBlocked();
     return this.commit();

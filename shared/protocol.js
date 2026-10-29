@@ -595,8 +595,19 @@ export const CREDIT_GRANT_MAX = 100;
  * art: set by the SERVER on every song it sends (ALBUM ART below); a page shows the cover only when
  * art is 'ok'. artKey / artReason: host only, on a cover the check hid.
  *
- * SearchResult: a Song the student may suggest.
- * @typedef {Song} SearchResult
+ * MY CHECKS (Dalton, 2026-10-28; shared/checks.js): a student sees each of their own songs waiting
+ * in Needs a look, how long it has waited and what it waits for. MyCheck = { id, song, title,
+ * since (ms, when suggested), place, of (its place in the teacher's line, oldest first, and the
+ * line's length), recheckAt? (ms: when the room tries its lyrics again by itself, Room.scheduleRecheck) }.
+ * Only the student's own songs: other students' songs are only counted (`of`).
+ * @typedef {{ id: string, song: string, title: string, since: number, place: number, of: number, recheckAt?: number }} MyCheck
+ *
+ * SearchResult: a Song the student may suggest. In a room's search (student and teacher), `check`
+ * tags each one (shared/filter.js checkStatus; display only, the suggestion is checked for real):
+ * 'ready' ✓ Checked (its cached verdict or the teacher's allow lets it straight into the queue;
+ * these come first), 'teacher' (checked: the checker had a question or said no, the teacher
+ * decides), 'unchecked' (not checked yet: "Clean edit" is not a check).
+ * @typedef {Song & { check?: 'ready'|'teacher'|'unchecked' }} SearchResult
  *
  * QueueItem as each client sees it. `jumped`: a student spent credits to move it to the front
  * (by = their nickname, at = when), else null. `pushed`: the teacher's ⏫ Play next (TEACHER PUSH;
@@ -615,7 +626,7 @@ export const CREDIT_GRANT_MAX = 100;
  *   profile?: string|null,
  *   open: boolean, locked: boolean, nowPlaying: QueueItem|null,
  *   queue: QueueItem[], settings: object, top5: Top5Item[],
- *   you: { nick: string, waiting: number, review: number, credits: number|null, restUntil: number|null,
+ *   you: { nick: string, waiting: number, review: number, checks: MyCheck[], credits: number|null, restUntil: number|null,
  *     restGraceUntil: number|null, restLeft: number, restGraceLeft: number, downvotesLeft: number|null,
  *     upvotesLeft: number|null } | null,
  *   students?: { device: string, nick: string, online: boolean, credits: number|null, restUntil: number|null,
@@ -630,7 +641,7 @@ export const CREDIT_GRANT_MAX = 100;
  *   the state (the room keeps only its hash); the host page remembers the code it set.
  *   `you` is null for the host. `you.waiting` counts the student's queued songs plus their songs
  *   waiting for a look; `you.review` is the second part alone (both count toward
- *   maxWaitingPerStudent). `students`, `aiStatus` and `review` are sent to the host only.
+ *   maxWaitingPerStudent). `you.checks`: those songs themselves (MY CHECKS below). `students`, `aiStatus` and `review` are sent to the host only.
  *   `review` is the "Needs a look" list (oldest first, at most REVIEW_MAX): songs the AI did not
  *   know while blockUnknownSongs is on. Students never see it. Its items have score 0, no votes.
  *   A review item may have `checked: 'lyrics'`: the AI read the song's lyrics (src/lyrics.js) and

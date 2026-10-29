@@ -36,8 +36,10 @@
 //               ghost?: 1,                      the song playing had a ghost 👍 when it started
 //                                               (protocol.js GHOST VOTE; waiting songs: worked
 //                                               out from addedAt, never stored)
-//               checked?: 'lyrics' }            review only: the AI read its lyrics and is still
-//                                               not sure (host only; dropped when allowed)
+//               checked?: 'lyrics'|'nolyrics',  review only: the AI read its lyrics and is still
+//                                               not sure, or could not read them (host only; dropped when allowed)
+//               recheckAt?: number }            review only: when the room tries its lyrics again by
+//                                               itself (Room.scheduleRecheck; dropped when it stops)
 
 import {
   CREDITS_MAX, CREDIT_GRANT_MAX, DEFAULT_SETTINGS, HISTORY_MAX, JUMP_COST, QUEUE_MAX, REVIEW_MAX, SUGGEST_COST,
@@ -49,6 +51,7 @@ import { nickKey } from './nick.js';
 import { legacySong, songId } from './catalog.js';
 import { songKey } from './repeats.js';
 import { restView } from './backtowork.js';
+import { checksOf } from './checks.js';
 
 const PLAYED_MAX = 1000;
 
@@ -275,6 +278,11 @@ export function reviewFor(state, device) {
   return reviewList(state).filter((item) => item.device === device).length;
 }
 
+/** The student's own songs in Needs a look (shared/checks.js checksOf). */
+export function checksFor(state, device) {
+  return checksOf(reviewList(state), device);
+}
+
 /** Songs one device has waiting: queued plus waiting for a look (both count toward the limit). */
 export function waitingFor(state, device) {
   return state.queue.filter((item) => item.device === device).length + reviewFor(state, device);
@@ -430,6 +438,7 @@ export function allowReview(state, id, now = Date.now()) {
   item.addedAt = now;
   item.votes = {};
   delete item.checked;
+  delete item.recheckAt;
   state.queue.push(item);
   sortQueue(state);
   return item;
@@ -817,6 +826,7 @@ export function snapshotFor(state, device, { online = new Set(), boards = 0, now
     top5: top5View(state.history, rules),
     you: isHost ? null : {
       nick: state.students[device]?.nick ?? '', waiting: waitingFor(state, device), review: reviewFor(state, device),
+      checks: checksFor(state, device), // ⏳ my songs being checked (protocol.js MY CHECKS)
       credits: creditsOf(state, device),
       downvotesLeft: downvotesLeft(state, device), // 👎 limit (protocol.js DOWNVOTE LIMIT); null = unlimited
       upvotesLeft: upvotesLeft(state, device), // 👍 limit (protocol.js UPVOTE LIMIT); null = unlimited or off

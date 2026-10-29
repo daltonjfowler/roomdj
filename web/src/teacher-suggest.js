@@ -23,6 +23,12 @@ const TOO_LONG = '⏱ Too long';
 const ARTIST_WAITING = '🎨 Artist waiting';
 const RESTING = '😴 Resting';
 const sentence = (s) => (/[.!?]$/.test(s) ? s : `${s}.`);
+// The room's search tags (protocol.js SearchResult `check`).
+const CHECK_NOTES = {
+  ready: '<small class="note" title="Already checked: no wait when you suggest it.">✓ Checked</small>',
+  unchecked: '<small class="note" title="Checked when you suggest it.">Not checked yet</small>',
+  teacher: '<small class="note" title="The checker had a question or said no: you decide.">Checker had a question</small>',
+};
 
 /**
  * @param {{ send: (msg: object) => boolean, getState: () => object|null }} deps
@@ -106,7 +112,8 @@ export function initTeacherSuggest({ send, getState }) {
         ${artHtml(song, 100, { blur: true })}
         <span class="song-text"><span class="song-title">${esc(song.title)}</span>
           <span class="song-artist">${spotifyMark(song)}${esc(song.artist)}</span>
-          ${song.explicit === 'cleaned' ? '<small class="note">Clean version</small>' : ''}</span>
+          ${song.explicit === 'cleaned' ? '<small class="note">Clean version</small>' : ''}
+          ${CHECK_NOTES[song.check] ?? ''}</span>
         <span class="item-tools">${buttonHtml(song)}</span>
       </li>`).join('');
     });

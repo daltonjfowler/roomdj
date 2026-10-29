@@ -17,6 +17,7 @@
     "test:a11y": "node test/browser/a11y.mjs",
     "test:apple": "node test/browser/apple.mjs",
     "test:student": "node test/browser/student.mjs",
+    "test:checks": "node test/browser/checks.mjs",
     "test:downvotes": "node test/browser/downvotes.mjs",
     "test:upvotes": "node test/browser/upvotes.mjs",
     "test:scorefloor": "node test/browser/scorefloor.mjs",

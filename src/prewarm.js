@@ -9,7 +9,7 @@
 // prewarm:v1:state:<day> { cursor, used }.
 
 import { aiThemeCheck, banKey } from '../shared/filter.js';
-import { judgeFromLyrics } from './lyrics.js';
+import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
 
 export const PREWARM_AI_PER_DAY = 150;
 export const PREWARM_PER_RUN = 6;
@@ -78,6 +78,7 @@ export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyrics
   };
   const lyrics = (song, want) => judgeFromLyrics(song, env, {
     ...want,
+    timeoutMs: LYRICS_PATIENT_MS, // no student waits on the cron
     fetchImpl: lyricsFetch, // tests only (undefined: the real fetch)
     allow: async () => (!env.LYRICS_RATE_ALL || (await env.LYRICS_RATE_ALL.limit({ key: 'everyone' })).success) && budget(),
   });
