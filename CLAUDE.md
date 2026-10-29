@@ -622,8 +622,9 @@ Claude account).
    OK/UNKNOWN with no `lyrics` answer, incl. a free teacher's used-up checks) goes on KV
    lyricsq:v1:look:<banKey>; a room keeps up to 40 searched songs that were not ✓ Checked (top 10 of each
    search, memory only) and writes them at close (lyricsq:v1:s:*); a song a teacher turned down (Remove in
-   Needs a look, Ban, Blocked today's Ban: Room.rejectedByTeacher, lyricsq:v1:t:<banKey>), and once a week
-   every teacher's ban list (night.js sweepBans, read only) so the night decides for everyone; that
+   Needs a look, Ban, Blocked today's Ban: Room.rejectedByTeacher, lyricsq:v1:t:<banKey>), and ONCE (never
+   again: lyrics do not change) the bans from before that (night.js sweepBans, read only; KV
+   night:v1:bans-swept, no expiry) so the night decides for everyone; that
    teacher's own ban always stays. Only song details, never a student,
    nickname or room. The cron runs nightShift 04:00-10:00 UTC before the charts: NIGHT_PER_RUN songs that
    need the AI (NIGHT_SONGS_PER_RUN in all), at most NIGHT_AI_PER_DAY AI calls a day; settled songs cost

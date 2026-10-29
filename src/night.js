@@ -5,8 +5,8 @@
 //     free teacher's AI checks were used up (nightWorthy; key lyricsq:v1:look:<banKey>);
 //   - songs a class searched that were not ✓ Checked yet (the room keeps up to NIGHT_SEARCH_MAX in
 //     memory and writes them as one key when it closes; key lyricsq:v1:s:<time>-<random>);
-//   - songs a teacher turned down (Remove in Needs a look, Ban; key lyricsq:v1:t:<banKey>), and once a
-//     week every teacher's ban list (sweepBans; lyricsq:v1:bans:<day>-<n>): Dalton, 2026-10-28, "songs
+//   - songs a teacher turned down (Remove in Needs a look, Ban; key lyricsq:v1:t:<banKey>), and ONCE
+//     the bans from before that (sweepBans; lyricsq:v1:bans:<day>-<n>): Dalton, 2026-10-28, "songs
 //     that were rejected by other teachers that weren't checked yet ... make final decision for
 //     everyone. Still leave blocked for that teacher". The night's verdict is a shared fact; the
 //     teacher's own ban list is never touched.
@@ -25,8 +25,8 @@ export const NIGHT_AI_PER_DAY = 150;
 /** Songs a run that needed the AI or LRCLIB, and songs a run in all (settled ones cost only KV reads). */
 export const NIGHT_PER_RUN = 8;
 export const NIGHT_SONGS_PER_RUN = 40;
-/** Every teacher's ban list goes on the night list at most this often. */
-const BANS_SWEEP_TTL_S = 7 * 24 * 3600;
+/** Set (never expires) once sweepBans has run: every ban since is listed when it is made. */
+const BANS_SWEPT = 'night:v1:bans-swept';
 const BANS_PER_KEY = 50;
 export const NIGHT_KEYS_PER_RUN = 10;
 /** Searched songs a room keeps for the night list. */
@@ -69,13 +69,14 @@ export async function addToNight(env, name, songs) {
 }
 
 /**
- * Once a week: every teacher's ban list (the legacy `banned` and each `p:<profile>:banned`) goes on
- * the night list, one entry per song (banKey), BANS_PER_KEY songs a key. Read only: the ban lists
- * stay as they are. → the number of songs listed.
+ * ONCE ever: the bans made before Room.rejectedByTeacher (every teacher's `banned` and
+ * `p:<profile>:banned`) go on the night list, one entry per song (banKey), BANS_PER_KEY songs a key.
+ * Never again (Dalton, 2026-10-28: "lyrics don't change"): a ban made since is listed when it is
+ * made, and a settled verdict is kept. Read only: the ban lists stay as they are. → songs listed.
  */
 export async function sweepBans(env, day) {
-  if (await env.CLASS_KV.get('night:v1:bans-swept')) return 0;
-  await env.CLASS_KV.put('night:v1:bans-swept', day, { expirationTtl: BANS_SWEEP_TTL_S });
+  if (await env.CLASS_KV.get(BANS_SWEPT)) return 0;
+  await env.CLASS_KV.put(BANS_SWEPT, day);
   const names = ['banned'];
   let cursor;
   do {

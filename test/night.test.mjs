@@ -77,7 +77,7 @@ test('nightShift: settles listed songs from their lyrics, a few a run, clears th
   assert.equal(last.asked, 0);
 });
 
-test('sweepBans: every teacher\'s ban list goes on the night list once a week; the ban lists stay', async () => {
+test('sweepBans: every teacher\'s ban list goes on the night list ONCE; the ban lists stay', async () => {
   const env = { CLASS_KV: fakeKv() };
   const legacy = JSON.stringify([{ id: 'it:501', title: 'Banned One', artist: 'X', at: 1 }, { trackId: 502, title: 'Old Entry', artist: 'Y', at: 2 }]);
   const other = JSON.stringify([{ id: 'it:503', title: 'Banned One', artist: 'X', at: 3 }, { id: 'sp:4uLU6hMCjMI75M1A2tKUQC', title: 'Spotify', artist: 'Z', at: 4 }]);
@@ -89,7 +89,7 @@ test('sweepBans: every teacher\'s ban list goes on the night list once a week; t
   assert.deepEqual(listed.map((s) => s.id), ['it:501', 'it:502']);
   assert.equal(env.CLASS_KV.map.get('banned'), legacy, 'the teacher\'s ban stays as it was');
   assert.equal(env.CLASS_KV.map.get('p:matt-carroll:banned'), other);
-  assert.equal(await sweepBans(env, '2026-10-29'), 0, 'not again within the week');
+  assert.equal(await sweepBans(env, '2026-11-30'), 0, 'never again (new bans are listed when they are made)');
 });
 
 test('nightShift: settled songs cost no AI and do not use up the run', async () => {
