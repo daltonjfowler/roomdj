@@ -130,6 +130,7 @@ export function migrateRoomState(state, { testAiOff = false } = {}) {
   // Rooms saved before the album art check (protocol.js ALBUM ART): the defaults, no verdicts yet.
   for (const k of ['artCheck', 'hideAllArt']) state.settings[k] ??= DEFAULT_SETTINGS[k];
   state.settings.blockNotMusic ??= true; // 🙉 (protocol.js blockNotMusic)
+  state.settings.kidzBop ??= 'check'; // 🧒 (protocol.js kidzBop)
   state.art ??= {};
   // Rooms saved before the downvote limit (protocol.js DOWNVOTE LIMIT): the default, none used yet.
   if (state.settings.maxDownvotes === undefined) state.settings.maxDownvotes = DEFAULT_SETTINGS.maxDownvotes;

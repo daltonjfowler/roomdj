@@ -266,7 +266,7 @@ export class Room extends DurableObject {
     /** Cover checks running now (one per key) and when a key's check last failed. */
     this.artFlight = new Map();
     this.artFailed = new Map();
-    /** Search tags read from KV: '<instrumentalsOnly>|<banKey>' → { check, until } (memory only). */
+    /** Search tags read from KV: '<instrumentalsOnly>|<kidzBop>|<banKey>' → { check, until } (memory only). */
     this.readyMem = new Map();
     /** Searched songs not ✓ Checked yet, for the night list at close (src/night.js; memory only, best effort). */
     this.nightSongs = new Map();
@@ -549,12 +549,13 @@ export class Room extends DurableObject {
   async withReady(results) {
     const now = Date.now();
     const instrumentalsOnly = this.room?.settings.instrumentalsOnly === true;
+    const kidzBop = this.room?.settings.kidzBop ?? 'check';
     if (this.readyMem.size > 3000) this.readyMem.clear();
-    const keys = new Map(results.map((s) => [s, banKey(s) && `${instrumentalsOnly ? 1 : 0}|${banKey(s)}`]));
+    const keys = new Map(results.map((s) => [s, banKey(s) && `${instrumentalsOnly ? 1 : 0}|${kidzBop}|${banKey(s)}`]));
     const toRead = [...new Set([...keys.values()].filter((k) => k && !(this.readyMem.get(k)?.until > now)))].slice(0, READY_MAX_READS);
     await Promise.all(toRead.map(async (k) => {
       const song = results.find((s) => keys.get(s) === k);
-      const check = await checkFromKv(song, this.env, { scope: this.scope, instrumentalsOnly });
+      const check = await checkFromKv(song, this.env, { scope: this.scope, instrumentalsOnly, kidzBop });
       this.readyMem.set(k, { check, until: check === 'ready' ? Infinity : now + READY_NONE_MS });
     }));
     const marked = results.map((s) => ({ ...s, check: this.readyMem.get(keys.get(s))?.check ?? 'unchecked' }));
@@ -776,7 +777,7 @@ export class Room extends DurableObject {
     if (this.room.settings.showFavorites !== false) {
       const [all, banned] = await Promise.all([this.favoriteList(), this.banned()]);
       if (!this.room) return;
-      list = studentFavorites(all, { blocklist: this.room.settings.blocklist, banned, notMusic: this.room.settings.blockNotMusic !== false });
+      list = studentFavorites(all, { blocklist: this.room.settings.blocklist, banned, notMusic: this.room.settings.blockNotMusic !== false, kidzBop: this.room.settings.kidzBop });
       await this.loadArt(list.map((f) => f.song));
     }
     const msg = { t: 'favorites', list };
@@ -1138,7 +1139,7 @@ export class Room extends DurableObject {
     const banned = await this.banned();
     try {
       const catalog = roomCatalog(this.room.service, this.env);
-      const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, notMusic: this.room?.settings.blockNotMusic !== false, catalog, fetchImpl: this.relay });
+      const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, notMusic: this.room?.settings.blockNotMusic !== false, kidzBop: this.room?.settings.kidzBop, catalog, fetchImpl: this.relay });
       await this.remember(found.results);
       await this.loadArt(found.results);
       found.results = await this.withReady(found.results);
@@ -1168,7 +1169,7 @@ export class Room extends DurableObject {
     const banned = await this.banned();
     try {
       const catalog = roomCatalog(this.room?.service ?? null, this.env);
-      const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, notMusic: this.room?.settings.blockNotMusic !== false, catalog, fetchImpl: this.relay });
+      const found = await searchAllowed(q, this.env, { blocklist: this.room?.settings.blocklist ?? [], banned, notMusic: this.room?.settings.blockNotMusic !== false, kidzBop: this.room?.settings.kidzBop, catalog, fetchImpl: this.relay });
       await this.remember(found.results);
       await this.loadArt(found.results);
       found.results = await this.withReady(found.results);

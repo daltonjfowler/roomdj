@@ -167,11 +167,12 @@ export function mainArtist(artist) {
 
 /**
  * Layers 1-3 (no network). `banned` is a Set or array of song ids (and banKey strings).
- * @returns {null | 'explicit'|'blocklist'|'banned'} the reason it is blocked, or null
+ * @returns {null | 'explicit'|'notmusic'|'kidzbop'|'blocklist'|'banned'} the reason it is blocked, or null
  */
-export function quickCheck(song, { blocklist = [], banned = [], notMusic = true } = {}) {
+export function quickCheck(song, { blocklist = [], banned = [], notMusic = true, kidzBop = 'check' } = {}) {
   if (song.explicit === 'explicit') return 'explicit';
   if (notMusic && notMusicHit(song)) return 'notmusic'; // settings.blockNotMusic (the teacher's switch)
+  if (kidzBop === 'block' && kidSafeArtist(song)) return 'kidzbop'; // settings.kidzBop (the teacher's choice)
   if (blocklistHit([song.title, song.artist, song.album], blocklist)) return 'blocklist';
   const ban = banned instanceof Set ? banned : new Set(banned);
   if (ban.has(song.id) || ban.has(banKey(song))) return 'banned';
@@ -683,9 +684,9 @@ export function unconfirmedOk(song, ai) {
  * queue, with no AI or LRCLIB call. `v`: the cached verdict (readVerdict) or null; `approved`: the
  * teacher allowed it. Display only: a suggestion still goes through filterSong.
  */
-export function readyToPlay(song, v, { approved = false, instrumentalsOnly = false } = {}) {
+export function readyToPlay(song, v, { approved = false, instrumentalsOnly = false, kidzBop = 'check' } = {}) {
   if (instrumentalsOnly && instrumentalOf(song, v?.instrumental ?? null) !== true) return false;
-  if (approved) return true;
+  if (approved || (kidzBop === 'allow' && kidSafeArtist(song))) return true;
   return v?.verdict === 'ok' && !unconfirmedOk(song, v);
 }
 
@@ -704,14 +705,15 @@ export function checkStatus(song, v, opts = {}) {
  * checkStatus from KV: the song's verdict and the teacher's approval, both under its banKey only
  * (putVerdict and approveSong write that key for every version). Two reads.
  */
-export async function checkFromKv(song, env, { scope = (k) => k, instrumentalsOnly = false } = {}) {
+export async function checkFromKv(song, env, { scope = (k) => k, instrumentalsOnly = false, kidzBop = 'check' } = {}) {
+  if (!instrumentalsOnly && kidzBop === 'allow' && kidSafeArtist(song)) return 'ready'; // no reads needed
   const key = banKey(song);
   if (!key) return 'unchecked';
   const [hit, approved] = await Promise.all([
     kvJson(env, verdictKey(key), 'verdict cache'),
     kvJson(env, scope(approvedKey(key)), 'approved'),
   ]);
-  return checkStatus(song, readVerdict(hit), { approved: Boolean(approved), instrumentalsOnly });
+  return checkStatus(song, readVerdict(hit), { approved: Boolean(approved), instrumentalsOnly, kidzBop });
 }
 
 /**
@@ -731,13 +733,17 @@ export async function checkFromKv(song, env, { scope = (k) => k, instrumentalsOn
  */
 export async function filterSong(song, { settings, banned = [], env, scope, lyrics, budget = null }) {
   const notMusic = settings.blockNotMusic !== false;
-  const quick = quickCheck(song, { blocklist: settings.blocklist, banned, notMusic });
+  const kidzBop = settings.kidzBop ?? 'check';
+  const quick = quickCheck(song, { blocklist: settings.blocklist, banned, notMusic, kidzBop });
   if (quick === 'blocklist') {
     return { ok: false, reason: quick, ai: null, word: blocklistHit([song.title, song.artist, song.album], settings.blocklist) };
   }
   if (quick === 'notmusic') return { ok: false, reason: quick, ai: null, word: notMusicHit(song) };
   if (quick) return { ok: false, reason: quick, ai: null };
   const instrumentalOnly = settings.instrumentalsOnly === true;
+  // 🧒 The teacher always allows Kidz Bop (their choice, like Allow for one song): no AI, no lyrics.
+  // Not under Instrumentals only: Kidz Bop sings.
+  if (kidzBop === 'allow' && kidSafeArtist(song) && !instrumentalOnly) return { ok: true, ai: null };
   if (!settings.aiCheck && !instrumentalOnly) return { ok: true, ai: null };
   const ai = await aiThemeCheck(song, env, { instrumental: instrumentalOnly, ask: settings.aiCheck, scope, lyrics, budget });
   // "Sexual" judged from lyrics goes to the teacher, not a block: the lyrics prompt called plain love

@@ -190,6 +190,34 @@ try {
   check('no page errors', errors.length === 0, errors.join(' | '));
   await ctx.close();
 
+  // 🧒 Kidz Bop setting: block leaves them out of search, allow tags them ✓ Checked. A made-up Kidz Bop
+  // song in the LOCAL search and song caches (src/itunes.js reads them before iTunes), so the result
+  // does not depend on how iTunes ranks today; deleted at the end.
+  const kidTrack = 990_000_000 + Math.floor(Math.random() * 1_000_000);
+  const kidQuery = `checks kidz test ${kidTrack}`;
+  const kidSong = {
+    id: `it:${kidTrack}`, title: `Checks Test Song ${kidTrack}`, artist: 'KIDZ BOP Kids', album: 'KIDZ BOP Test', artwork: '',
+    durationMs: 180_000, explicit: 'notExplicit', previewUrl: 'https://audio-ssl.itunes.apple.com/test.m4a', genre: "Children's Music", year: 2024,
+  };
+  const kidEntries = [
+    { key: `search:${kidQuery}`, value: JSON.stringify([kidSong]) },
+    { key: `song:${kidTrack}`, value: JSON.stringify(kidSong) },
+  ];
+  localKvBulk('put', kidEntries);
+  seeded.push(...kidEntries.map((e) => e.key));
+  const kidzSearch = async () => (await roomSearch(room, devB, kidQuery)).filter((s) => s.artist === 'KIDZ BOP Kids');
+  send(host, { t: 'settings', settings: { kidzBop: 'block' } });
+  await until(() => lastState(host)?.settings.kidzBop === 'block');
+  check('🧒 Always blocked: no Kidz Bop in search', (await kidzSearch()).length === 0);
+  send(host, { t: 'settings', settings: { kidzBop: 'allow' } });
+  await until(() => lastState(host)?.settings.kidzBop === 'allow');
+  const kidz = await kidzSearch();
+  check('🧒 Always allowed: Kidz Bop songs show as ✓ Checked', kidz.length === 1 && kidz[0].check === 'ready', JSON.stringify(kidz));
+  const kn = a.msgs.length;
+  send(a, { t: 'suggest', song: kidz[0]?.id });
+  const kidAnswer = await until(() => a.msgs.slice(kn).find((m) => m.t === 'suggested' && m.song === kidz[0]?.id), { timeout: 20_000 });
+  check('🧒 Always allowed: a Kidz Bop suggestion joins the queue at once', kidAnswer?.ok === true, JSON.stringify(kidAnswer));
+
   // The teacher removes it (Needs a look's Remove): it goes on the night list for everyone.
   const reviewItem = await until(() => lastState(host)?.review?.find((i) => i.song.id === held.id));
   send(host, { t: 'veto', id: reviewItem?.id });

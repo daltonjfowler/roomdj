@@ -326,3 +326,34 @@ test('readyToPlay / checkStatus / checkFromKv: ✓ Checked only when the queue w
   assert.equal(checkStatus(s, { verdict: 'unknown', lyrics: 'found', source: 'lyrics' }), 'teacher');
   assert.equal(checkStatus(s, { verdict: 'ok', lyrics: 'found', source: 'lyrics', instrumental: false }), 'ready');
 });
+
+test('🧒 kidzBop setting: check (default), allow (no AI, still bans/words/explicit), block (quick no)', async () => {
+  const kid = song({ id: 'it:77', title: 'Shape of You', artist: 'KIDZ BOP Kids' });
+  let asked = 0;
+  const env = { CLASS_KV: fakeKv(), AI: { run: async () => { asked++; return { response: '{"instrumental":false,"verdict":"UNKNOWN","category":null,"evidence":""}' }; } } };
+  const base = { ...DEFAULT_SETTINGS, aiCheck: true, blockUnknownSongs: true };
+  assert.equal(DEFAULT_SETTINGS.kidzBop, 'check');
+  // allow: in, with no AI call
+  const allowed = await filterSong(kid, { settings: { ...base, kidzBop: 'allow' }, env });
+  assert.deepEqual([allowed.ok, asked], [true, 0]);
+  // allow still respects the teacher's bans, blocked words and the explicit flag
+  assert.equal((await filterSong(kid, { settings: { ...base, kidzBop: 'allow' }, banned: ['it:77'], env })).reason, 'banned');
+  assert.equal((await filterSong(kid, { settings: { ...base, kidzBop: 'allow', blocklist: ['shape'] }, env })).reason, 'blocklist');
+  assert.equal((await filterSong({ ...kid, explicit: 'explicit' }, { settings: { ...base, kidzBop: 'allow' }, env })).reason, 'explicit');
+  // allow does not beat Instrumentals only (Kidz Bop sings)
+  assert.notEqual((await filterSong(kid, { settings: { ...base, kidzBop: 'allow', instrumentalsOnly: true }, env })).ok, true);
+  // block: a quick no, no AI
+  asked = 0;
+  const blocked = await filterSong(kid, { settings: { ...base, kidzBop: 'block' }, env });
+  assert.deepEqual([blocked.ok, blocked.reason, asked], [false, 'kidzbop', 0]);
+  assert.equal(quickCheck(kid, { kidzBop: 'block' }), 'kidzbop');
+  assert.equal(quickCheck(song(), { kidzBop: 'block' }), null, 'only Kidz Bop');
+  assert.deepEqual(filterWhy(kid, blocked).why, { id: 'kidzbop' });
+  // search tags: allow = ✓ Checked with no KV read
+  assert.equal(await checkFromKv(kid, { CLASS_KV: null }, { kidzBop: 'allow' }), 'ready');
+  assert.equal(readyToPlay(kid, null, { kidzBop: 'allow' }), true);
+  assert.equal(readyToPlay(kid, null), false);
+  // settings
+  assert.equal(validateSettings({ ...DEFAULT_SETTINGS, kidzBop: 'block' }).settings?.kidzBop ?? validateSettings({ ...DEFAULT_SETTINGS, kidzBop: 'block' }).kidzBop, 'block');
+  assert.equal(validateSettings({ ...DEFAULT_SETTINGS, kidzBop: 'sometimes' }).ok, false);
+});

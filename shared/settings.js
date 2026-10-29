@@ -141,6 +141,14 @@ function maxUpvotes(errors, value) {
 }
 
 /** 👎 votes (protocol.js DOWNVOTE MODE): one of DOWNVOTE_MODES. */
+/** 🧒 Kidz Bop songs (protocol.js kidzBop): 'check' | 'allow' | 'block'; missing = 'check'. */
+function kidzBopMode(errors, v) {
+  if (v === undefined || v === null) return 'check';
+  if (v === 'check' || v === 'allow' || v === 'block') return v;
+  errors.push('Kidz Bop songs must be Checked, Always allowed or Always blocked.');
+  return 'check';
+}
+
 function downvoteMode(errors, value) {
   if (DOWNVOTE_MODES.includes(value)) return value;
   errors.push('👎 votes must be off, on with counts hidden, or on with counts shown.');
@@ -204,6 +212,7 @@ export function validateSettings(input, { testAiOff = false } = {}) {
     artCheck: bool(errors, 'Album art check', pick('artCheck')),
     hideAllArt: bool(errors, 'Hide all album art', pick('hideAllArt')),
     blockNotMusic: bool(errors, 'Block memes, noise and sound effects', pick('blockNotMusic')),
+    kidzBop: kidzBopMode(errors, pick('kidzBop')),
     maxDownvotes: maxDownvotes(errors, pick('maxDownvotes')),
     upvotes: bool(errors, '👍 votes', pick('upvotes')),
     maxUpvotes: maxUpvotes(errors, pick('maxUpvotes')),

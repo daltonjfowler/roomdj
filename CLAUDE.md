@@ -610,6 +610,11 @@ Claude account).
    invariant 17's never-stored rule). Four parts:
    (a) Kidz Bop (shared/filter.js kidSafeArtist: main artist "KIDZ BOP Kids"/"Kidz Bop"): an AI OK needs
    no lyrics check (their records are rewritten for kids); an AI no still blocks; bans and word lists apply.
+   The teacher's 🧒 setting `kidzBop` (Settings, All settings; Dalton, 2026-10-28) overrides it: 'check'
+   (default, as above), 'allow' (always in: no AI or lyrics call, but the explicit flag, 🙉, blocked words,
+   bans and Instrumentals only still count; search tags them ✓ Checked) or 'block' (quickCheck 'kidzbop':
+   left out of search and favorites, refused with "🧒 No Kidz Bop", Allow anyway works like a blocked word).
+   'allow' is the ONE category-wide exception to invariant 32, by Dalton's own request; add no others.
    (b) Search tags in a room's search (student + teacher): Room.withReady reads each result's banKey
    verdict and the teacher's banKey approval (filter.js checkFromKv/checkStatus: 2 KV reads a song, at
    most 30 a search, kept in room memory) and sets `check`: 'ready' "✓ Checked" (first in the list),

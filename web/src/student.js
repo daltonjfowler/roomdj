@@ -74,7 +74,7 @@ const shownSong = (id) => results.find((x) => x.id === id) ?? favorites.find((f)
 const cleanNo = (id, why) => (why && AI_WHY.has(why.id) && shownSong(id)?.explicit === 'cleaned' ? `${CLEAN_NO} ` : '');
 // A refusal that will not change today: the result shows this instead of a Suggest button.
 const REFUSED_LABEL = {
-  explicit: 'Not allowed', blocklist: 'Not allowed', banned: 'Not allowed', theme: 'Not allowed', played: 'Played already',
+  explicit: 'Not allowed', blocklist: 'Not allowed', banned: 'Not allowed', theme: 'Not allowed', kidzbop: 'Not allowed', played: 'Played already',
 };
 // A refusal that is "wait", not "no": the toast is amber, not red.
 const WAIT_REASONS = new Set(['limit', 'locked', 'duplicate', 'rate', 'reviewFull', 'unavailable', 'queueFull', 'credits', 'cleanup', 'too_long', 'same_artist', 'resting', 'back_to_work']);

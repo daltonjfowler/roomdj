@@ -317,6 +317,11 @@ export const DEFAULT_SETTINGS = Object.freeze({
   blockNotMusic: true, // 🙉 memes, noise and sound effects are refused (shared/filter.js notMusicHit + the AI's
   //                      'notmusic'; Dalton, 2026-10-24: a switch per teacher, on by default). Saved settings
   //                      and rooms without it read as true. Browsing before joining (no room) always blocks.
+  kidzBop: 'check', // 🧒 Kidz Bop songs (Dalton, 2026-10-28: "a kidzbop toggle for the teacher so they can blanket
+  //                   block or allow those songs"): 'check' = like any song (an AI OK needs no lyrics check,
+  //                   shared/filter.js kidSafeArtist), 'allow' = always let in (still: explicit flag, word lists,
+  //                   bans, Instrumentals only), 'block' = never (left out of search, refused with reason
+  //                   'kidzbop'). Saved settings and rooms without it read as 'check'.
   maxDownvotes: 3, // 👎 per student per class (DOWNVOTE LIMIT below): a whole number 1..20, null = unlimited.
   //                  Saved settings and rooms without it read as 3.
   upvotes: true, // 👍 votes on or off (UPVOTE LIMIT below). Saved settings and rooms without it read as true.
@@ -1161,6 +1166,7 @@ export const FILTER_REASONS = Object.freeze({
   review: 'Your teacher needs to check that song first. It joins the queue if they say yes.',
   not_instrumental: 'Your teacher wants instrumental music right now: songs with no singing.',
   notmusic: 'That one is a meme, noise or sound effect, not a song for class.',
+  kidzbop: 'Your teacher is not playing Kidz Bop songs.',
 });
 
 // REASONS (Dalton, 2026-10-05): every "no" carries why = { id, evidence? }. The single list of
@@ -1189,6 +1195,7 @@ export const REASONS = Object.freeze({
   selfharm: { emoji: '💔', student: 'Self-harm', teacher: 'Self-harm' },
   hate: { emoji: '🚫', student: 'Hate or slurs', teacher: 'Hate or slurs' },
   notmusic: { emoji: '🙉', student: 'Not music for class', teacher: 'Not music (meme, noise, sound effects)' },
+  kidzbop: { emoji: '🧒', student: 'No Kidz Bop', teacher: 'Kidz Bop (your setting)' },
   troll: { emoji: '🎭', student: 'Political or troll pick', teacher: 'Political or troll pick' },
   swearing: { emoji: '🤬', student: 'Heavy swearing', teacher: 'Heavy swearing' },
   blocked_word: { emoji: '📝', student: 'Blocked word', teacher: 'Blocked word' },

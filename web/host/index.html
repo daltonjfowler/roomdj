@@ -456,6 +456,14 @@
           <label class="check switch-row"><input id="setNotMusic" class="switch" type="checkbox" role="switch" aria-describedby="notMusicHelp">
             <span>🙉 Block memes, noise and sound effects</span><span class="switch-state" aria-hidden="true"></span></label>
           <small id="notMusicHelp" class="switch-help">Phonk and other meme edits, white noise, animal and fart sounds, and things that are not songs.</small>
+          <!-- 🧒 Kidz Bop songs (protocol.js kidzBop) -->
+          <label class="inline-row" for="setKidzBop" data-adv>🧒 Kidz Bop songs
+            <select id="setKidzBop" class="text" aria-describedby="kidzBopHelp">
+              <option value="check">Checked like other songs</option>
+              <option value="allow">Always allowed</option>
+              <option value="block">Always blocked</option>
+            </select></label>
+          <small id="kidzBopHelp" class="switch-help" data-adv>Kidz Bop rewrites songs for kids, so an AI OK is enough: no lyrics lookup.</small>
           <label class="field" for="setWords">Blocked words
             <textarea id="setWords" class="text" rows="3" spellcheck="false" aria-describedby="wordsHelp"></textarea></label>
           <small id="wordsHelp" class="note">One word or phrase per line. Songs and nicknames with these words are blocked.</small>

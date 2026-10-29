@@ -1583,6 +1583,7 @@ function fillSettings(s) {
   $('#setArtCheck').checked = s.artCheck !== false; // 🖼 ALBUM ART
   $('#setHideAllArt').checked = s.hideAllArt === true;
   $('#setNotMusic').checked = s.blockNotMusic !== false; // 🙉 (protocol.js blockNotMusic)
+  $('#setKidzBop').value = ['check', 'allow', 'block'].includes(s.kidzBop) ? s.kidzBop : 'check'; // 🧒 (protocol.js kidzBop)
   [$('#setRecapVolume').min, $('#setRecapVolume').max] = SETTINGS_LIMITS.recapVolume;
   $('#setRecapVolume').value = String(s.recapVolume ?? DEFAULT_SETTINGS.recapVolume);
   [$('#setPeriod').min, $('#setPeriod').max] = SETTINGS_LIMITS.periodMinutes;
@@ -1693,6 +1694,10 @@ function adaptSettings() {
   say('#notMusicHelp', $('#setNotMusic').checked
     ? 'Phonk and other meme edits, white noise, animal and fart sounds, and things that are not songs are refused.'
     : 'Off: memes, noise and sound effects can be suggested. The rest of the song check still runs.');
+  say('#kidzBopHelp', $('#setKidzBop').value === 'allow'
+    ? 'Every Kidz Bop song gets in with no AI or lyrics check (they rewrite songs for kids). Explicit songs, blocked words and your bans still count.'
+    : $('#setKidzBop').value === 'block' ? 'No Kidz Bop: they are left out of search, and a suggestion is turned down with "🧒 No Kidz Bop".'
+      : 'Kidz Bop rewrites songs for kids, so an AI OK is enough: no lyrics lookup. An AI no still blocks.');
   say('#hideAllArtHelp', $('#setHideAllArt').checked ? 'No album covers anywhere, just plain 🎵 tiles. Music players may still show their own pictures.'
     : 'Off: album covers show (after the check above).');
   say('#showFavHelp', $('#setShowFav').checked ? 'Students see a list of songs your classes loved most and can suggest one with a tap. No names are shown.'
@@ -1793,6 +1798,7 @@ function readSettings() {
     artCheck: $('#setArtCheck').checked,
     hideAllArt: $('#setHideAllArt').checked,
     blockNotMusic: $('#setNotMusic').checked,
+    kidzBop: $('#setKidzBop').value,
   };
 }
 

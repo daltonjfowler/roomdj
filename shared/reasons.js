@@ -95,6 +95,8 @@ export function filterWhy(song, verdict, { banNote = '' } = {}) {
         why: { id: 'notmusic', evidence: CATEGORY_EVIDENCE.notmusic },
         detail: verdict.word ? `Not music for class: "${verdict.word}"` : 'Not music for class',
       };
+    case 'kidzbop': // the teacher's 🧒 Kidz Bop choice (protocol.js kidzBop)
+      return { why: { id: 'kidzbop' }, detail: 'Kidz Bop songs: Always blocked (your setting)' };
     case 'banned':
       return { why: banNote ? { id: 'banned', evidence: banNote } : { id: 'banned' }, detail: banNote ? `Your ban note: ${banNote}` : 'On your ban list' };
     case 'theme': {
