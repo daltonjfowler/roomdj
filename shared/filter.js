@@ -44,6 +44,19 @@ export const SETTLED_VERDICT_TTL_SECONDS = 365 * 24 * 60 * 60;
  * ban still wins).
  */
 export const approvedKey = (idOrKey) => `approved:${kvId(idOrKey)}`;
+
+/**
+ * Checked by hand for every teacher (Dalton, 2026-10-29: "Songs like hotline bling are ok and should
+ * be allowed as well as gods plan ... drake songs that could be played if fully clean"): like a
+ * teacher's Allow, but for everyone (source 'house'). Only Dalton adds songs here, one by one, never
+ * a whole artist (CLAUDE.md invariant 40). The explicit version is still refused (quickCheck): only
+ * the clean edit plays. Bans, blocked words and Instrumentals only still count.
+ */
+const HOUSE_OK = new Set([
+  ['Hotline Bling', 'Drake'],
+  ["God's Plan", 'Drake'],
+].map(([title, artist]) => banKey({ title, artist })));
+export const houseOk = (song) => HOUSE_OK.has(banKey(song));
 /**
  * Bump when buildThemePrompt changes what counts as inappropriate, or what a verdict holds:
  * verdicts cached under the old prompt are then not reused. Teacher approvals (approvedKey) are
@@ -589,15 +602,17 @@ export async function aiThemeCheck(song, env, { instrumental = false, ask = true
   const none = { category: null, evidence: '' };
   const needInstrumental = instrumental && instrumentalHint(song) === null;
   const spotify = catalogOf(song.id) === SPOTIFY;
-  let approved = false;
-  for (const id of ids) {
+  const house = houseOk(song);
+  let approved = house;
+  for (const id of house ? [] : ids) {
     if (await kvJson(env, scope(approvedKey(id)), 'approved')) {
       approved = true;
       break;
     }
   }
   const teacherOk = (inst) => ({
-    verdict: 'ok', ...none, reason: 'your teacher allowed it', failed: false, cached: true, source: 'teacher', instrumental: inst ?? null,
+    verdict: 'ok', ...none, reason: house ? 'RoomDJ checked it by hand' : 'your teacher allowed it', failed: false, cached: true,
+    source: house ? 'house' : 'teacher', instrumental: inst ?? null,
   });
   if (approved && !needInstrumental) return teacherOk(null);
   let known = null; // the cached verdict under the current prompt
@@ -674,7 +689,7 @@ export const kidSafeArtist = (song) => KID_SAFE_ARTISTS.has(mainArtist(song?.art
 
 /** True for an AI "OK" its lyrics have not confirmed (filterSong). A teacher's allow is always confirmed. */
 export function unconfirmedOk(song, ai) {
-  if (ai.source === 'teacher' || ai.source === 'lyrics') return false;
+  if (ai.source === 'teacher' || ai.source === 'house' || ai.source === 'lyrics') return false;
   if (ai.lyrics === 'instrumental' || ai.instrumental === true || instrumentalHint(song) === true) return false;
   return !kidSafeArtist(song);
 }
@@ -706,14 +721,14 @@ export function checkStatus(song, v, opts = {}) {
  * (putVerdict and approveSong write that key for every version). Two reads.
  */
 export async function checkFromKv(song, env, { scope = (k) => k, instrumentalsOnly = false, kidzBop = 'check' } = {}) {
-  if (!instrumentalsOnly && kidzBop === 'allow' && kidSafeArtist(song)) return 'ready'; // no reads needed
+  if (!instrumentalsOnly && ((kidzBop === 'allow' && kidSafeArtist(song)) || houseOk(song))) return 'ready'; // no reads needed
   const key = banKey(song);
   if (!key) return 'unchecked';
   const [hit, approved] = await Promise.all([
     kvJson(env, verdictKey(key), 'verdict cache'),
     kvJson(env, scope(approvedKey(key)), 'approved'),
   ]);
-  return checkStatus(song, readVerdict(hit), { approved: Boolean(approved), instrumentalsOnly, kidzBop });
+  return checkStatus(song, readVerdict(hit), { approved: Boolean(approved) || houseOk(song), instrumentalsOnly, kidzBop });
 }
 
 /**

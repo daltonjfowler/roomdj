@@ -7,15 +7,20 @@
 // PREWARM_AI_PER_DAY AI calls a day (inside Workers AI's free daily allowance), PREWARM_PER_RUN songs
 // a run (a few subrequests each). KV: prewarm:v1:list:<day> (the day's chart songs, fetched once),
 // prewarm:v1:state:<day> { cursor, used }.
+// Once the day's chart songs are done, the same runs and budget go on with the songbook (Dalton,
+// 2026-10-29: "capture likely asks"; src/songbook.js): one pass over its songs, KV prewarm:v1:songbook
+// { made, at } (no expiry), started again only when `npm run songbook` makes a new list.
 
 import { aiThemeCheck, banKey } from '../shared/filter.js';
 import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
+import { SONGBOOK_MADE, songbookToCheck } from './songbook.js';
 
 export const PREWARM_AI_PER_DAY = 150;
 export const PREWARM_PER_RUN = 6;
 const STOREFRONTS = ['us', 'gb', 'ca', 'au'];
 const FEED = (sf) => `https://rss.marketingtools.apple.com/api/v2/${sf}/music/most-played/100/songs.json`;
 const DAY_TTL_S = 2 * 24 * 3600;
+const SONGBOOK_STATE = 'prewarm:v1:songbook';
 
 /** A chart entry as a song for the theme check (null: not a usable one). */
 export function chartSong(r) {
@@ -62,7 +67,7 @@ async function todaysSongs(env, day, fetchImpl) {
 }
 
 /** One cron run. → { checked, asked, used } (for the log and tests). */
-export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyricsFetch } = {}) {
+export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyricsFetch, songbook = songbookToCheck(), songbookMade = SONGBOOK_MADE } = {}) {
   if (!env.CLASS_KV || !env.AI) return { checked: 0, asked: 0, used: 0 };
   const day = new Date(now).toISOString().slice(0, 10);
   const stateKey = `prewarm:v1:state:${day}`;
@@ -82,8 +87,7 @@ export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyrics
     fetchImpl: lyricsFetch, // tests only (undefined: the real fetch)
     allow: async () => (!env.LYRICS_RATE_ALL || (await env.LYRICS_RATE_ALL.limit({ key: 'everyone' })).success) && budget(),
   });
-  while (state.cursor < songs.length && checked < PREWARM_PER_RUN && state.used < PREWARM_AI_PER_DAY) {
-    const song = songs[state.cursor++];
+  const check = async (song) => {
     try {
       // ask: true (the check is on); no teacher scope: approvals are a teacher's, not facts.
       await aiThemeCheck(song, env, { ask: true, scope: (k) => `prewarm-none:${k}`, lyrics, budget });
@@ -91,8 +95,19 @@ export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyrics
       console.error(JSON.stringify({ message: 'prewarm check failed', song: song.id, error: String(e) }));
     }
     checked++;
+  };
+  const more = () => checked < PREWARM_PER_RUN && state.used < PREWARM_AI_PER_DAY;
+  while (state.cursor < songs.length && more()) await check(songs[state.cursor++]);
+  // The songbook, after the charts (one pass per list).
+  let book = null;
+  if (state.cursor >= songs.length && more() && songbook.length) {
+    const kept = (await env.CLASS_KV.get(SONGBOOK_STATE, 'json')) ?? {};
+    book = { made: songbookMade, at: kept.made === songbookMade ? Number(kept.at) || 0 : 0 };
+    const start = book.at;
+    while (book.at < songbook.length && more()) await check(songbook[book.at++]);
+    if (book.at !== start || kept.made !== songbookMade) await env.CLASS_KV.put(SONGBOOK_STATE, JSON.stringify(book));
   }
   await env.CLASS_KV.put(stateKey, JSON.stringify(state), { expirationTtl: DAY_TTL_S });
-  if (asked) console.log(JSON.stringify({ message: 'prewarm', day, checked, asked, used: state.used, of: songs.length, at: state.cursor }));
-  return { checked, asked, used: state.used };
+  if (asked) console.log(JSON.stringify({ message: 'prewarm', day, checked, asked, used: state.used, of: songs.length, at: state.cursor, ...(book ? { songbook: book.at, songbookOf: songbook.length } : {}) }));
+  return { checked, asked, used: state.used, ...(book ? { songbook: book.at } : {}) };
 }

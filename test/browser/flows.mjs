@@ -19,6 +19,7 @@
 // the same address still joins), changing the code mid-day, and a room closing itself at `until`.
 // Searches hit the real iTunes API. Screenshots of failures go to test/browser/.out/.
 
+import { displayCode, normalizeCode } from '../../shared/code.js';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -331,15 +332,15 @@ try {
   pages.push(host);
   await pickTeacher(host.page, KEY);
   const suggestedOnPage = await host.page.inputValue('#openCode');
-  check('host start screen suggests a code (three words and a number)', /^[a-z]+ [a-z]+ [a-z]+ [1-9][0-9]$/.test(suggestedOnPage), suggestedOnPage);
+  check('host start screen suggests a code (5 random characters, in capitals)', /^[B-DF-HJ-KM-NP-TV-Z2-9]{5}$/.test(suggestedOnPage), suggestedOnPage);
   // A code with no letters or numbers is refused before anything opens (any other code is fine).
   await host.page.fill('#openCode', '!!');
   await host.page.click('#openBtn');
   check('host: an empty own code is refused with a reason', Boolean(await until(async () => /Type a class code/.test(await text(host, '#keyMsg')))));
   await host.page.click('#newCode');
   const { code, id: roomId, until: roomUntil } = await openRoom(host);
-  check('host opens a room with the suggested code', /^[a-z]+-[a-z]+-[a-z]+-[1-9][0-9]$/.test(code ?? ''), code);
-  check('host: the board shows the code as words', (await host.page.getAttribute('#bigCode', 'aria-label')) === code.replace(/-/g, ' '));
+  check('host opens a room with the suggested code', /^[b-df-hj-km-np-tv-z2-9]{5}$/.test(code ?? ''), code);
+  check('host: the board shows the code in capitals', (await host.page.getAttribute('#bigCode', 'aria-label')) === code.toUpperCase());
   check('host: open until the end of today by default', new Date(roomUntil).getHours() === 23 || roomUntil - Date.now() >= 50 * 60_000, new Date(roomUntil).toString());
   await hostSettings(host, { max: 5, ai: false, words: ['pineapple'] });
   check('room settings change from the dialog', Boolean(await hostState(host, (s) => s.settings.maxWaitingPerStudent === 5 && !s.settings.aiCheck && s.settings.blocklist.includes('pineapple'))));
@@ -347,7 +348,7 @@ try {
   // Refused nicknames: a teacher-blocked word, and a rude one dressed up.
   const extra = await openPage('nick', `?code=${code}`);
   pages.push(extra);
-  check('join link prefills the class code', (await extra.page.inputValue('#code')) === code.replace(/-/g, ' '));
+  check('join link prefills the class code', (await extra.page.inputValue('#code')) === displayCode(code));
   for (const [label, nick] of [['blocklisted word', 'Pineapple Pete'], ['rude word', 'xXsh1tXx']]) {
     await joinStudent(extra, code, nick);
     const msg = await until(async () => (await visible(extra, '#joinScreen')) && (await text(extra, '#joinMsg')));
@@ -584,7 +585,7 @@ try {
   await host.page.click('#codeSave');
   const changed = await until(async () => (await host.page.getAttribute('#bigCode', 'aria-label')) === newShown);
   check('change code: the board shows the new code', Boolean(changed), `${await host.page.getAttribute('#bigCode', 'aria-label')} vs ${newShown}`);
-  const newCode = newShown.replace(/ /g, '-');
+  const newCode = normalizeCode(newShown);
   check('change code: the host remembers it (and the join link)', (await hostRoom(host)).code === newCode
     && (await host.page.getAttribute('#copyLink', 'data-url')).includes(`code=${newCode}`));
   const [oldStatus, oldBody] = await apiJoin(code, 'flows-new-device-0001');

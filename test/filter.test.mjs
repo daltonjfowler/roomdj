@@ -4,7 +4,7 @@ import { DEFAULT_SETTINGS, QUERY_MAX } from '../shared/protocol.js';
 import {
   PROMPT_VERSION, THEME_MODEL, aiThemeCheck, approveSong, buildThemePrompt, filterSong, hasWholeWord, parseThemeVerdict, quickCheck,
 } from '../shared/filter.js';
-import { baseTitle, checkFromKv, checkStatus, kidSafeArtist, notMusicHit, readyToPlay, themeCategory } from '../shared/filter.js';
+import { baseTitle, checkFromKv, checkStatus, houseOk, kidSafeArtist, notMusicHit, readyToPlay, themeCategory } from '../shared/filter.js';
 import { validateSettings } from '../shared/settings.js';
 import { filterWhy } from '../shared/reasons.js';
 import { toSong } from '../src/itunes.js';
@@ -356,4 +356,22 @@ test('🧒 kidzBop setting: check (default), allow (no AI, still bans/words/expl
   // settings
   assert.equal(validateSettings({ ...DEFAULT_SETTINGS, kidzBop: 'block' }).settings?.kidzBop ?? validateSettings({ ...DEFAULT_SETTINGS, kidzBop: 'block' }).kidzBop, 'block');
   assert.equal(validateSettings({ ...DEFAULT_SETTINGS, kidzBop: 'sometimes' }).ok, false);
+});
+
+test('hand-checked for everyone (houseOk): the clean edit passes with no AI or lyrics; explicit, bans and words still count', async () => {
+  const bling = song({ id: 'it:1440841363', title: 'Hotline Bling', artist: 'Drake', album: 'Views', explicit: 'cleaned' });
+  let asked = 0;
+  const env = { CLASS_KV: fakeKv(), AI: { run: async () => { asked++; return { response: '{"instrumental":false,"verdict":"INAPPROPRIATE","category":"alcohol","evidence":"x"}' }; } } };
+  const base = { ...DEFAULT_SETTINGS, aiCheck: true, blockUnknownSongs: true };
+  assert.equal(houseOk(bling), true);
+  assert.equal(houseOk(song({ title: "God's Plan", artist: 'Drake' })), true, 'any version (banKey)');
+  assert.equal(houseOk(song({ title: 'One Dance', artist: 'Drake' })), false, 'one song at a time, never a whole artist');
+  const r = await filterSong(bling, { settings: base, env, lyrics: async () => { throw new Error('no lyrics call'); } });
+  assert.deepEqual([r.ok, r.ai.source, asked], [true, 'house', 0]);
+  assert.equal(r.ai.reason, 'RoomDJ checked it by hand');
+  assert.equal((await filterSong({ ...bling, explicit: 'explicit' }, { settings: base, env })).reason, 'explicit', 'only the clean edit');
+  assert.equal((await filterSong(bling, { settings: base, banned: ['it:1440841363'], env })).reason, 'banned', "a teacher's ban wins");
+  assert.equal((await filterSong(bling, { settings: { ...base, blocklist: ['hotline'] }, env })).reason, 'blocklist');
+  assert.equal(await checkFromKv(bling, { CLASS_KV: { get: async () => { throw new Error('no reads'); } } }), 'ready');
+  assert.equal(asked, 0);
 });

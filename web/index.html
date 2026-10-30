@@ -51,7 +51,7 @@
         <h1 id="joinTitle">Join your class</h1>
         <p id="joinNote" class="banner info">Ask your teacher for today's class code to suggest and vote.</p>
         <form id="joinForm" novalidate>
-          <label class="field">Class code <small>The words and number on the board.</small>
+          <label class="field">Class code <small>The code on the board. Capitals and spaces do not matter.</small>
             <input id="code" class="text code-input" name="code" required autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="joinMsg">
           </label>
           <!-- Made, never typed (shared/nickgen.js); the typed box is for local tests only (TYPED_NICKNAMES) -->
@@ -114,6 +114,23 @@
             <label class="sr-only" for="q">Search for a song or an artist</label>
             <input id="q" class="text" type="search" placeholder="Search for a song or an artist" autocomplete="off" spellcheck="false">
           </form>
+          <!-- 📚 The songbook's lists and the search filters (protocol.js SONGBOOK, shared/songbook.js) -->
+          <div id="shelves" class="shelves" hidden>
+            <p class="note">Or pick from songs RoomDJ already checked:</p>
+            <div id="shelfBtns" class="shelf-btns" role="group" aria-label="Lists of checked songs"></div>
+          </div>
+          <div id="searchTools" class="search-tools" role="group" aria-label="Filter the songs" hidden>
+            <label class="only-checked"><input id="onlyChecked" type="checkbox"> ✓ Checked only</label>
+            <label class="sr-only" for="genre">Genre</label>
+            <select id="genre" class="text"><option value="">All genres</option></select>
+            <label class="sr-only" for="sortBy">Sort by</label>
+            <select id="sortBy" class="text">
+              <option value="popular">Most popular</option>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="title">A to Z</option>
+            </select>
+          </div>
           <!-- One line: the credits pill (only while the teacher has them on, protocol.js CREDITS) and my songs waiting -->
           <div class="status-row">
             <p id="credits" class="credits" hidden><span class="credits-pill"><span aria-hidden="true">🎟</span> <b id="creditsN">0 credits</b></span>

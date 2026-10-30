@@ -171,7 +171,7 @@
             <a id="adminLink" class="linkbtn" href="/admin/" hidden>Admin</a></p>
           <!-- Free teachers: what is left today and when it resets (GET /api/teacher/usage) -->
           <p id="usageNote" class="note usage-note" hidden></p>
-          <label class="field">Class code <small>Goes on the board. Keep the suggestion or type your own.</small>
+          <label class="field">Class code <small>Goes on the board. Keep the suggestion or type your own: a word, a phrase, anything. Capitals and spaces do not matter.</small>
             <span class="code-row">
               <input id="openCode" class="text" autocomplete="off" spellcheck="false" required>
               <button id="newCode" type="button" title="Suggest another class code">🎲 New suggestion</button>
@@ -798,6 +798,19 @@
       <input id="tq" class="text" type="search" autocomplete="off" spellcheck="false" placeholder="Song or artist" aria-describedby="tqMsg">
       <button type="submit" class="primary">Search</button>
     </form>
+    <!-- Search filters (protocol.js SONGBOOK, shared/songbook.js), the same as the student page's -->
+    <div id="tTools" class="t-tools" role="group" aria-label="Filter the songs" hidden>
+      <label class="check"><input id="tOnlyChecked" type="checkbox"> ✓ Checked only</label>
+      <label class="sr-only" for="tGenre">Genre</label>
+      <select id="tGenre" class="text"><option value="">All genres</option></select>
+      <label class="sr-only" for="tSort">Sort by</label>
+      <select id="tSort" class="text">
+        <option value="popular">Most popular</option>
+        <option value="newest">Newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="title">A to Z</option>
+      </select>
+    </div>
     <p id="tqMsg" class="note" role="status"></p>
     <ul id="tResults" class="fav-list t-results"></ul>
     <form method="dialog">

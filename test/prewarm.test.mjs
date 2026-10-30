@@ -54,3 +54,28 @@ test('prewarm: a few songs a run, verdicts cached; known songs cost nothing; dai
   assert.equal(last.used, PREWARM_AI_PER_DAY);
   assert.equal(last.asked, 0, 'past the cap: nothing more');
 });
+
+test('prewarm: the songbook after the day\'s charts, one pass per list, a new list starts again', async () => {
+  const env = {
+    CLASS_KV: fakeKv(),
+    AI: { run: async () => ({ response: '{"instrumental":false,"verdict":"OK","category":null,"evidence":""}' }) },
+  };
+  const now = Date.UTC(2026, 9, 29, 12);
+  const lyricsFetch = async () => new Response('[]', { headers: { 'content-type': 'application/json' } });
+  const songbook = Array.from({ length: PREWARM_PER_RUN + 2 }, (_, i) => ({ id: `it:${5000 + i}`, title: `Book ${i}`, artist: 'Shelf', album: '', durationMs: 1 }));
+  // Charts first: 2 chart songs, then the rest of the run goes to the songbook.
+  const one = await prewarm(env, { now, fetchImpl: feed(2), lyricsFetch, songbook, songbookMade: '2026-10-29' });
+  assert.equal(one.checked, PREWARM_PER_RUN);
+  assert.equal(one.songbook, PREWARM_PER_RUN - 2);
+  assert.ok(env.CLASS_KV.map.has(verdictKey('it:5000', PROMPT_VERSION)));
+  const two = await prewarm(env, { now, fetchImpl: feed(2), lyricsFetch, songbook, songbookMade: '2026-10-29' });
+  assert.equal(two.songbook, songbook.length, 'picks up where it stopped');
+  // Done: nothing more for this list, even on a new day.
+  env.CLASS_KV.map.delete('prewarm:v1:state:2026-10-29');
+  const three = await prewarm(env, { now, fetchImpl: feed(2), lyricsFetch, songbook, songbookMade: '2026-10-29' });
+  assert.deepEqual([three.songbook, three.checked], [songbook.length, 2]);
+  // A new list (npm run songbook again): from the top; known songs cost no AI call.
+  env.CLASS_KV.map.delete('prewarm:v1:state:2026-10-29');
+  const four = await prewarm(env, { now, fetchImpl: feed(2), lyricsFetch, songbook, songbookMade: '2026-11-05' });
+  assert.deepEqual([four.songbook, four.asked], [PREWARM_PER_RUN - 2, 0]);
+});

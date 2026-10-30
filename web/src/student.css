@@ -114,6 +114,16 @@
 
 /* Search */
 .search-row { display: flex; gap: 8px; }
+/* 📚 Songbook lists + search filters (protocol.js SONGBOOK) */
+.shelves .note { margin: 0 0 6px; }
+.shelf-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.shelf-btns button { min-height: 40px; padding: 6px 12px; border-radius: 99px; font-weight: 650; }
+.shelf-btns button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.search-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.search-tools[hidden], .shelves[hidden] { display: none; }
+.search-tools select.text { width: auto; flex: 1 1 9em; min-width: 0; max-width: 14em; min-height: 40px; padding-block: 6px; }
+.only-checked { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-weight: 650; white-space: nowrap; }
+.only-checked input { width: 18px; height: 18px; accent-color: var(--accent); }
 .results, .queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .result, .qitem {
   display: grid; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;
@@ -177,6 +187,17 @@
   .vote { min-width: 60px; min-height: 48px; }
   .jump { min-width: 6.4em; min-height: 48px; padding-inline: 8px; }
   .suggest { min-height: 48px; }
+}
+
+/* Phone search results: the title gets the whole row beside the button and up to two lines, and the
+   ✓ Checked / Clean edit tags go under it (in a third column they left "Hotlin…"). */
+@media (max-width: 560px) {
+  .result { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "song btn" "tags btn"; row-gap: 4px; }
+  .result > .song { grid-area: song; }
+  .result > .tag, .result > .tags { grid-area: tags; justify-self: start; justify-content: flex-start; margin-left: 64px; }
+  .result > .suggest, .result > .refused { grid-area: btn; }
+  .result .song-title, .qitem .song-title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+  .suggest.primary { min-width: 84px; }
 }
 
 /* A song the student was told no to: the label and a "Why?" that says the reason again. */

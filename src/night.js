@@ -58,7 +58,7 @@ export function nightSong(song) {
  * allow, not a song LRCLIB has no lyrics for.
  */
 export function nightWorthy(song, ai) {
-  if (!nightSong(song) || !ai || ai.lyrics || ai.source === 'teacher' || ai.source === 'policy') return false;
+  if (!nightSong(song) || !ai || ai.lyrics || ai.source === 'teacher' || ai.source === 'house' || ai.source === 'policy') return false;
   return ai.verdict === 'ok' || ai.verdict === 'unknown';
 }
 

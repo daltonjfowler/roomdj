@@ -15,7 +15,7 @@ Claude account).
   - `protocol.js`: **the contract** (HTTP routes, WebSocket messages, State shape, settings,
     class code numbers). Change it first, then both sides.
   - `code.js`: class codes for the day (copied from uploadmymodel's class phrase): suggested codes
-    (3 words + a number, over 2^28), `normalizeCode`, `validateCode` (a teacher's own: anything with
+    (5 random characters, no vowels or look-alikes, over 2^24, shown in capitals; `compactCode`: spacing never matters), `normalizeCode`, `validateCode` (a teacher's own: anything with
     a letter or number, Dalton's choice), `untilFor` (end of today in the host's time zone, or one class period).
   - `queue.js`: queue + voting rules (pure functions on plain objects), and credits (balances,
     charge, refund, jump order, teacher grants; protocol.js CREDITS).
@@ -165,6 +165,10 @@ Claude account).
 - `src/night.js`: the night shift (invariant 38): KV `lyricsq:v1:*` lists of songs to settle,
   `nightShift` from the cron 10 pm-6 am Eastern (NIGHT_HOURS_ET), NIGHT_AI_PER_DAY.
 - `src/search.js`: the search students see (no explicit, blocklist, ban list; clean swaps; no AI).
+- `src/popular.js`: 🔥 Popular on RoomDJ (invariant 40d): `noteAsks` at room close, `refreshPopular` daily.
+- `src/songbook.js` + `src/songbook-data.js` (made by `npm run songbook` from
+  `scripts/songbook-seeds.mjs`, never edited by hand): the songbook's shelves (invariant 40).
+  `shared/songbook.js`: the search filters (`viewResults`, `resultGenres`, `cleanView`).
 - `src/youtube.js`: YouTube Data API search for the host's YouTube player (secret
   `YOUTUBE_API_KEY`; KV `yt:<trackId>` for 30 days, `yt:quota` while the day's quota is used up).
   iTunes songs only.
@@ -253,7 +257,12 @@ Claude account).
    Two teachers with keys (TEACHER_KEY, TEACHER_KEY_2) can take each other's room if they know
    its code: same trust, accepted.
 7. Class codes: stored only as hashes (KV and the room), compared in constant time IN THE ROOM
-   (KV is only the signpost and can be a minute stale). Suggested codes stay at 2^28 or more; a
+   (KV is only the signpost and can be a minute stale). The hash ignores spaces and dashes (codes.js
+   codeHash over compactCode, 2026-10-29: long phrases failed when a class spaced them differently;
+   legacyCodeHash is still tried at join and open for rooms from before, delete after 2026-11-01).
+   Suggested codes: 5 random characters from shared/code.js CODE_ALPHABET (no vowels: never a word; no
+   0/O/1/I/L), 2^24 or more (Dalton, 2026-10-29: "make the phrase way simpler", picked "5-char random"
+   over words; about 1 in 200 for one address guessing all day); a
    teacher's own may be anything with a letter or number (Dalton's choice, 2026-10-05). A code another open room has is refused: KV codeInUse first, then the code's CodeLock Durable Object (src/codelock.js, src/codes.js lockDecision/claimCode/releaseCode; 2026-10-23), which only one room can hold, so KV lag between data centres cannot let two rooms share a code. Open, change code, change times and close all go through it; test: npm run test:coderace.
 8. Wrong codes: `JOIN_RATE_IP` (60 a minute) counts every try BEFORE the compare, then the
    per-device lockout (5 wrong: 5 s, doubling to 300 s; a locked device is refused without a
@@ -640,6 +649,38 @@ Claude account).
    page (#myChecks) says "RoomDJ is double-checking the words. Next try in 40 seconds." or "Waiting for
    your teacher to check it (number 2 in line)." plus how long it has waited (server clock). Other
    students' waiting songs are never sent, only counted.
+40. Songbook, hand-checked songs, search filters (Dalton, 2026-10-29: "extrapolate and try to capture
+   likely asks", "Songs like hotline bling are ok and should be allowed as well as gods plan", "only
+   include pre-screened songs ... sort by genre or popularity"; protocol.js SONGBOOK).
+   (a) Songbook: ~700 likely asks by shelf (protocol.js SHELVES), most asked first, in
+   scripts/songbook-seeds.mjs. `npm run songbook` finds each on iTunes (clean edit or nothing to bleep;
+   no live/remix/karaoke/sped-up; explicit-only songs are left out and listed) into src/songbook-data.js.
+   The seeds are NOT approvals: src/prewarm.js checks them with the normal aiThemeCheck + lyrics after
+   the day's charts, same budget, one pass per list (KV prewarm:v1:songbook { made, at }, no expiry).
+   GET /api/rooms/:room/songbook?shelf= (Room.songbook): the room's quickCheck, then withReady, and ONLY
+   ✓ Checked ('ready') songs are sent. The student page shows the shelves while the search box is empty.
+   (b) Hand-checked songs (shared/filter.js HOUSE_OK, houseOk): Dalton's own per-song calls for every
+   teacher, like a teacher's Allow (source 'house', no AI or lyrics call). Only the clean edit (the
+   explicit flag still refuses), bans, blocked words, 🙉 and Instrumentals only still count. Add ONLY
+   songs Dalton names, one by one, never a whole artist or category (invariant 32 stands).
+   (c) Search filters (student + teacher, page only, shared/songbook.js viewResults): ✓ Checked only,
+   a genre from the results' own genres, sort Most popular (the server's order: ✓ Checked first, then
+   the catalog's or the shelf's rank) / Newest / Oldest / A to Z (year 0 last). The student page keeps
+   ✓ Checked only + sort in localStorage cq.searchView. Display only: a suggestion is checked for real.
+41. Spotify never gives up for the day on one refusal (Dalton, 2026-10-29: "says connect a premium Spotify
+   account and refuse to play" until a full sign-out; "plays for like 6 songs then die"; web/src/players/spotify.js).
+   A 403 means "not Premium" ONLY with Spotify's reason PREMIUM_REQUIRED or GET /me product free/open
+   (notPremium; no answer = not counted); account_error is checked the same way. Any other 403, or a
+   speaker Spotify forgot (404 after the retries): putPlay drops the speaker, makes a new one, moves
+   playback to it (PUT /me/player) and tries ONCE more; still refused → notReady(TRY_AGAIN) (Start music
+   tries again from scratch). connect() always disconnects the old speaker first. test: npm run test:spotify ("a passing 403").
+   (d) 🔥 Popular on RoomDJ (Dalton, 2026-10-29: "most popular requests amongst ALL teachers", "when you
+   click search it shows", "base on student favorites", NOT the teachers' ⭐ lists; src/popular.js): at
+   close a room adds its STUDENTS' requests that played to the end (never teacher picks) to the
+   teacher's KV `asks` (teacherKvKey; songs only, ASKS_MAX, fading like favorites). Once a day the cron
+   merges every teacher's `asks` into KV popular:v1, a song only when POPULAR_MIN_TEACHERS (2) teachers'
+   students asked for it (never one class's taste). Shelf id 'popular' (first button); the student page
+   opens it when a student taps an empty search box. Same quickCheck + ✓ Checked only rule as a shelf.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

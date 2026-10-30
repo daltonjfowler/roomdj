@@ -355,6 +355,10 @@ button.more { padding-inline: 8px; min-width: 32px; }
 .t-pane form { padding: 0; }
 .t-search { display: flex !important; gap: 8px; }
 .t-search input { flex: 1 1 auto; min-width: 0; }
+.t-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.t-tools[hidden] { display: none; }
+.t-tools select.text { width: auto; flex: 1 1 9em; min-width: 0; max-width: 14em; }
+.t-tools .check { white-space: nowrap; font-weight: 600; }
 .t-results { max-height: 50vh; }
 .t-results .item-tools, .fav-item .item-tools { flex-wrap: wrap; justify-content: flex-end; }
 .item-tools button.status { background: transparent; border-color: var(--line); color: var(--muted); font-weight: 600; }

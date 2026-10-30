@@ -122,6 +122,9 @@
 //        (Dormant: with SPOTIFY_CLIENT_SECRET set, a Spotify room would search Spotify's
 //        catalog, catalog 'spotify'. It stays unset: Spotify's Developer Policy III.8 and III.14.)
 //        Admitted devices only (403 join otherwise).
+//   GET  /api/rooms/:room/songbook?shelf=<id>    header x-device (shelf 'popular': 🔥 students' requests everywhere)
+//        → 200 { results: SearchResult[], shelf } SONGBOOK below: the shelf's ✓ Checked songs only
+//        (check 'ready'), most asked first; 400 shelf. The same guards and rate limits as search.
 //   GET  /api/rooms/:room/ws?role=student&device=<id>&nick=<name>   → WebSocket (admitted devices)
 //   GET  /api/rooms/:room/ws?role=host&token=<hostToken>            → WebSocket
 //   GET  /api/rooms/:room/ws?role=board          → WebSocket; the board token goes in the first
@@ -240,6 +243,35 @@ export const CLEANUP_PAST_SLACK_MS = 2 * 60_000;
 export const ADMITTED_MAX = 400;
 export const NICK_MAX = 20;
 export const QUERY_MAX = 80;
+
+// SONGBOOK (Dalton, 2026-10-29: "capture likely asks", "only include pre-screened songs", "sort by
+// genre or popularity"; CLAUDE.md invariant 40): songs classes are likely to ask for, by shelf
+// (scripts/songbook-seeds.mjs → src/songbook-data.js), pre-checked by the chart cron with the normal
+// song check. A student (empty search box) or a search's filters browse them; only songs the check
+// settled as OK for this room (SearchResult check 'ready') are listed. Search filters (shared/songbook.js
+// viewResults, on the page only): ✓ Checked only, a genre from the results, and a sort.
+// 🔥 'popular' is not a songbook shelf: what STUDENTS asked for (their requests that played, + 👍;
+// never teacher picks) in every teacher's rooms, merged once a day (src/popular.js), a song only when
+// POPULAR_MIN_TEACHERS teachers' students asked for it. The student page opens it when the student
+// taps an empty search box.
+export const SHELVES = Object.freeze([
+  { id: 'popular', label: '🔥 Popular on RoomDJ' },
+  { id: 'pop', label: '🎤 Pop' },
+  { id: 'hiphop', label: '🎧 Hip-hop & R&B' },
+  { id: 'kpop', label: '💜 K-pop' },
+  { id: 'movies', label: '🎬 Movies & musicals' },
+  { id: 'throwbacks', label: '📻 Throwbacks' },
+  { id: 'rock', label: '🎸 Rock' },
+  { id: 'country', label: '🤠 Country' },
+  { id: 'latin', label: '💃 Latin' },
+  { id: 'dance', label: '🪩 Dance' },
+  { id: 'focus', label: '📚 Focus (no words)' },
+]);
+/** Most songs one shelf sends (its top ranked ones). */
+export const SHELF_MAX = 80;
+export const POPULAR_MAX = 60;
+export const POPULAR_MIN_TEACHERS = 2;
+export const RESULT_SORTS = Object.freeze(['popular', 'newest', 'oldest', 'title']);
 export const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
 /**
  * The teacher's own pseudo device (TEACHER PICKS below): the host page's suggestions and votes use

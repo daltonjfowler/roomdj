@@ -251,6 +251,10 @@ try {
       window.onSpotifyWebPlaybackSDKReady?.();`,
     }));
     const favs = { made: [], added: [] };
+    // A passing 403 (Dalton, 2026-10-29: "says connect a premium Spotify account and refuse to play"):
+    // the next N play requests are refused with Spotify's non-Premium reason; transfers are recorded.
+    const refuse = { left: 0, seen: 0 };
+    const transfers = [];
     await p.page.route('https://api.spotify.com/**', async (r) => {
       const req = r.request();
       if (req.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: CORS });
@@ -263,12 +267,21 @@ try {
         const explicit = explicitTitle && title.toLowerCase().includes(explicitTitle.toLowerCase());
         return r.fulfill({ headers: CORS, json: { tracks: { items: [{ uri: `spotify:track:${id}`, name: title, artists: [{ name: artist }], duration_ms: 0, explicit }] } } });
       }
+      if (url.pathname === '/v1/me/player/play' && refuse.left > 0) {
+        refuse.left--;
+        refuse.seen++;
+        return r.fulfill({ status: 403, headers: CORS, json: { error: { status: 403, message: 'Player command failed: Restriction violated', reason: 'UNKNOWN' } } });
+      }
+      if (url.pathname === '/v1/me/player' && req.method() === 'PUT') {
+        transfers.push(JSON.parse(req.postData() || '{}'));
+        return r.fulfill({ status: 204, headers: CORS });
+      }
       if (url.pathname === '/v1/me/player/play') {
         plays.push({ device: url.searchParams.get('device_id'), body: JSON.parse(req.postData() || '{}') });
         return r.fulfill({ status: 204, headers: CORS });
       }
       // ⭐ RoomDJ Favs (players/spotify.js saveToFavs): who am I, make the playlist, add to it.
-      if (url.pathname === '/v1/me' && req.method() === 'GET') return r.fulfill({ headers: CORS, json: { id: 'teacher-one' } });
+      if (url.pathname === '/v1/me' && req.method() === 'GET') return r.fulfill({ headers: CORS, json: { id: 'teacher-one', product: 'premium' } });
       if (url.pathname === '/v1/me/playlists' && req.method() === 'POST') {
         favs.made.push(JSON.parse(req.postData() || '{}'));
         return r.fulfill({ status: 201, headers: CORS, json: { id: 'PLFAVS' } });
@@ -367,10 +380,13 @@ try {
 
     // ---- 6. Never end early ----
     const nowId = () => host.msgs.findLast((m) => m.t === 'state')?.state.nowPlaying?.song?.id;
+    refuse.left = 1; // Spotify refuses the third song once, for a reason that is not Premium
     s1.send(JSON.stringify({ t: 'suggest', song: songC.id }));
     await until(() => s1.msgs.filter((m) => m.t === 'suggested').length >= 3, { timeout: 20_000 });
     const playing = await until(() => nowId() === songC.id && plays.length === 3, { timeout: 15_000 });
     check('third song (relink test) starts', Boolean(playing), JSON.stringify({ now: nowId(), plays: plays.length }));
+    check('a passing 403: a new speaker, playback moved to it, the song plays', refuse.seen === 1 && transfers.length === 1 && transfers[0].device_ids?.[0] === 'DEV1', JSON.stringify({ refuse, transfers }));
+    check('a passing 403: never "needs Premium"', !/Premium/.test(await toasts(p)) && !/Premium/.test(await p.page.locator('#playerWarn').textContent().catch(() => '')), await toasts(p));
     const uriC = plays[2]?.body.uris?.[0];
     const stC = (over, tw = {}) => ({ paused: false, position: 1000, duration: 200_000,
       track_window: { current_track: { uri: uriC, name: songC.title }, previous_tracks: [], ...tw }, ...over });

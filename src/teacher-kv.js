@@ -1,7 +1,7 @@
 // Teacher-level KV keys, per teacher profile (protocol.js TEACHER PROFILES). Every teacher-level
 // record goes through teacherKvKey: settings (src/worker.js), banned (src/search.js, src/room.js),
-// approved:* (shared/filter.js through the room's scope), favorites (src/room.js), openRooms (the
-// board's sign-in, src/open-rooms.js).
+// approved:* (shared/filter.js through the room's scope), favorites (src/room.js), asks (🔥 students'
+// requests, src/popular.js), openRooms (the board's sign-in, src/open-rooms.js).
 // The legacy profile (`legacy: true`, whatever its id: the data from before profiles) and a room saved before
 // profiles (profile null) use the plain name, so nothing had to be copied or rewritten.
 // Every other profile: `p:<profileId>:<name>`.

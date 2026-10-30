@@ -9,14 +9,24 @@
 // claimCode/releaseCode below): one Durable Object per code hash, one holder at a time. codeInUse
 // stays as the cheap first check (and covers rooms opened before the lock existed).
 
-import { normalizeCode } from '../shared/code.js';
+import { compactCode, normalizeCode } from '../shared/code.js';
 
 const encoder = new TextEncoder();
+const hex = async (text) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(text)))]
+  .map((b) => b.toString(16).padStart(2, '0')).join('');
 
-/** Hex SHA-256 of the normalized code. */
-export async function codeHash(code) {
-  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(`classqueue code:${normalizeCode(code)}`)));
-  return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+/** Hex SHA-256 of the code with no spaces or dashes (shared/code.js compactCode): spacing never matters. */
+export function codeHash(code) {
+  return hex(`classqueue code v2:${compactCode(code)}`);
+}
+
+/**
+ * The hash rooms opened before 2026-10-29 keep (dashes between words, so spacing mattered). Join and
+ * "code in use" still try it while such a room can be open (a room lives at most OPEN_MAX_MS, 24 h).
+ * Safe to delete with its callers after 2026-11-01.
+ */
+export function legacyCodeHash(code) {
+  return hex(`classqueue code:${normalizeCode(code)}`);
 }
 
 const kvKey = (hash) => `room:${hash}`;

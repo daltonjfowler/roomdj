@@ -26,7 +26,7 @@ import { normalizeCode, validateCode, validateUntil } from '../shared/code.js';
 import { shiftTimes, validateTimes } from '../shared/classtime.js';
 import { sha256Hex } from './room.js';
 import { BOARD_CSP, BOARD_PERMISSIONS, COMMON_HEADERS, CONTENT_SECURITY_POLICY, PAGE_CSP } from './headers.js';
-import { claimCode, codeHash, codeInUse, putCodeRoute, readCodeRoute, releaseCode } from './codes.js';
+import { claimCode, codeHash, codeInUse, legacyCodeHash, putCodeRoute, readCodeRoute, releaseCode } from './codes.js';
 import { addressOf, lockout } from './lockout.js';
 import { readBanned } from './search.js';
 import { quickCheck } from '../shared/filter.js';
@@ -42,6 +42,7 @@ import { handleAuth, teacherSession } from './auth.js';
 import { FREE_CAPS, freeUsage, spendFree } from './free.js';
 import { prewarm } from './prewarm.js';
 import { nightHours, nightShift } from './night.js';
+import { refreshPopular } from './popular.js';
 import { handleAdmin } from './admin.js';
 import { cleanPath, robotsTag } from './seo.js';
 import { readOpenRooms, removeOpenRoom, updateOpenRooms } from './open-rooms.js';
@@ -231,7 +232,7 @@ async function createRoom(request, env) {
   // the period's own running favorite (src/room.js periodFavorite).
   const period = typeof read.body?.period === 'string' && (settings.bellSchedule ?? []).some((b) => b.name === read.body.period) ? read.body.period : null;
   const hash = await codeHash(v.code);
-  if (await codeInUse(env, hash)) {
+  if ((await codeInUse(env, hash)) || (await codeInUse(env, await legacyCodeHash(v.code)))) {
     return json(409, { error: 'code_taken', message: 'Another open room is using that class code. Pick a different one.' });
   }
   // Every teacher runs one room at a time (Dalton, 2026-10-16: "It doesn't make any sense to ever have
@@ -343,8 +344,13 @@ async function joinRoom(request, env) {
   const code = normalizeCode(read.body?.code);
   let admitted = null;
   if (code) {
-    const hash = await codeHash(code);
-    const route = await readCodeRoute(env, hash);
+    // The code with any spacing; a room opened before spacing stopped mattering has the legacy hash.
+    let hash = await codeHash(code);
+    let route = await readCodeRoute(env, hash);
+    if (!route) {
+      hash = await legacyCodeHash(code);
+      route = await readCodeRoute(env, hash);
+    }
     if (route && ROOM_ID_PATTERN.test(route.id)) {
       const res = await roomStub(env, route.id).fetch('https://room/admit', {
         method: 'POST',
@@ -525,8 +531,8 @@ async function handleRoom(request, env, url, match) {
   if (request.method !== 'GET') return json(405, { error: 'method', message: 'Use GET.' });
   const stub = roomStub(env, id);
   if (action === '') return stub.fetch('https://room/info');
-  if (action === '/search') {
-    return stub.fetch(`https://room/search${url.search}`, { headers: { 'x-device': request.headers.get('x-device') ?? '' } });
+  if (action === '/search' || action === '/songbook') {
+    return stub.fetch(`https://room${action}${url.search}`, { headers: { 'x-device': request.headers.get('x-device') ?? '' } });
   }
   if (action === '/ws') return stub.fetch(new Request(`https://room/ws${url.search}`, request));
   if (action === '/youtube') {
@@ -603,7 +609,7 @@ async function handleApi(request, env, url) {
     if (request.method !== 'GET') return json(405, { error: 'method', message: 'Use GET.' });
     return appleToken(request, env, url);
   }
-  const room =url.pathname.match(/^\/api\/rooms\/([^/]+)(\/search|\/ws|\/youtube)?$/);
+  const room =url.pathname.match(/^\/api\/rooms\/([^/]+)(\/search|\/songbook|\/ws|\/youtube)?$/);
   if (room) return handleRoom(request, env, url, room);
   return json(404, { error: 'not_found', message: 'No such API.' });
 }
@@ -629,11 +635,12 @@ export default {
     return page;
   },
   // The cron (wrangler.jsonc triggers): at night, the songs classes could not settle (src/night.js);
-  // then chart songs before classes suggest them (src/prewarm.js).
+  // then chart songs before classes suggest them (src/prewarm.js); once a day 🔥 Popular (src/popular.js).
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
       if (nightHours(Date.now())) await nightShift(env).catch((e) => console.error(JSON.stringify({ message: 'night shift failed', error: String(e) })));
       await prewarm(env).catch((e) => console.error(JSON.stringify({ message: 'prewarm failed', error: String(e) })));
+      await refreshPopular(env).catch((e) => console.error(JSON.stringify({ message: 'popular failed', error: String(e) })));
     })());
   },
 };

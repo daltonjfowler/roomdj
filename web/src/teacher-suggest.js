@@ -10,6 +10,7 @@ import { QUERY_MAX, whyText } from '../../shared/protocol.js';
 import { tooLong } from '../../shared/classtime.js';
 import { mainArtist, mainArtistName } from '../../shared/filter.js';
 import { restingEvidence, restingUntilLabel, songKey } from '../../shared/repeats.js';
+import { cleanView, resultGenres, viewResults } from '../../shared/songbook.js';
 
 const SEARCH_DELAY_MS = 350;
 /** A refusal that will not change today: the result shows this instead of a Suggest button. */
@@ -46,6 +47,7 @@ export function initTeacherSuggest({ send, getState }) {
   let playedKeys = new Set(); // 'repeats': song keys played this period (any version)
   let resting = new Map(); // 'repeats': song key → [at, until]
   let renderedKey = '';
+  let view = cleanView({ checked: false, sort: 'popular' }); // the search filters (shared/songbook.js)
 
   const state = () => getState();
   const restingOf = (song) => {
@@ -102,13 +104,27 @@ export function initTeacherSuggest({ send, getState }) {
     return why ? `${button}<button type="button" data-act="twhy" aria-label="${esc(`Why: ${song.title}`)}">Why?</button>` : button;
   }
 
+  /** The filters: shown while there are results; the genre list is the results' own. */
+  function showTools() {
+    $('#tTools').hidden = !results.length;
+    const genres = resultGenres(results);
+    const sel = $('#tGenre');
+    if (sel.dataset.list !== genres.join('|')) {
+      sel.innerHTML = `<option value="">All genres</option>${genres.map((g) => `<option>${esc(g)}</option>`).join('')}`;
+      sel.dataset.list = genres.join('|');
+    }
+    sel.value = genres.includes(view.genre) ? view.genre : '';
+  }
+
   function render() {
     if (!$('#suggestDlg').open) return;
-    const key = JSON.stringify(results.map((song) => [song.id, ...stateOf(song)]));
+    const shown = viewResults(results, view);
+    const key = JSON.stringify([view, shown.map((song) => [song.id, ...stateOf(song)])]);
     if (key === renderedKey) return;
     renderedKey = key;
+    showTools();
     keepFocus(() => {
-      $('#tResults').innerHTML = results.map((song) => `<li class="fav-item" data-id="${esc(song.id)}">
+      $('#tResults').innerHTML = shown.map((song) => `<li class="fav-item" data-id="${esc(song.id)}">
         ${artHtml(song, 100, { blur: true })}
         <span class="song-text"><span class="song-title">${esc(song.title)}</span>
           <span class="song-artist">${spotifyMark(song)}${esc(song.artist)}</span>
@@ -166,6 +182,12 @@ export function initTeacherSuggest({ send, getState }) {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(search, SEARCH_DELAY_MS);
   });
+  for (const sel of ['#tOnlyChecked', '#tGenre', '#tSort']) {
+    $(sel).addEventListener('change', () => {
+      view = cleanView({ checked: $('#tOnlyChecked').checked, genre: $('#tGenre').value, sort: $('#tSort').value });
+      render();
+    });
+  }
   $('#tResults').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-act]');
     if (!btn || btn.disabled) return;

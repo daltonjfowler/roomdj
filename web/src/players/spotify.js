@@ -28,6 +28,9 @@ const POLL_MS = 1000;
 const FAVS_NAME = 'RoomDJ Favs';
 const FAVS_SCOPE = 'Spotify needs your OK to save to a playlist. Sign out, sign in with Spotify again, then try ⭐ again.';
 const NEED_LOGIN = 'Connect Spotify first (the button under the player), or pick Song previews.';
+// Spotify refused for a reason that passes (another device took over, a speaker it forgot): the tab
+// tries again from a new speaker on the next click, never "not Premium" for the rest of the day.
+const TRY_AGAIN = 'Spotify stopped answering this computer. Click Start music to try again.';
 const NEED_PREMIUM = 'Spotify needs a Premium account to play songs here. Log in with a Premium account, or pick Song previews.';
 const MOVED = 'Spotify moved to another device. Click Start music to bring it back here.';
 const LOST_CHECK_MS = 1500;
@@ -150,6 +153,65 @@ export function createSpotifyPlayer({ auth, notify = () => {} } = {}) {
     return r;
   }
 
+  /**
+   * Dalton, 2026-10-29: "sometimes it says connect a premium Spotify account and refuse to play" until a
+   * full sign-out, often after moving between computers. Every 403 used to mean "not Premium" for the
+   * rest of the page's life, but Spotify also answers 403 for passing reasons (another device took the
+   * music, "Restriction violated"). Now only its PREMIUM_REQUIRED reason, or GET /me saying the
+   * account is not Premium, counts. Unsure (offline): not counted.
+   */
+  async function notPremium(r = null) {
+    if (r) {
+      const reason = (await r.clone().json().catch(() => ({})))?.error?.reason;
+      if (reason === 'PREMIUM_REQUIRED') return true;
+    }
+    try {
+      const me = await api('/me');
+      const product = me.ok ? (await me.json().catch(() => ({})))?.product : null;
+      return product === 'free' || product === 'open'; // no answer: not counted
+    } catch {
+      return false;
+    }
+  }
+
+  /** The speaker is gone or Spotify refused it: drop it, make a new one, move playback to it. → its id */
+  async function rebuild() {
+    note({ msg: 'new speaker (the old one stopped working)' });
+    const old = sdk;
+    ready = null;
+    sdk = null;
+    try { old?.disconnect(); } catch { /* gone already */ }
+    const id = await connect();
+    await api('/me/player', { method: 'PUT', body: { device_ids: [id], play: false } }).catch(() => {});
+    return id;
+  }
+
+  /**
+   * PUT /me/player/play on our speaker. A brand-new speaker the Web API does not know yet (404) is
+   * asked again; then, and for a 403 that is not about Premium, ONE new speaker. → the Response (ok),
+   * or throws: notReady(NEED_PREMIUM) / notReady(TRY_AGAIN) / Error for anything else.
+   */
+  async function putPlay(id, body) {
+    const path = (d) => `/me/player/play?device_id=${encodeURIComponent(d)}`;
+    let r = await api(path(id), { method: 'PUT', body });
+    for (let i = 0; i < 2 && r.status === 404; i++) {
+      await wait(1000);
+      r = await api(path(id), { method: 'PUT', body });
+    }
+    if (r.status === 403 && (await notPremium(r))) {
+      unusable = NEED_PREMIUM;
+      throw notReady(NEED_PREMIUM);
+    }
+    if (r.status === 404 || r.status === 403) {
+      note({ msg: `play answered ${r.status}: trying a new speaker` });
+      const fresh = await rebuild();
+      r = await api(path(fresh), { method: 'PUT', body });
+      if (r.status === 404) { await wait(1000); r = await api(path(fresh), { method: 'PUT', body }); }
+      if (r.status === 404 || r.status === 403) throw notReady(TRY_AGAIN);
+    }
+    return r;
+  }
+
   /** True when the playlist still exists and this account can read it (a deleted one answers 404). */
   async function stillMine(id) {
     const r = await api(`/playlists/${encodeURIComponent(id)}?fields=id`);
@@ -176,6 +238,11 @@ export function createSpotifyPlayer({ auth, notify = () => {} } = {}) {
 
   function connect() {
     if (ready) return ready;
+    // A speaker Spotify dropped ('not_ready') is let go before a new one is made: never two "RoomDJ"s.
+    if (sdk) {
+      try { sdk.disconnect(); } catch { /* gone already */ }
+      sdk = null;
+    }
     ready = (async () => {
       await loadSdk();
       if (!(await auth?.token())) throw notReady(NEED_LOGIN);
@@ -197,15 +264,25 @@ export function createSpotifyPlayer({ auth, notify = () => {} } = {}) {
           notify(unusable, 'bad');
           giveUp(unusable);
         });
-        player.addListener('authentication_error', () => {
-          const message = 'The Spotify login ran out. Click Connect Spotify again.';
-          notify(message, 'bad');
+        player.addListener('authentication_error', async () => {
+          // Often just an old token: a fresh one and a new speaker next time fixes it.
+          const fresh = await auth.refreshNow().catch(() => null);
+          if (sdk === player) ready = null;
+          const message = fresh ? TRY_AGAIN : 'The Spotify login ran out. Click Connect Spotify again.';
+          note({ msg: `authentication_error${fresh ? ' (new token: new speaker next time)' : ''}` });
+          if (!fresh) notify(message, 'bad');
           giveUp(message);
         });
-        player.addListener('account_error', () => {
-          unusable = NEED_PREMIUM;
-          notify(NEED_PREMIUM, 'bad');
-          giveUp(NEED_PREMIUM);
+        player.addListener('account_error', async () => {
+          // The SDK says this also when another computer's speaker took the account over: check first.
+          if (await notPremium()) {
+            unusable = NEED_PREMIUM;
+            notify(NEED_PREMIUM, 'bad');
+            return giveUp(NEED_PREMIUM);
+          }
+          note({ msg: 'account_error, but the account is Premium: new speaker next time' });
+          if (sdk === player) ready = null;
+          giveUp(TRY_AGAIN);
         });
         player.addListener('playback_error', (e) => {
           note({ msg: `playback_error ${String(e?.message ?? '').slice(0, 80)}${startedUri ? ' (skipping)' : ''}` });
@@ -290,20 +367,11 @@ export function createSpotifyPlayer({ auth, notify = () => {} } = {}) {
     stopPoll();
   }
 
-  async function start(id, uri, at = 0, tries = 3) {
-    const r = await api(`/me/player/play?device_id=${encodeURIComponent(id)}`, { method: 'PUT', body: { uris: [uri], position_ms: at } });
+  async function start(id, uri, at = 0) {
+    const r = await putPlay(id, { uris: [uri], position_ms: at });
     if (r.ok) {
       if (filler) filler.live = false; // the queue song replaced the background music
       return;
-    }
-    // Just after 'ready' the new device may not be known to the Web API yet.
-    if (r.status === 404 && tries > 1) {
-      await wait(1000);
-      return start(id, uri, at, tries - 1);
-    }
-    if (r.status === 403) {
-      unusable = NEED_PREMIUM;
-      throw notReady(NEED_PREMIUM);
     }
     throw new Error('Spotify would not start this song.');
   }
@@ -423,15 +491,9 @@ export function createSpotifyPlayer({ auth, notify = () => {} } = {}) {
       const at = filler?.uri === contextUri ? filler.at : null;
       filler = { uri: contextUri, live: false, at };
       note({ msg: `background music: ${contextUri.split(':')[1]}${at ? ` at ${Math.round(at.pos / 1000)} s` : ''}` });
-      const path = `/me/player/play?device_id=${encodeURIComponent(id)}`;
-      const put = (from) => api(path, { method: 'PUT', body: { context_uri: contextUri, ...(from ? { offset: { uri: from.uri }, position_ms: from.pos } : {}) } });
+      const put = (from) => putPlay(id, { context_uri: contextUri, ...(from ? { offset: { uri: from.uri }, position_ms: from.pos } : {}) });
       let r = await put(at);
-      if (!r.ok && r.status === 404) { await wait(1000); r = await put(at); } // a brand-new speaker
-      if (!r.ok && at && r.status !== 403) r = await put(null); // that track left the playlist: from the top
-      if (r.status === 403) {
-        unusable = NEED_PREMIUM;
-        throw notReady(NEED_PREMIUM);
-      }
+      if (!r.ok && at) r = await put(null); // that track left the playlist: from the top
       if (!r.ok) throw new Error('Spotify would not play that playlist or album. Check the link.');
       if (filler?.uri === contextUri) filler.live = true;
     },

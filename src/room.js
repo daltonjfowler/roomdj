@@ -61,7 +61,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { couponsOn, redeemCoupon } from './coupons.js';
 import { COUPON_MESSAGES } from '../shared/coupon.js';
-import { ADMITTED_MAX, DEVICE_ID_PATTERN, FILTER_REASONS, NICK_MAX, QUERY_MAX } from '../shared/protocol.js';
+import { ADMITTED_MAX, DEVICE_ID_PATTERN, FILTER_REASONS, NICK_MAX, QUERY_MAX, SHELF_MAX } from '../shared/protocol.js';
 import { TEACHER_DEVICE, TEACHER_SEARCH_RATE, TEACHER_SUGGEST_RATE } from '../shared/protocol.js';
 import {
   addSuggestion, addToReview, allowBlocked, lockNext, allowReview, applyBlocklist, kickDevice, migrateRoomState, newRoomState,
@@ -76,7 +76,7 @@ import { ART_WAIT_MS, artFields, artJson, artKey, validArtKey } from '../shared/
 import { cachedArtVerdict, checkCover, putTeacherArtOk, teacherArtOk } from './art.js';
 import { backToWorkMessage, backToWorkOn, clearRests, letBackIn, restRefusal, startRest } from '../shared/backtowork.js';
 import { SPOTIFY, catalogOf, legacySong, songId } from '../shared/catalog.js';
-import { approveSong, banKey, checkFromKv, filterSong } from '../shared/filter.js';
+import { approveSong, banKey, checkFromKv, filterSong, quickCheck } from '../shared/filter.js';
 import {
   BLOCKED_WORD_EVIDENCE, blockedView, canAllow, canBan, filterWhy, logBlocked, teacherWhy,
 } from '../shared/reasons.js';
@@ -91,6 +91,8 @@ import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
 import { NIGHT_SEARCH_MAX, addToNight, nightSong, nightWorthy } from './night.js';
 import { lookupCatalog, roomCatalog } from './catalog.js';
 import { readBanned, searchAllowed } from './search.js';
+import { isShelf, shelfSongs } from './songbook.js';
+import { ASKS_KV, noteAsks, readAsks, readPopular } from './popular.js';
 import { claimCode, codeHash, codeInUse, deleteCodeRoute, putCodeRoute, releaseCode } from './codes.js';
 import { YoutubeError, resolveVideo } from './youtube.js';
 import { VIDEO_ID_PATTERN } from '../shared/youtube-match.js';
@@ -161,6 +163,8 @@ const ART_NONE_MS = 60_000;
 /** Search tags (Room.withReady): a ready song is remembered for the room's life, any other this long. */
 const READY_NONE_MS = 3 * 60_000;
 const READY_MAX_READS = 30;
+/** How long a room keeps its copy of 🔥 Popular on RoomDJ (made once a day). */
+const POPULAR_MEM_MS = 30 * 60_000;
 /** A cover whose check failed is not asked again for this long. */
 const ART_RETRY_MS = 60_000;
 /** A board socket that has not sent its token after this long is closed when the next one opens. */
@@ -258,6 +262,8 @@ export class Room extends DurableObject {
     this.freeChain = Promise.resolve(true);
     /** The teacher's favorites (KV), read at most once a FAVORITES_FRESH_MS: { list, at }. */
     this.favorites = null;
+    /** 🔥 Popular on RoomDJ (src/popular.js), read at most once a POPULAR_MEM_MS: { list, at }. */
+    this.popular = null;
     /** The teacher's repeat record (KV `recent`), read at most once a RECENT_FRESH_MS: { map, at }. */
     this.rest = null;
     this.restWrittenAt = 0;
@@ -546,13 +552,13 @@ export class Room extends DurableObject {
    * so classes pick songs that cost no AI or LRCLIB call and a kid can tell "Clean edit" from
    * "checked". KV only (checkFromKv), never the AI. Copies: the room's remembered songs stay plain.
    */
-  async withReady(results) {
+  async withReady(results, maxReads = READY_MAX_READS) {
     const now = Date.now();
     const instrumentalsOnly = this.room?.settings.instrumentalsOnly === true;
     const kidzBop = this.room?.settings.kidzBop ?? 'check';
     if (this.readyMem.size > 3000) this.readyMem.clear();
     const keys = new Map(results.map((s) => [s, banKey(s) && `${instrumentalsOnly ? 1 : 0}|${kidzBop}|${banKey(s)}`]));
-    const toRead = [...new Set([...keys.values()].filter((k) => k && !(this.readyMem.get(k)?.until > now)))].slice(0, READY_MAX_READS);
+    const toRead = [...new Set([...keys.values()].filter((k) => k && !(this.readyMem.get(k)?.until > now)))].slice(0, maxReads);
     await Promise.all(toRead.map(async (k) => {
       const song = results.find((s) => keys.get(s) === k);
       const check = await checkFromKv(song, this.env, { scope: this.scope, instrumentalsOnly, kidzBop });
@@ -831,6 +837,18 @@ export class Room extends DurableObject {
     }
   }
 
+  /**
+   * 🔥 The room closes: its students' requests that played to the end go into the teacher's KV `asks`
+   * (src/popular.js noteAsks; songs only), one read and one write. The cron merges every teacher's.
+   */
+  async asksAtClose() {
+    const history = this.room?.history ?? [];
+    if (!this.env.CLASS_KV || !history.some((h) => h.teacher !== true && h.status === 'finished')) return;
+    const key = teacherKvKey(ASKS_KV, this.profile);
+    const list = noteAsks(readAsks(await this.env.CLASS_KV.get(key, 'json')), history);
+    await this.env.CLASS_KV.put(key, JSON.stringify({ v: 1, list }));
+  }
+
   /** The room closes: its Top 5 (finished or still playing, net above 0) each count one more Top 5. */
   async favoritesAtClose() {
     // SCORE FLOOR + DOWNVOTE MODE: the Top 5 as the class saw it; a net > 0 is the same raw or floored.
@@ -963,6 +981,11 @@ export class Room extends DurableObject {
       } catch (e) {
         console.error(JSON.stringify({ message: 'favorites at close failed', error: String(e) }));
       }
+      try {
+        await this.asksAtClose();
+      } catch (e) {
+        console.error(JSON.stringify({ message: 'asks at close failed', error: String(e) }));
+      }
       // The song still playing at the bell counts once it ran REPEAT_MIN_MS; then the pending plays go to KV.
       const playing = this.room.nowPlaying ? this.room.history?.findLast((x) => x.id === this.room.nowPlaying.id) : null;
       if (playing && Date.now() - playing.at >= REPEAT_MIN_MS) notePlayed((this.room.restPending ??= {}), playing.song, Date.now());
@@ -1018,6 +1041,7 @@ export class Room extends DurableObject {
       if (url.pathname === '/admit' && request.method === 'POST') return await this.admit(request);
       if (url.pathname === '/info') return (await this.live()) ? json(200, { open: true, until: this.room.until }) : json(404, NO_ROOM);
       if (url.pathname === '/search') return await this.search(request, url);
+      if (url.pathname === '/songbook') return await this.songbook(request, url);
       if (url.pathname === '/youtube') return await this.youtube(request, url);
       if (url.pathname === '/host') return await this.hostCheck(request);
       if (url.pathname === '/boardToken' && request.method === 'POST') return await this.signinBoardToken(request);
@@ -1153,6 +1177,41 @@ export class Room extends DurableObject {
   }
 
   /**
+   * A songbook shelf (protocol.js SONGBOOK, invariant 40): the shelf's songs this room's rules let
+   * show (quickCheck: explicit, 🙉, Kidz Bop, blocked words, bans), tagged like search, and ONLY the
+   * ✓ Checked ones sent, in shelf order. No catalog call, never the AI: the cron checks them.
+   */
+  async songbook(request, url) {
+    if (!(await this.live())) return json(404, NO_ROOM);
+    const device = request.headers.get('x-device') ?? '';
+    if (!DEVICE_ID_PATTERN.test(device)) return json(400, { error: 'device', message: 'Reload the page and join again.' });
+    if (this.room.kicked.includes(device)) return json(403, { error: 'kicked', message: 'You were removed from this room.' });
+    if (!this.admitted(device)) return json(403, NOT_JOINED);
+    const shelf = url.searchParams.get('shelf') ?? '';
+    if (!isShelf(shelf)) return json(400, { error: 'shelf', message: 'Pick one of the lists.' });
+    if (!this.allow('search', device) || !this.allow('roomSearch', 'room')) {
+      return json(429, { error: 'rate', message: 'That is a lot of searching. Wait a minute and try again.' });
+    }
+    const s = this.room.settings;
+    const ctx = { blocklist: s.blocklist ?? [], banned: await this.banned(), notMusic: s.blockNotMusic !== false, kidzBop: s.kidzBop };
+    const shown = (shelf === 'popular' ? await this.popularSongs() : shelfSongs(shelf)).filter((song) => !quickCheck(song, ctx));
+    const results = (await this.withReady(shown, SHELF_MAX)).filter((song) => song.check === 'ready');
+    const ready = new Set(results.map((song) => song.id));
+    const plain = shown.filter((song) => ready.has(song.id)); // remembered like search's: without the tag
+    await this.remember(plain);
+    await this.loadArt(plain);
+    return new Response(this.artText({ results, shelf }, 'student'), {
+      status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+    });
+  }
+
+  /** 🔥 Popular on RoomDJ (src/popular.js): KV read at most once a POPULAR_MEM_MS per room. */
+  async popularSongs() {
+    if (!this.popular || Date.now() - this.popular.at > POPULAR_MEM_MS) this.popular = { list: await readPopular(this.env), at: Date.now() };
+    return this.popular.list;
+  }
+
+  /**
    * The teacher's search (host 'search', protocol.js TEACHER PICKS): exactly a student's room search
    * (src/search.js through this room's relay, the same KV cache, kept in this room's songs), over
    * the host socket. The relay may ask this same host page for the iTunes call: that answer comes
@@ -1199,7 +1258,9 @@ export class Room extends DurableObject {
       fresh[`song:${song.id}`] = song;
     }
     try {
-      if (Object.keys(fresh).length) await this.ctx.storage.put(fresh);
+      // storage.put takes at most 128 keys at once (a songbook shelf sends up to SHELF_MAX songs).
+      const entries = Object.entries(fresh);
+      for (let i = 0; i < entries.length; i += 100) await this.ctx.storage.put(Object.fromEntries(entries.slice(i, i + 100)));
     } catch (e) {
       console.error(JSON.stringify({ message: 'recent songs write failed', error: String(e) }));
     }

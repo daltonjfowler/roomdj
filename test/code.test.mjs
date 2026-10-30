@@ -2,12 +2,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  CODE_COUNT, CODE_WORDS, displayCode, generateCode, normalizeCode, untilFor, validateCode, validateUntil,
+  CODE_ALPHABET, CODE_COUNT, displayCode, generateCode, normalizeCode, untilFor, validateCode, validateUntil,
 } from '../shared/code.js';
 import {
   CLASS_PERIOD_MIN, CODE_MAX, CODE_MIN_CHARS, CODE_MIN_PARTS, OPEN_MAX_MS, OPEN_MIN_MS, ROOM_ID_PATTERN,
 } from '../shared/protocol.js';
-import { codeHash } from '../src/codes.js';
+import { codeHash, legacyCodeHash } from '../src/codes.js';
 
 test('class codes: forgiving to type (case, spaces, dashes), strict to check', () => {
   assert.equal(normalizeCode('  Orange Walrus__TACO 12 '), 'orange-walrus-taco-12');
@@ -33,24 +33,19 @@ test('validateCode: any code with a letter or number passes; empty or too long i
   assert.match(validateCode('a'.repeat(30) + ' ' + 'b'.repeat(30) + ' c').message, /too long/);
 });
 
-test('suggested codes: too many to guess, easy to type, always valid', () => {
-  // JOIN_RATE_IP (60 a minute) for a whole day against at least 2^28 codes: about 1 in 5,200.
-  assert.ok(CODE_COUNT >= 2 ** 28, `only ${CODE_COUNT} codes`);
-  assert.ok((60 * 60 * 24) / CODE_COUNT < 1 / 5000);
-  const words = CODE_WORDS.flat();
-  assert.deepEqual(words.filter((w, i) => words.indexOf(w) !== i), [], 'no word twice');
-  for (const w of words) assert.match(w, /^[a-z]{3,11}$/, w);
-  const longest = CODE_WORDS.map((list) => Math.max(...list.map((w) => w.length))).reduce((a, b) => a + b) + 3 + 2;
-  assert.ok(longest <= CODE_MAX, `${longest}`);
-  assert.match(generateCode(), /^[a-z]+-[a-z]+-[a-z]+-[1-9][0-9]$/);
-  assert.equal(generateCode(() => 0), `${CODE_WORDS.map((l) => l[0]).join('-')}-10`);
-  assert.equal(generateCode(() => 0.999999), `${CODE_WORDS.map((l) => l.at(-1)).join('-')}-99`);
-  // The shortest possible suggestion still passes the teacher's-own-code rule.
-  const shortest = CODE_WORDS.map((list) => list.reduce((a, w) => (w.length < a.length ? w : a))).join('-') + '-10';
-  assert.equal(validateCode(shortest).ok, true, shortest);
+test('suggested codes: 5 random characters, too many to guess, never a word, always valid', () => {
+  // JOIN_RATE_IP (60 a minute) for a whole day against at least 2^24 codes: about 1 in 200.
+  assert.ok(CODE_COUNT >= 2 ** 24, `only ${CODE_COUNT} codes`);
+  assert.ok((60 * 60 * 24) / CODE_COUNT < 1 / 190, 'one address guessing all day: about 1 in 200');
+  assert.equal(new Set(CODE_ALPHABET).size, CODE_ALPHABET.length);
+  assert.doesNotMatch(CODE_ALPHABET, /[aeiou01l]/, 'no vowels (no words), no look-alikes');
+  assert.match(generateCode(), /^[b-df-hj-km-np-tv-z2-9]{5}$/);
+  assert.equal(generateCode(() => 0), 'bbbbb');
+  assert.equal(generateCode(() => 0.999999), '99999');
   for (let i = 0; i < 300; i++) assert.equal(validateCode(generateCode()).ok, true);
-  // Words that must never be in a list (names, double meanings, tricky spellings).
-  for (const w of ['taco', 'banana', 'pickle', 'amber', 'rusty', 'desert', 'arctic', 'grey', 'gray']) assert.equal(words.includes(w), false, w);
+  assert.equal(displayCode('k7mpq'), 'K7MPQ', 'shown in capitals');
+  assert.equal(displayCode('K7MPQ'), 'K7MPQ');
+  assert.equal(displayCode('golden-walrus-lantern-42'), 'golden walrus lantern 42', "a teacher's own phrase as it was");
 });
 
 test('open until: the host page choices, and what the server accepts', () => {
@@ -73,7 +68,12 @@ test('code hash: the same for every way of typing a code, different for another 
   const a = await codeHash('Golden Walrus Lantern 42');
   assert.match(a, /^[0-9a-f]{64}$/);
   assert.equal(await codeHash('golden-walrus-lantern-42'), a);
+  // Spacing never matters (2026-10-29: long phrases failed when the class spaced them differently).
+  for (const typed of ['goldenwalruslantern42', 'Golden  WalrusLantern 42', 'golden_walrus lantern-42 ']) assert.equal(await codeHash(typed), a, typed);
   assert.notEqual(await codeHash('golden-walrus-lantern-43'), a);
+  // Rooms opened before keep the old hash (join tries it too until they are gone).
+  assert.notEqual(await legacyCodeHash('golden walrus lantern 42'), a);
+  assert.equal(await legacyCodeHash('Golden Walrus Lantern 42'), await legacyCodeHash('golden-walrus-lantern-42'));
   // Not the plain SHA-256 of the code (this app's own prefix).
   const plain = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('golden-walrus-lantern-42'))).toString('hex');
   assert.notEqual(a, plain);
@@ -81,7 +81,3 @@ test('code hash: the same for every way of typing a code, different for another 
   assert.equal(ROOM_ID_PATTERN.test('golden-walrus-lantern-42'), false);
 });
 
-test('suggested codes never use the words Dalton struck (giggle combos like "blue pancake")', () => {
-  const words = CODE_WORDS.flat();
-  for (const w of ['pancake', 'waffle', 'starfish', 'brown']) assert.ok(!words.includes(w), w);
-});

@@ -180,23 +180,23 @@ test('bans, approvals and favorites keys are per profile; legacy reads the old p
 // version (another trackId, a "(feat. ...)" title), with no AI and no lyrics call.
 test('a teacher approval lasts across rooms and versions over a cached AI "no"', async () => {
   const dalton = { id: 'dalton-fowler', name: 'Dalton Fowler', legacy: false };
-  const godsPlan = { id: 'it:1406109863', title: "God's Plan", artist: 'Drake', album: 'Scorpion', explicit: 'cleaned' };
+  const oneDance = { id: 'it:1406109863', title: 'One Dance', artist: 'Drake', album: 'Views', explicit: 'cleaned' };
   const no = JSON.stringify({ verdict: 'inappropriate', category: 'sexual', evidence: 'Mature themes and language', instrumental: false });
-  const kv = fakeKv({ 'verdict:v5:1406109863': no, 'verdict:v5:song:god s plan|drake': no });
+  const kv = fakeKv({ 'verdict:v5:1406109863': no, 'verdict:v5:song:one dance|drake': no });
   const env = { CLASS_KV: kv, AI: { run: async () => { throw new Error('no AI call for an approved song'); } } };
   const lyrics = async () => { throw new Error('no lyrics call for an approved song'); };
   const settings = { ...DEFAULT_SETTINGS, aiCheck: true, blockUnknownSongs: true };
-  const before = await filterSong(godsPlan, { settings, env, scope: teacherScope(dalton), lyrics });
+  const before = await filterSong(oneDance, { settings, env, scope: teacherScope(dalton), lyrics });
   assert.equal(before.reason, 'theme', 'blocked before the teacher says yes');
-  await approveSong(godsPlan, env, teacherScope(roomProfile(dalton)));
-  assert.equal(kv.map.get('p:dalton-fowler:approved:1406109863'), kv.map.get('p:dalton-fowler:approved:song:god s plan|drake'));
-  const other = { ...godsPlan, id: 'it:999', title: "God's Plan (feat. Someone) - Radio Edit", artist: 'Drake & Someone' };
-  for (const s of [godsPlan, other]) {
+  await approveSong(oneDance, env, teacherScope(roomProfile(dalton)));
+  assert.equal(kv.map.get('p:dalton-fowler:approved:1406109863'), kv.map.get('p:dalton-fowler:approved:song:one dance|drake'));
+  const other = { ...oneDance, id: 'it:999', title: "One Dance (feat. Someone) - Radio Edit", artist: 'Drake & Someone' };
+  for (const s of [oneDance, other]) {
     const r = await filterSong(s, { settings, env, scope: teacherScope(roomProfile(dalton)), lyrics });
     assert.deepEqual([r.ok, r.ai.source], [true, 'teacher'], s.id);
   }
-  assert.equal((await filterSong(godsPlan, { settings, banned: ['song:god s plan|drake'], env, scope: teacherScope(dalton) })).reason, 'banned', 'a ban still wins');
-  assert.equal((await filterSong(godsPlan, { settings, env, scope: teacherScope(null) })).reason, 'theme', 'the legacy profile did not approve it');
+  assert.equal((await filterSong(oneDance, { settings, banned: ['song:one dance|drake'], env, scope: teacherScope(dalton) })).reason, 'banned', 'a ban still wins');
+  assert.equal((await filterSong(oneDance, { settings, env, scope: teacherScope(null) })).reason, 'theme', 'the legacy profile did not approve it');
 });
 
 test('the room snapshot names its teacher (everyone) and its profile id (host only)', () => {

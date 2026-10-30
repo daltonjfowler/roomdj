@@ -15,6 +15,8 @@ import { noteServerTime } from './server-clock.js';
 import { showBell } from './bell-pill.js';
 import { generateNick, isGeneratedNick } from '../../shared/nickgen.js';
 import { AI_CATEGORIES, DEVICE_ID_PATTERN, FILTER_REASONS, NICK_MAX, QUERY_MAX, ROOM_ID_PATTERN, PUSH_TAG, byLabel, whyText } from '../../shared/protocol.js';
+import { SHELVES } from '../../shared/protocol.js';
+import { cleanView, resultGenres, viewResults } from '../../shared/songbook.js';
 import { JUMP_COST, SUGGEST_COST } from '../../shared/protocol.js';
 import { couponFromHash } from '../../shared/coupon.js';
 import { tooLong } from '../../shared/classtime.js';
@@ -167,6 +169,10 @@ let resultsKey = []; // what each result row shows now, to update only the rows 
 let favorites = []; // ⭐ Class favorites from the room ('favorites': { song, pinned, top5 })
 let favKey = []; // like resultsKey, for the favorites list
 let favMode = false; // the ⭐ Class favorites view instead of search
+let shelfOpen = null; // the songbook list shown instead of a search (protocol.js SONGBOOK)
+let foundMsg = ''; // what the last search or list found (renderResults adds what the filters hide)
+// The search filters (shared/songbook.js): ✓ Checked only and the sort are kept on this device.
+let view = cleanView({ ...store.get('localStorage', 'cq.searchView'), genre: '' });
 let lockTimer = null; // the wrong-code lockout countdown
 // The teacher's Rename: { id, code } of the room this device is still admitted to, so the next
 // Join goes straight back in with the new nickname (no class code needed; it may have changed).
@@ -243,6 +249,8 @@ function stopRoom() {
   $('#q').value = '';
   $('#results').innerHTML = '';
   $('#searchMsg').textContent = '';
+  shelfOpen = null;
+  foundMsg = '';
   setNet(null);
 }
 
@@ -764,6 +772,7 @@ function setFavMode(on) {
   for (const sel of ['#searchForm', '#searchMsg', '#results']) $(sel).hidden = on;
   if (on) $('#searchCredit').hidden = true;
   $('#favPane').hidden = !on;
+  showTools();
 }
 function renderFind(s) {
   const on = s.settings?.showFavorites !== false;
@@ -1147,6 +1156,8 @@ $('#searchForm').addEventListener('submit', (e) => {
 });
 $('#q').addEventListener('input', () => {
   clearTimeout(searchTimer);
+  if ($('#q').value.trim()) setShelf(null);
+  showTools();
   searchTimer = setTimeout(search, SEARCH_DELAY_MS);
 });
 
@@ -1159,11 +1170,12 @@ function showCredit(on) {
 
 async function search() {
   const q = $('#q').value.trim();
+  if (!q && shelfOpen) return; // a list is open: an empty box keeps it
   searchAbort?.abort();
   if (q.length < 2 || !room) {
     results = [];
     busy('#searchMsg', '#results', false);
-    $('#searchMsg').textContent = q.length === 1 ? 'Keep typing…' : '';
+    foundMsg = q.length === 1 ? 'Keep typing…' : '';
     showCredit(false);
     return renderResults();
   }
@@ -1177,21 +1189,106 @@ async function search() {
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
       results = [];
-      $('#searchMsg').textContent = data.message || 'Search is not working right now. Try again in a moment.';
+      foundMsg = data.message || 'Search is not working right now. Try again in a moment.';
     } else {
       results = data.results ?? [];
-      $('#searchMsg').textContent = results.length
-        ? `${results.length} ${results.length === 1 ? 'song' : 'songs'} found.`
-        : noneText('songs');
+      foundMsg = results.length ? `${plural(results.length, 'song')} found.` : noneText('songs');
     }
     showCredit(r.ok && data.catalog === 'spotify');
   } catch (err) {
     if (err.name === 'AbortError') return;
     results = [];
-    $('#searchMsg').textContent = 'Could not search. Check your internet and try again.';
+    foundMsg = 'Could not search. Check your internet and try again.';
   }
   busy('#searchMsg', '#results', false);
   renderResults();
+}
+
+// ---- 📚 The songbook's lists and the search filters (protocol.js SONGBOOK, shared/songbook.js) ----
+$('#shelfBtns').innerHTML = SHELVES.map((s) => `<button type="button" data-shelf="${esc(s.id)}" aria-pressed="false">${esc(s.label)}</button>`).join('');
+
+/** The list buttons while the search box is empty, the filters while there are songs to filter. */
+function showTools() {
+  const searching = Boolean($('#q').value.trim());
+  $('#shelves').hidden = favMode || !room || searching;
+  $('#searchTools').hidden = favMode || !results.length;
+  const genres = resultGenres(results);
+  const sel = $('#genre');
+  const want = genres.join('|');
+  if (sel.dataset.list !== want) {
+    sel.innerHTML = `<option value="">All genres</option>${genres.map((g) => `<option>${esc(g)}</option>`).join('')}`;
+    sel.dataset.list = want;
+  }
+  sel.value = genres.includes(view.genre) ? view.genre : '';
+  $('#onlyChecked').checked = view.checked;
+  $('#sortBy').value = view.sort;
+}
+
+function setShelf(id) {
+  shelfOpen = id;
+  for (const b of $('#shelfBtns').children) b.setAttribute('aria-pressed', String(b.dataset.shelf === id));
+}
+
+async function openShelf(id) {
+  const shelf = SHELVES.find((s) => s.id === id);
+  if (!shelf || !room) return;
+  clearTimeout(searchTimer);
+  searchAbort?.abort();
+  const abort = (searchAbort = new AbortController());
+  setShelf(id);
+  showCredit(false);
+  busy('#searchMsg', '#results', true);
+  try {
+    const r = await fetch(`/api/rooms/${room.id}/songbook?shelf=${encodeURIComponent(id)}`, {
+      headers: { 'x-device': deviceId() },
+      signal: abort.signal,
+    });
+    const data = await r.json().catch(() => ({}));
+    results = r.ok ? data.results ?? [] : [];
+    foundMsg = !r.ok ? data.message || 'The list is not working right now. Try again in a moment.'
+      : results.length ? `${shelf.label}: ${plural(results.length, 'checked song')}, ${id === 'popular' ? 'what students ask for most on RoomDJ' : 'most asked first'}.`
+        : id === 'popular' ? 'Nothing is popular across RoomDJ yet. Pick a list or search for a song.'
+          : 'RoomDJ is still checking the songs on this list. Search for a song instead.';
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    results = [];
+    foundMsg = 'Could not load the list. Check your internet and try again.';
+  }
+  busy('#searchMsg', '#results', false);
+  renderResults();
+}
+
+// Tapping an empty search box shows 🔥 Popular on RoomDJ (Dalton, 2026-10-29: "when you click search it shows").
+$('#q').addEventListener('focus', () => {
+  if (!$('#q').value.trim() && !shelfOpen && !results.length && room && !favMode) openShelf('popular');
+});
+
+$('#shelfBtns').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-shelf]');
+  if (!b) return;
+  if (shelfOpen === b.dataset.shelf) {
+    setShelf(null);
+    results = [];
+    foundMsg = '';
+    return renderResults();
+  }
+  openShelf(b.dataset.shelf);
+});
+
+function changeView() {
+  view = cleanView({ checked: $('#onlyChecked').checked, genre: $('#genre').value, sort: $('#sortBy').value });
+  store.set('localStorage', 'cq.searchView', { checked: view.checked, sort: view.sort });
+  renderResults();
+}
+for (const sel of ['#onlyChecked', '#genre', '#sortBy']) $(sel).addEventListener('change', changeView);
+
+/** The search message: what was found, and what the filters hide. */
+function showFound(shown) {
+  const hidden = results.length - shown;
+  const msg = !results.length || !hidden ? foundMsg
+    : shown ? `${foundMsg} ${shown} shown with your filters.`
+      : view.checked ? 'None of these songs are checked yet. Turn off ✓ Checked only to see them.' : 'No songs match your filters.';
+  if ($('#searchMsg').textContent !== msg) $('#searchMsg').textContent = msg;
 }
 
 /** What a result's button says, and how: '' Suggest, 'off' Suggest but not now, 'status' a label. */
@@ -1235,7 +1332,10 @@ function renderResults() {
   const full = (state?.you?.waiting ?? 0) >= max;
   const credits = state?.you?.credits ?? null;
   const state1 = (song) => [song, ...resultState(song, queued, playing, full, credits)];
-  resultsKey = renderList($('#results'), results.map(state1), resultsKey);
+  const shown = viewResults(results, view);
+  showTools();
+  showFound(shown.length);
+  resultsKey = renderList($('#results'), shown.map(state1), resultsKey);
   // ⭐ Class favorites: the same buttons (and the same server path) as search results.
   const favs = favMode ? favorites.map((f) => [...state1(f.song), f]) : [];
   favKey = renderList($('#favResults'), favs, favKey);
