@@ -53,7 +53,7 @@ function pick(results, [title, artist], shelf) {
   const songs = results.map(toSong).filter(Boolean).filter((s) => (baseTitle(s.title) || normalizeWords(s.title)) === want);
   const byArtist = songs.filter((s) => mainArtist(s.artist) === mainArtist(artist) || ` ${normalizeWords(s.artist)} `.includes(` ${who} `));
   // Classical and film scores are filed under the performer as often as the composer.
-  const pool = byArtist.length || shelf !== 'focus' ? byArtist : songs;
+  const pool = byArtist.length || (shelf !== 'focus' && shelf !== 'classical') ? byArtist : songs;
   const playable = pool.filter((s) => s.explicit !== 'explicit' && !/kidz bop/i.test(s.artist) && !extraVersion(s.title, s.album, title));
   return {
     song: playable.find((s) => s.explicit === 'notExplicit') ?? playable.find((s) => s.explicit === 'cleaned') ?? null,

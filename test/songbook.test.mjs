@@ -103,8 +103,8 @@ test('archiveShelves and shelfWorthy', () => {
   assert.deepEqual(archiveShelves({ genre: 'Hip-Hop/Rap', year: 2005 }), ['hiphop', 'throwbacks']);
   assert.deepEqual(archiveShelves({ genre: 'K-Pop', year: 2025 }), ['kpop']);
   assert.deepEqual(archiveShelves({ genre: 'Alternative', year: 2010 }), ['rock']);
-  assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }), [], 'no words not known: not Focus');
-  assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }, { instrumental: true }), ['focus']);
+  assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }), ['classical'], 'no words not known: not Focus');
+  assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }, { instrumental: true }), ['focus', 'classical']);
   assert.deepEqual(archiveShelves({ genre: 'Holiday', year: 2020 }), []);
   // The style shelves: by genre and year, or by an artist the seeds put there.
   const none = new Map();

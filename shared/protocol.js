@@ -275,6 +275,7 @@ export const SHELVES = Object.freeze([
   { id: 'afrobeats', label: '🌍 Afrobeats' },
   { id: 'soul', label: '🕺 Soul, funk & Motown' },
   { id: 'jazz', label: '🎷 Jazz & blues' },
+  { id: 'classical', label: '🎻 Classical' },
   { id: 'dance', label: '🪩 Dance' },
   { id: 'focus', label: '📚 Focus (no words)' },
 ]);

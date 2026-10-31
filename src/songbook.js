@@ -53,6 +53,7 @@ const STYLE_SHELF = [
   ['reggae', (g) => /^(reggae|roots reggae|modern dancehall|dancehall|dub|lovers rock|ska)$/.test(g)],
   ['afrobeats', (g) => /^(afrobeats|afro-beat|afro-pop|afropop|afro house|amapiano|african|afro-fusion)$/.test(g)],
   ['soul', (g, y) => /^(soul|motown|funk|disco|doo wop|neo-soul|quiet storm)$/.test(g) || (g === 'r&b/soul' && y > 0 && y <= 1989)],
+  ['classical', (g) => /^(classical|orchestral|opera|baroque era|classical era|romantic era|chamber music|choral|art song|modern era|medieval era|renaissance)$/.test(g)],
   ['jazz', (g) => /^(jazz|vocal jazz|big band|bop|hard bop|cool jazz|contemporary jazz|crossover jazz|mainstream jazz|smooth jazz|latin jazz|fusion|dixieland|ragtime|trad jazz|swing|vocal|blues|chicago blues|classic blues|contemporary blues|country blues|delta blues|electric blues|acoustic blues)$/.test(g)],
 ];
 const STYLE_IDS = new Set(STYLE_SHELF.map(([id]) => id));
