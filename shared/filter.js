@@ -37,7 +37,9 @@ import { AI_CATEGORIES } from './protocol.js';
 /** Workers AI model for the theme check (confirmed in the Workers AI model catalog). */
 export const THEME_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 export const VERDICT_TTL_SECONDS = 30 * 24 * 60 * 60;
-export const SETTLED_VERDICT_TTL_SECONDS = 365 * 24 * 60 * 60;
+// A settled answer (OK or not for school) never expires (Dalton, 2026-10-31: "lyrics don't change");
+// a new PROMPT_VERSION asks again anyway. null = no expiry.
+export const SETTLED_VERDICT_TTL_SECONDS = null;
 /**
  * KV key of a song the teacher allowed: its id (iTunes: the bare trackId, as before catalog ids)
  * or its banKey ('song:<title>|<artist>', every version). No expiry: the teacher's yes stands (a
@@ -516,13 +518,13 @@ export function storedVerdict(r) {
 }
 
 async function putVerdict(env, ids, r) {
-  // A settled answer is a fact about the song, shared by every teacher: kept a year, so the checked
-  // songs pile up and new classes cost less (Dalton, 2026-10-14). "Not sure" is asked again sooner.
+  // A settled answer is a fact about the song, shared by every teacher: kept for good, so the checked
+  // songs pile up and new classes cost less (Dalton, 2026-10-14, -31). "Not sure" is asked again sooner.
   const ttl = r.lyrics === 'none' ? NO_LYRICS_TTL_SECONDS : r.verdict === 'unknown' ? VERDICT_TTL_SECONDS : SETTLED_VERDICT_TTL_SECONDS;
   // Per id, and per song (banKey) so the same song from the other catalog can use it too.
   for (const id of ids) {
     try {
-      await env.CLASS_KV?.put(verdictKey(id), storedVerdict(r), { expirationTtl: ttl });
+      await env.CLASS_KV?.put(verdictKey(id), storedVerdict(r), ttl ? { expirationTtl: ttl } : undefined);
     } catch (e) {
       console.error(JSON.stringify({ message: 'verdict cache write failed', error: String(e) }));
     }

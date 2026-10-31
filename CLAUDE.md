@@ -540,7 +540,7 @@ Claude account).
    GET /api/teacher/usage: what a free teacher has left today; the host shows it (start screen, Settings).
    THEME_MODEL stays llama-3.3-70b (2026-10-14 comparison, 69 songs: 70b 2 misses; 8b and Scout 9
    misses each, letting drinking/drug songs through; Qwen3 30B answers nothing usable). Cost falls
-   by sharing verdicts instead: settled verdicts are kept a year (SETTLED_VERDICT_TTL_SECONDS), and a
+   by sharing verdicts instead: settled verdicts never expire (SETTLED_VERDICT_TTL_SECONDS null; Dalton 2026-10-31), and a
    cron (src/prewarm.js, every 15 min) checks Apple's most-played charts (us/gb/ca/au) before classes
    suggest them, at most PREWARM_AI_PER_DAY AI calls a day.
 29. Admin (Dalton, 2026-10-14; src/admin.js, web/admin/, web/src/admin-page.js): /admin/ for a SPOTIFY
@@ -670,7 +670,9 @@ Claude account).
    an older prompt is not trusted). The cron (src/prewarm.js): after the charts and the songbook it
    checks iTunes' top songs per genre (GENRE_IDS); every song a run finds ✓ Checked is looked up on
    iTunes and joins KV songbook:v1:grown (shelfWorthy, archiveShelves; dropped on a prompt bump).
-   Known songs cost no AI and count only against PREWARM_SCAN_PER_RUN. Archive and grown songs are
+   Known songs cost no AI and count only against PREWARM_SCAN_PER_RUN. Budget (Dalton, 2026-10-31: "get
+   more now of common songs"): PREWARM_AI_PER_DAY 1200 (~33 neurons a call), 6 songs a run by day,
+   PREWARM_NIGHT_PER_RUN 30 at night (night.js nightHours, New York). More seeds: scripts/songbook-seeds-more.mjs. Archive and grown songs are
    ✓ Checked with no KV read (archiveReady); the room's quickCheck (bans, words, Kidz Bop) still runs.
    (b) Hand-checked songs (shared/filter.js HOUSE_OK, houseOk): Dalton's own per-song calls for every
    teacher, like a teacher's Allow (source 'house', no AI or lyrics call). Only the clean edit (the

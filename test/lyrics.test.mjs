@@ -286,7 +286,8 @@ test('unknown → lyrics → a verdict, cached with source lyrics and never the 
   const stored = kv.map.get(verdictKey(song().id));
   assert.deepEqual(JSON.parse(stored), { verdict: 'ok', category: 'other', evidence: 'A happy song about friends', instrumental: false, lyrics: 'found', lv: LYRICS_PROMPT_VERSION, source: 'lyrics' });
   assert.equal(kv.map.get(verdictKey(banKey(song()))), stored, 'per song too');
-  assert.equal(kv.ttl.get(verdictKey(song().id)), SETTLED_VERDICT_TTL_SECONDS, 'a settled verdict is kept a year');
+  assert.equal(kv.ttl.get(verdictKey(song().id)), null, 'a settled verdict never expires');
+  assert.equal(SETTLED_VERDICT_TTL_SECONDS, null);
   for (const [k, v] of kv.map) assert.equal(v.includes('playground') || v.includes('Sunshine'), false, `no lyrics in KV ${k}`);
   const again = await filterSong(song(), { settings: DEFAULT_SETTINGS, env, lyrics });
   assert.equal(again.ok, true);

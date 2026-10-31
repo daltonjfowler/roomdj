@@ -6,6 +6,8 @@
 // that searches for them gets the answer at once instead of waiting.
 // Add songs at the end of a shelf (or where they belong in its rank), then run `npm run songbook`.
 
+import { MORE } from './songbook-seeds-more.mjs';
+
 export const SEEDS = {
   pop: [
     ['Espresso', 'Sabrina Carpenter'], ['APT.', 'ROSÉ'], ['Die With A Smile', 'Lady Gaga'], ['Birds of a Feather', 'Billie Eilish'],
@@ -204,6 +206,9 @@ export const SEEDS = {
     ['Mii Channel Theme', 'Nintendo'], ['Married Life', 'Michael Giacchino'], ['Interstellar Main Theme', 'Hans Zimmer'], ['Comptine d\'un autre été, l\'après-midi', 'Yann Tiersen'],
   ],
 };
+
+// More common songs (scripts/songbook-seeds-more.mjs), after each shelf's own.
+for (const [shelf, more] of Object.entries(MORE)) SEEDS[shelf].push(...more);
 
 /** Shelves in the order a student sees them. */
 export const SHELF_ORDER = ['pop', 'hiphop', 'kpop', 'movies', 'throwbacks', 'rock', 'country', 'latin', 'dance', 'focus'];

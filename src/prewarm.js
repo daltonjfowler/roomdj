@@ -1,11 +1,11 @@
 // Checked songs pile up (Dalton, 2026-10-14: "keep building a large dataset of checked songs so it'll
 // cost less as we go"). A cron (wrangler.jsonc triggers) checks the songs classes are most likely to
 // suggest, Apple's most-played charts, BEFORE anyone suggests them, with the same theme check (and
-// lyrics follow-up) a suggestion gets. Verdicts are shared facts (verdict:v7:*, kept a year when
+// lyrics follow-up) a suggestion gets. Verdicts are shared facts (verdict:v7:*, kept for good when
 // settled), so a class later pays nothing for them.
 // Cheap by design: songs already known cost nothing (no AI call, not counted); at most
-// PREWARM_AI_PER_DAY AI calls a day (inside Workers AI's free daily allowance), PREWARM_PER_RUN songs
-// a run (a few subrequests each). KV: prewarm:v1:list:<day> (the day's chart songs, fetched once),
+// PREWARM_AI_PER_DAY AI calls a day, PREWARM_PER_RUN songs a run in the day (PREWARM_NIGHT_PER_RUN at
+// night; a few subrequests each). KV: prewarm:v1:list:<day> (the day's chart songs, fetched once),
 // prewarm:v1:state:<day> { cursor, used }.
 // Once the day's chart songs are done, the same runs and budget go on with the songbook (Dalton,
 // 2026-10-29: "capture likely asks"; src/songbook.js): one pass over its songs, KV prewarm:v1:songbook
@@ -18,12 +18,19 @@
 import { aiThemeCheck, banKey, checkFromKv } from '../shared/filter.js';
 import { parseItunes, toSong } from '../shared/itunes.js';
 import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
+import { nightHours } from './night.js';
 import { GROWN_KEY, SONGBOOK_MADE, addGrown, archiveShelves, bakedKeys, readGrown, shelfWorthy, songbookToCheck } from './songbook.js';
 
-export const PREWARM_AI_PER_DAY = 150;
+// Dalton, 2026-10-31: "get more now of common songs in prep for broader release". About 33 neurons
+// a call (llama 3.3), so the cap is about 40k neurons a day at most (~$0.30 a day over the free 10k);
+// it tapers off by itself as the lists become known songs (no AI).
+export const PREWARM_AI_PER_DAY = 1200;
+/** Songs a run may send to the AI: few in the day (classes share the LRCLIB line), more at night. */
 export const PREWARM_PER_RUN = 6;
+export const PREWARM_NIGHT_PER_RUN = 30;
 /** Songs a run looks at in all (known ones are a KV read or two each, no AI). */
 export const PREWARM_SCAN_PER_RUN = 40;
+export const PREWARM_NIGHT_SCAN_PER_RUN = 150;
 // iTunes top songs per genre, US: Pop, Hip-Hop/Rap, R&B/Soul, Rock, Alternative, Country, Latin,
 // Dance, Electronic, Soundtrack, K-Pop, Classical, Singer/Songwriter.
 const GENRE_IDS = [14, 18, 15, 21, 20, 6, 12, 17, 7, 16, 51, 5, 10];
@@ -196,7 +203,10 @@ export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyrics
     scanned++;
     if (asked > before) checked++; // a known song cost no AI call: only the scan counts
   };
-  const more = () => checked < PREWARM_PER_RUN && scanned < PREWARM_SCAN_PER_RUN && state.used < PREWARM_AI_PER_DAY;
+  const night = nightHours(now);
+  const perRun = night ? PREWARM_NIGHT_PER_RUN : PREWARM_PER_RUN;
+  const scanMax = night ? PREWARM_NIGHT_SCAN_PER_RUN : PREWARM_SCAN_PER_RUN;
+  const more = () => checked < perRun && scanned < scanMax && state.used < PREWARM_AI_PER_DAY;
   while (state.cursor < songs.length && more()) await check(songs[state.cursor++]);
   // The songbook, after the charts (one pass per list).
   let book = null;

@@ -1,7 +1,7 @@
 // src/prewarm.js: chart songs are checked before classes suggest them, within a daily AI cap.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PREWARM_AI_PER_DAY, PREWARM_PER_RUN, PREWARM_SCAN_PER_RUN, chartSong, genreChartSong, growShelves, prewarm } from '../src/prewarm.js';
+import { PREWARM_AI_PER_DAY, PREWARM_NIGHT_PER_RUN, PREWARM_PER_RUN, PREWARM_SCAN_PER_RUN, chartSong, genreChartSong, growShelves, prewarm } from '../src/prewarm.js';
 import { GROWN_KEY, readGrown } from '../src/songbook.js';
 import { PROMPT_VERSION, verdictKey } from '../shared/filter.js';
 
@@ -40,6 +40,7 @@ test('prewarm: a few songs a run, verdicts cached; known songs cost nothing; dai
   // LRCLIB has nothing for these test songs (never the real LRCLIB in a test).
   const lyricsFetch = async () => new Response('[]', { headers: { 'content-type': 'application/json' } });
   const one = await prewarm(env, { now, fetchImpl: feed(300), lyricsFetch, songbook: [] });
+  // 8 am in New York: a daytime run.
   assert.equal(one.checked, PREWARM_PER_RUN);
   assert.equal(one.asked, PREWARM_PER_RUN * 2, 'each OK is also looked up on LRCLIB to confirm it (one budget step each)');
   assert.ok(env.CLASS_KV.map.has(verdictKey('it:1000', PROMPT_VERSION)), 'the verdict is cached for everyone');
@@ -52,7 +53,7 @@ test('prewarm: a few songs a run, verdicts cached; known songs cost nothing; dai
   assert.equal(asked, before, 'known songs: not asked');
   // The cap: runs until the day's AI calls are used.
   let last;
-  for (let i = 0; i < 100; i++) last = await prewarm(env, { now, fetchImpl: feed(300), lyricsFetch, songbook: [] });
+  for (let i = 0; i < 400 && !(last?.used >= PREWARM_AI_PER_DAY && last.asked === 0); i++) last = await prewarm(env, { now: now + 2 * 86_400_000, fetchImpl: feed(1000), lyricsFetch, songbook: [] });
   assert.equal(last.used, PREWARM_AI_PER_DAY);
   assert.equal(last.asked, 0, 'past the cap: nothing more');
 });
@@ -134,4 +135,11 @@ test('growShelves: a failed lookup adds nothing; known songs are not looked up a
   assert.equal(await growShelves(env, found, ok, new Set()), 1);
   assert.equal(await growShelves(env, found, ok, new Set()), 0);
   assert.equal(calls, 1, 'already on a shelf: no second lookup');
+});
+
+test('prewarm: more songs a run at night (New York), the same daily cap', async () => {
+  const env = { CLASS_KV: fakeKv(), AI: { run: async () => ({ response: '{"instrumental":false,"verdict":"OK","category":null,"evidence":""}' }) } };
+  const lyricsFetch = async () => new Response('[]', { headers: { 'content-type': 'application/json' } });
+  const night = await prewarm(env, { now: Date.UTC(2026, 9, 31, 6), fetchImpl: feed(300), lyricsFetch, songbook: [] }); // 2 am ET
+  assert.equal(night.checked, PREWARM_NIGHT_PER_RUN);
 });
