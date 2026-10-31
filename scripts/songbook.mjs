@@ -132,7 +132,8 @@ for (const shelf of SHELF_ORDER) {
   await writeFile(CACHE, JSON.stringify(cache));
 }
 
-const made = new Date().toISOString().slice(0, 10);
+// To the minute: the cron starts a new pass whenever this changes (two builds in a day are two lists).
+const made = new Date().toISOString().slice(0, 16);
 await writeFile(OUT, `// Made by \`npm run songbook\` (scripts/songbook.mjs) from scripts/songbook-seeds.mjs. Do not edit by hand.
 export const SONGBOOK_MADE = '${made}';
 export const SONGBOOK_SONGS = [

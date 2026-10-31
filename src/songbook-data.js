@@ -1,5 +1,5 @@
 // Made by `npm run songbook` (scripts/songbook.mjs) from scripts/songbook-seeds.mjs. Do not edit by hand.
-export const SONGBOOK_MADE = '2026-10-31';
+export const SONGBOOK_MADE = '2026-10-31T20:34';
 export const SONGBOOK_SONGS = [
 {"id":"it:1746801012","title":"Espresso (On Vacation Version)","artist":"Sabrina Carpenter","album":"Espresso EP","artwork":"https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/57/e8/7b/57e87ba0-5057-9bb9-c247-ce7dbe426e89/24UMGIM55213.rgb.jpg/300x300bb.jpg","durationMs":175459,"explicit":"notExplicit","previewUrl":"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/e9/4d/02/e94d0230-11ee-ef94-d2cf-a5d547bd73f4/mzaf_554140808559155562.plus.aac.p.m4a","genre":"Pop","year":2024,"shelf":"pop","rank":1},
 {"id":"it:1773452221","title":"APT.","artist":"ROSÉ & Bruno Mars","album":"APT. - Single","artwork":"https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/2d/1a/7d/2d1a7d91-587e-0ceb-d434-327bd66d9e86/075679628312.jpg/300x300bb.jpg","durationMs":169917,"explicit":"notExplicit","previewUrl":"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/7a/15/38/7a1538f3-f41a-a2eb-0f24-8eb6712ee043/mzaf_7740628412097685267.plus.aac.p.m4a","genre":"Pop","year":2024,"shelf":"pop","rank":2},
