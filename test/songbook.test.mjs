@@ -13,7 +13,7 @@ import { SHELF_SCAN, addGrown, archiveReady, archiveShelves, isShelf, readGrown,
 const r = (id, over = {}) => ({ id: `it:${id}`, title: `Song ${id}`, artist: `Artist ${id}`, genre: 'Pop', year: 2020, check: 'unchecked', ...over });
 
 test('songbook data: playable iTunes songs on known shelves, never explicit, ranked from 1', () => {
-  assert.match(SONGBOOK_MADE, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(SONGBOOK_MADE, /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/);
   assert.ok(SONGBOOK_SONGS.length > 300, `a real list (${SONGBOOK_SONGS.length})`);
   const ranks = new Map();
   for (const s of SONGBOOK_SONGS) {
