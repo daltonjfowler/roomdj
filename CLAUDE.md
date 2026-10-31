@@ -674,6 +674,16 @@ Claude account).
    more now of common songs"): PREWARM_AI_PER_DAY 1200 (~33 neurons a call), 6 songs a run by day,
    PREWARM_NIGHT_PER_RUN 30 at night (night.js nightHours, New York). More seeds: scripts/songbook-seeds-more.mjs. Archive and grown songs are
    ✓ Checked with no KV read (archiveReady); the room's quickCheck (bans, words, Kidz Bop) still runs.
+   (f) Style shelves (Dalton, 2026-10-31: "ska too and punk rock and pop punk and classic rock and
+   grunge and metal and etc I want more categories and diversity"): classicrock, grunge, metal, punk,
+   poppunk, ska, indie, reggae, afrobeats, soul, jazz, seeded in scripts/songbook-seeds-styles.mjs.
+   A song joins them on top of its broad shelf (src/songbook.js STYLE_SHELF): by iTunes genre (and
+   year), or because a style seed has its main artist (Apple files most punk, grunge and ska as plain
+   Rock/Alternative). A seed ending in "song" (songOnly) is that song only, never the whole artist (a
+   pop star with one pop punk hit). readGrown works each grown song's shelves out again, so a new
+   shelf picks up old finds; re-run `npm run songbook:archive` after changing the rules. The cron also
+   reads the style genres' iTunes charts (GENRE_IDS). Phones show the list buttons as a 3-row
+   sideways strip (student.css).
    (b) Hand-checked songs (shared/filter.js HOUSE_OK, houseOk): Dalton's own per-song calls for every
    teacher, like a teacher's Allow (source 'house', no AI or lyrics call). Only the clean edit (the
    explicit flag still refuses), bans, blocked words, 🙉 and Instrumentals only still count. Add ONLY

@@ -119,6 +119,12 @@
 .shelf-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 .shelf-btns button { min-height: 40px; padding: 6px 12px; border-radius: 99px; font-weight: 650; }
 .shelf-btns button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+/* Phones: 20+ lists in 3 rows that scroll sideways, not a tall wall of buttons. contain: the strip's
+   width never widens the page (its grid parents size to their content). */
+@media (max-width: 560px) {
+  .shelf-btns { display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto); justify-content: start; contain: inline-size; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; padding-bottom: 4px; }
+  .shelf-btns button { white-space: nowrap; }
+}
 .search-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .search-tools[hidden], .shelves[hidden] { display: none; }
 .search-tools select.text { width: auto; flex: 1 1 9em; min-width: 0; max-width: 14em; min-height: 40px; padding-block: 6px; }

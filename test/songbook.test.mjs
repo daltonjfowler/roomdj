@@ -106,6 +106,22 @@ test('archiveShelves and shelfWorthy', () => {
   assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }), [], 'no words not known: not Focus');
   assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }, { instrumental: true }), ['focus']);
   assert.deepEqual(archiveShelves({ genre: 'Holiday', year: 2020 }), []);
+  // The style shelves: by genre and year, or by an artist the seeds put there.
+  const none = new Map();
+  assert.deepEqual(archiveShelves({ genre: 'Metal', year: 1986 }, {}, none), ['rock', 'metal', 'throwbacks']);
+  assert.deepEqual(archiveShelves({ genre: 'Rock', year: 1975 }, {}, none), ['rock', 'classicrock', 'throwbacks']);
+  assert.deepEqual(archiveShelves({ genre: 'Alternative', year: 1994 }, {}, none), ['rock', 'grunge', 'throwbacks']);
+  assert.deepEqual(archiveShelves({ genre: 'Ska', year: 1980 }, {}, none), ['ska', 'reggae', 'throwbacks']);
+  assert.deepEqual(archiveShelves({ genre: 'Afrobeats', year: 2023 }, {}, none), ['hiphop', 'afrobeats']);
+  assert.deepEqual(archiveShelves({ genre: 'R&B/Soul', year: 1971 }, {}, none), ['hiphop', 'soul', 'throwbacks']);
+  assert.deepEqual(archiveShelves({ genre: 'R&B/Soul', year: 2021 }, {}, none), ['hiphop']);
+  assert.deepEqual(archiveShelves({ genre: 'Jazz', year: 2020 }, { instrumental: true }, none), ['focus', 'jazz']);
+  const artists = new Map([['green day', new Set(['punk'])]]);
+  assert.deepEqual(archiveShelves({ genre: 'Alternative', artist: 'Green Day', year: 2004 }, {}, artists), ['rock', 'punk', 'throwbacks']);
+  assert.deepEqual(archiveShelves({ genre: 'Alternative', artist: 'Green Day & Friends', year: 2016 }, {}, artists), ['rock', 'punk']);
+  // The real seeds: a seeded style artist brings its other songs; a "song only" seed does not.
+  assert.ok(archiveShelves({ genre: 'Rock', artist: 'Ramones', year: 2015 }).includes('punk'));
+  assert.ok(!archiveShelves({ genre: 'Pop', artist: 'Olivia Rodrigo', year: 2023 }).includes('poppunk'));
   assert.equal(shelfWorthy(r(1, { explicit: 'notExplicit' })), true);
   assert.equal(shelfWorthy(r(1, { explicit: 'explicit' })), false);
   assert.equal(shelfWorthy(r(1, { title: 'Golden (Sped Up)' })), false);

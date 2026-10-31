@@ -112,7 +112,9 @@ try {
     await page.click('#joinBtn');
     await page.waitForSelector('#roomScreen:not([hidden])', { timeout: 15_000 });
     await page.waitForSelector('#shelves:not([hidden])', { timeout: 8000 });
-    check(`${w}px: the list buttons show while the search box is empty`, (await page.locator('#shelfBtns button').count()) >= 8);
+    check(`${w}px: the list buttons show while the search box is empty`, (await page.locator('#shelfBtns button').count()) >= 20);
+    // 20+ lists: phones scroll the strip sideways, never the page (student.css).
+    check(`${w}px: the list buttons never widen the page`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.focus('#q');
     const pop = await page.waitForFunction(() => /Popular on RoomDJ|Nothing is popular/.test(document.querySelector('#searchMsg').textContent), null, { timeout: 10_000 }).then(() => true, () => false);
     check(`${w}px: tapping the empty search box opens 🔥 Popular`, pop && (await page.getAttribute('#shelfBtns button[data-shelf="popular"]', 'aria-pressed')) === 'true');

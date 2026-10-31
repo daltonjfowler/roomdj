@@ -7,6 +7,7 @@
 // Add songs at the end of a shelf (or where they belong in its rank), then run `npm run songbook`.
 
 import { MORE } from './songbook-seeds-more.mjs';
+import { STYLES } from './songbook-seeds-styles.mjs';
 
 export const SEEDS = {
   pop: [
@@ -209,6 +210,8 @@ export const SEEDS = {
 
 // More common songs (scripts/songbook-seeds-more.mjs), after each shelf's own.
 for (const [shelf, more] of Object.entries(MORE)) SEEDS[shelf].push(...more);
+// The style shelves (scripts/songbook-seeds-styles.mjs).
+Object.assign(SEEDS, STYLES);
 
 /** Shelves in the order a student sees them. */
-export const SHELF_ORDER = ['pop', 'hiphop', 'kpop', 'movies', 'throwbacks', 'rock', 'country', 'latin', 'dance', 'focus'];
+export const SHELF_ORDER = ['pop', 'hiphop', 'kpop', 'movies', 'throwbacks', 'rock', 'classicrock', 'grunge', 'metal', 'punk', 'poppunk', 'ska', 'indie', 'country', 'latin', 'reggae', 'afrobeats', 'soul', 'jazz', 'dance', 'focus'];

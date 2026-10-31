@@ -6,7 +6,7 @@
 // room's shelf shows only ✓ Checked songs (Room.songbook). Server data, so a room may trust these
 // song details like its own search's.
 
-import { PROMPT_VERSION, banKey, houseOk, kidSafeArtist, normalizeWords, notMusicHit } from '../shared/filter.js';
+import { PROMPT_VERSION, banKey, houseOk, kidSafeArtist, mainArtist, normalizeWords, notMusicHit } from '../shared/filter.js';
 import { SHELF_MAX, SHELVES } from '../shared/protocol.js';
 import { ARCHIVE_SONGS, ARCHIVE_VERSION } from './songbook-archive-data.js';
 import { SONGBOOK_MADE, SONGBOOK_SONGS } from './songbook-data.js';
@@ -18,7 +18,7 @@ export const SHELF_READS = 40;
 /** Songs a shelf looks at for its SHELF_MAX: the checked ones first, then seeds to ask KV about. */
 export const SHELF_SCAN = SHELF_MAX + SHELF_READS;
 
-const plain = ({ shelf, rank, shelves, instrumental, ...song }) => song;
+const plain = ({ shelf, rank, shelves, instrumental, songOnly, ...song }) => song;
 
 /** A songbook shelf or 🔥 'popular' (src/popular.js; it has no songbook songs). */
 export const isShelf = (id) => SHELVES.some((s) => s.id === id);
@@ -29,7 +29,7 @@ const GENRE_SHELF = [
   [/^(pop|singer\/songwriter|teen pop|adult contemporary)$/, 'pop'],
   [/^(hip-hop\/rap|hip-hop|rap|r&b\/soul|contemporary r&b|soul|afrobeats|afro-beat|afropop)$/, 'hiphop'],
   [/^(soundtrack|musicals|original score|disney|tv soundtrack|foreign cinema|anime)$/, 'movies'],
-  [/^(rock|alternative|hard rock|metal|indie rock|indie pop|punk|classic rock|pop\/rock|soft rock|adult alternative|american trad rock|britpop|new wave|rock & roll|emo|pop punk|grunge)$/, 'rock'],
+  [/^(rock|alternative|hard rock|metal|indie rock|indie pop|punk|classic rock|pop\/rock|soft rock|adult alternative|american trad rock|britpop|new wave|rock & roll|emo|pop punk|grunge|arena rock|british invasion|southern rock|glam rock|prog-rock\/art rock|psychedelic|blues-rock|hair metal|college rock|goth rock)$/, 'rock'],
   [/^(country|americana|contemporary country|honky tonk|bluegrass|country rock)$/, 'country'],
   [/^(latin|pop latino|urbano latino|música mexicana|musica mexicana|regional mexicano|reggaeton|salsa y tropical|latin urban|música tropical|latin pop)$/, 'latin'],
   [/^(dance|electronic|house|techno|electronica|edm|trance|dubstep|disco)$/, 'dance'],
@@ -37,17 +37,55 @@ const GENRE_SHELF = [
 const FOCUS_GENRES = /^(classical|instrumental|new age|ambient|soundtrack|original score|piano|jazz|lo-fi|easy listening|video game)$/;
 const THROWBACK_YEAR = 2009;
 
+// The style shelves (Dalton, 2026-10-31: "ska too and punk rock and pop punk and classic rock and
+// grunge and metal... I want more categories and diversity"), on top of the broad shelf above: by
+// iTunes genre (and year), or because the seeds put the song's artist on that shelf. Apple files most
+// punk, grunge and ska under plain Rock or Alternative, so the artist is the better sign.
+const ROCKISH = /^(rock|hard rock|alternative|pop\/rock|american trad rock|roots rock)$/;
+const STYLE_SHELF = [
+  ['classicrock', (g, y) => /^(classic rock|arena rock|british invasion|rock & roll|southern rock|glam rock|prog-rock\/art rock|psychedelic|blues-rock|rockabilly|surf|jam bands)$/.test(g) || (ROCKISH.test(g) && y > 0 && y <= 1989)],
+  ['grunge', (g, y) => g === 'grunge' || (/^(alternative|college rock)$/.test(g) && y >= 1989 && y <= 1999)],
+  ['metal', (g) => /^(metal|heavy metal|hair metal|death metal\/black metal|metalcore|nu metal)$/.test(g)],
+  ['punk', (g) => /^(punk|punk rock|hardcore punk)$/.test(g)],
+  ['poppunk', (g) => /^(pop punk|emo)$/.test(g)],
+  ['ska', (g) => /^(ska|ska punk|two tone)$/.test(g)],
+  ['indie', (g) => /^(indie rock|indie pop|indie|college rock|indie folk)$/.test(g)],
+  ['reggae', (g) => /^(reggae|roots reggae|modern dancehall|dancehall|dub|lovers rock|ska)$/.test(g)],
+  ['afrobeats', (g) => /^(afrobeats|afro-beat|afro-pop|afropop|afro house|amapiano|african|afro-fusion)$/.test(g)],
+  ['soul', (g, y) => /^(soul|motown|funk|disco|doo wop|neo-soul|quiet storm)$/.test(g) || (g === 'r&b/soul' && y > 0 && y <= 1989)],
+  ['jazz', (g) => /^(jazz|vocal jazz|big band|bop|hard bop|cool jazz|contemporary jazz|crossover jazz|mainstream jazz|smooth jazz|latin jazz|fusion|dixieland|ragtime|trad jazz|swing|vocal|blues|chicago blues|classic blues|contemporary blues|country blues|delta blues|electric blues|acoustic blues)$/.test(g)],
+];
+const STYLE_IDS = new Set(STYLE_SHELF.map(([id]) => id));
+
+/** mainArtist → the style shelves the seeds put that artist on. */
+function seedArtists(songs = SONGBOOK_SONGS) {
+  const map = new Map();
+  for (const s of songs) {
+    if (!STYLE_IDS.has(s.shelf) || s.songOnly) continue;
+    const who = mainArtist(s.artist);
+    if (!who) continue;
+    if (!map.has(who)) map.set(who, new Set());
+    map.get(who).add(s.shelf);
+  }
+  return map;
+}
+const SEED_ARTISTS = seedArtists();
+
 /**
- * The shelves an archive song goes on: its genre's, 📻 Throwbacks for 2009 and older, 📚 Focus
- * when the checker found it has no words (instrumental) and its genre fits.
+ * The shelves an archive (or cron) song goes on: its genre's, the style shelves its genre or artist
+ * fits, 📻 Throwbacks for 2009 and older, 📚 Focus when the checker found it has no words
+ * (instrumental) and its genre fits.
  */
-export function archiveShelves(song, { instrumental = false } = {}) {
+export function archiveShelves(song, { instrumental = false } = {}, artists = SEED_ARTISTS) {
   const genre = String(song.genre ?? '').toLowerCase().trim();
+  const year = Number(song.year) || 0;
   const out = [];
   const hit = GENRE_SHELF.find(([re]) => re.test(genre));
   if (hit && !(instrumental && FOCUS_GENRES.test(genre))) out.push(hit[1]);
   if (instrumental && FOCUS_GENRES.test(genre)) out.push('focus');
-  if (song.year > 0 && song.year <= THROWBACK_YEAR) out.push('throwbacks');
+  const byArtist = artists.get(mainArtist(song.artist ?? '')) ?? new Set();
+  for (const [id, fits] of STYLE_SHELF) if (fits(genre, year) || byArtist.has(id)) out.push(id);
+  if (year > 0 && year <= THROWBACK_YEAR) out.push('throwbacks');
   return out;
 }
 
@@ -68,9 +106,14 @@ export const GROWN_KEY = 'songbook:v1:grown';
 /** Songs kept, newest finds first (about 500 bytes each: well under KV's 25 MB). */
 export const GROWN_MAX = 4000;
 
-/** KV GROWN_KEY → its songs (each with `shelves`), or [] when missing or from an older prompt. */
+/**
+ * KV GROWN_KEY → its songs, or [] when missing or from an older prompt. Each one's `shelves` are
+ * worked out again (archiveShelves), so a new shelf picks up songs found before it existed.
+ */
 export function readGrown(raw, version = PROMPT_VERSION) {
-  return raw && raw.v === version && Array.isArray(raw.list) ? raw.list.filter((s) => s?.id && Array.isArray(s.shelves)) : [];
+  if (!raw || raw.v !== version || !Array.isArray(raw.list)) return [];
+  return raw.list.filter((s) => s?.id && Array.isArray(s.shelves))
+    .map((s) => ({ ...s, shelves: [...new Set([...s.shelves, ...archiveShelves(s, { instrumental: s.instrumental === true })])] }));
 }
 
 /** New finds go first, one per song (banKey), at most GROWN_MAX. → the KV value */

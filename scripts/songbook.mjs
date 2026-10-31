@@ -77,7 +77,7 @@ for (const shelf of SHELF_ORDER) {
     const key = `${shelf}|${banKey(found.song)}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    songs.push({ ...found.song, shelf, rank: ++rank });
+    songs.push({ ...found.song, shelf, rank: ++rank, ...(seed[2] === 'song' ? { songOnly: true } : {}) });
   }
   console.log(`${shelf}: ${rank} of ${SEEDS[shelf].length}`);
   await mkdir(dirname(CACHE), { recursive: true });

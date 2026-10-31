@@ -32,8 +32,10 @@ export const PREWARM_NIGHT_PER_RUN = 30;
 export const PREWARM_SCAN_PER_RUN = 40;
 export const PREWARM_NIGHT_SCAN_PER_RUN = 150;
 // iTunes top songs per genre, US: Pop, Hip-Hop/Rap, R&B/Soul, Rock, Alternative, Country, Latin,
-// Dance, Electronic, Soundtrack, K-Pop, Classical, Singer/Songwriter.
-const GENRE_IDS = [14, 18, 15, 21, 20, 6, 12, 17, 7, 16, 51, 5, 10];
+// Dance, Electronic, Soundtrack, K-Pop, Classical, Singer/Songwriter; then the style shelves'
+// (src/songbook.js STYLE_SHELF): Metal, Hard Rock, Punk, Pop Punk, Grunge, Ska, Reggae, Indie Rock,
+// African, Soul, Motown, Funk, Jazz, British Invasion, Rock & Roll.
+const GENRE_IDS = [14, 18, 15, 21, 20, 6, 12, 17, 7, 16, 51, 5, 10, 1153, 1152, 1006, 100019, 1003, 1194, 24, 1004, 1203, 1143, 1140, 1139, 11, 1148, 1157];
 const GENRE_FEED = (id) => `https://itunes.apple.com/us/rss/topsongs/limit=100/genre=${id}/json`;
 const LOOKUP_MAX = 150;
 const STOREFRONTS = ['us', 'gb', 'ca', 'au'];
