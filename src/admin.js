@@ -5,6 +5,7 @@
 //   PATCH /api/admin/teachers/:id {name?, archived?} → rename / hide / show a teacher on the list
 //   POST /api/admin/link {email, profile}    → link a Spotify email to a list teacher (only its hash
 //                                              is kept; the email is never stored or logged)
+//   GET  /api/admin/requests.csv             → every student song request ever (shared/requests.js)
 // KV cost: list operations (paged, capped) and a few gets; free teachers and their daily use are
 // read from LIST METADATA (written with the records), so no per-teacher get.
 
@@ -14,6 +15,7 @@ import { PROMPT_VERSION } from '../shared/filter.js';
 import { FREE_CAPS } from './free.js';
 import { KV_PROFILES, ensureProfiles } from './profiles.js';
 import { teacherSession } from './auth.js';
+import { CSV_COLUMNS, csvLines, requestLog } from '../shared/requests.js';
 
 const MAX_BODY = 2048;
 const NOT_FOUND = { error: 'not_found', message: 'No such API.' };
@@ -86,7 +88,7 @@ async function changeFreeTeacher(env, id, body) {
 async function stats(env) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
-  const [list, links, own, sessions, use, verdicts, prewarm] = await Promise.all([
+  const [list, links, own, sessions, use, verdicts, prewarm, requests] = await Promise.all([
     ensureProfiles(env),
     listAll(env, 'link:v1:', 1),
     listAll(env, 'prof:v1:'),
@@ -94,6 +96,7 @@ async function stats(env) {
     listAll(env, 'use:v1:'),
     listAll(env, `verdict:v${PROMPT_VERSION}:`, 20), // older verdicts are asked again (shared/filter.js)
     env.CLASS_KV.get(`prewarm:v1:state:${today}`, 'json'),
+    requestLog(env)?.summary().catch(() => null) ?? null,
   ]);
   const linked = new Set(await Promise.all(links.keys.map((k) => env.CLASS_KV.get(k.name))));
   const teachers = list.map((p) => ({
@@ -127,7 +130,41 @@ async function stats(env) {
     today: { teachers: todayUse.length, rooms: sum('rooms'), ai: sum('ai'), art: sum('art'), caps: FREE_CAPS },
     prewarm: prewarm ?? null,
     songs: verdicts.more ? `${songs}+` : songs,
+    requests: requests ?? null,
   };
+}
+
+/** Every request as CSV, a page at a time (the log can grow past what one answer should hold). */
+export function requestsCsv(env) {
+  const log = requestLog(env);
+  if (!log) return json(503, { error: 'storage', message: 'The request log is not set up on this server.' });
+  const { readable, writable } = new TransformStream();
+  const out = writable.getWriter();
+  const enc = new TextEncoder();
+  (async () => {
+    try {
+      await out.write(enc.encode(`${CSV_COLUMNS.join(',')}
+`));
+      for (let after = 0; ;) {
+        const { rows, last } = await log.page(after);
+        if (rows.length) await out.write(enc.encode(`${csvLines(rows)}
+`));
+        if (last === null) break;
+        after = last;
+      }
+      await out.close();
+    } catch (e) {
+      console.error(JSON.stringify({ message: 'request csv failed', error: String(e) }));
+      await out.abort(e).catch(() => {});
+    }
+  })();
+  const day = new Date().toISOString().slice(0, 10);
+  return new Response(readable, {
+    headers: {
+      'content-type': 'text/csv; charset=utf-8', 'cache-control': 'no-store',
+      'content-disposition': `attachment; filename="roomdj-requests-${day}.csv"`,
+    },
+  });
 }
 
 /** /api/admin/* */
@@ -136,6 +173,7 @@ export async function handleAdmin(request, env, url) {
   const admin = await adminOf(request, env);
   if (!admin) return json(404, NOT_FOUND);
   if (url.pathname === '/api/admin/stats' && request.method === 'GET') return json(200, await stats(env));
+  if (url.pathname === '/api/admin/requests.csv' && request.method === 'GET') return requestsCsv(env);
   const one = url.pathname.match(/^\/api\/admin\/teachers\/([^/]+)$/);
   if (one && request.method === 'PATCH') {
     const body = await readBody(request);

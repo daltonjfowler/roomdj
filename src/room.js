@@ -93,6 +93,7 @@ import { lookupCatalog, roomCatalog } from './catalog.js';
 import { readBanned, searchAllowed } from './search.js';
 import { isShelf, shelfSongs } from './songbook.js';
 import { ASKS_KV, noteAsks, readAsks, readPopular } from './popular.js';
+import { askEntry, finishAsks, logAsk, requestLog } from '../shared/requests.js';
 import { claimCode, codeHash, codeInUse, deleteCodeRoute, putCodeRoute, releaseCode } from './codes.js';
 import { YoutubeError, resolveVideo } from './youtube.js';
 import { VIDEO_ID_PATTERN } from '../shared/youtube-match.js';
@@ -849,6 +850,15 @@ export class Room extends DurableObject {
     await this.env.CLASS_KV.put(key, JSON.stringify({ v: 1, list }));
   }
 
+  /** 📈 The room closes: its students' asks go to the request log, with no device ids (shared/requests.js). */
+  async requestsAtClose() {
+    const log = requestLog(this.env);
+    const rows = finishAsks(this.room?.askLog ?? [], this.room?.history ?? []);
+    if (!log || !rows.length) return;
+    await log.add(rows);
+    this.room.askLog = [];
+  }
+
   /** The room closes: its Top 5 (finished or still playing, net above 0) each count one more Top 5. */
   async favoritesAtClose() {
     // SCORE FLOOR + DOWNVOTE MODE: the Top 5 as the class saw it; a net > 0 is the same raw or floored.
@@ -985,6 +995,11 @@ export class Room extends DurableObject {
         await this.asksAtClose();
       } catch (e) {
         console.error(JSON.stringify({ message: 'asks at close failed', error: String(e) }));
+      }
+      try {
+        await this.requestsAtClose();
+      } catch (e) {
+        console.error(JSON.stringify({ message: 'request log at close failed', error: String(e) }));
       }
       // The song still playing at the bell counts once it ran REPEAT_MIN_MS; then the pending plays go to KV.
       const playing = this.room.nowPlaying ? this.room.history?.findLast((x) => x.id === this.room.nowPlaying.id) : null;
@@ -1581,6 +1596,10 @@ export class Room extends DurableObject {
     const teacher = a.device === TEACHER_DEVICE;
     const id = songId(raw);
     const no = (reason, message) => this.send(ws, { t: 'suggested', ok: false, reason, message, song: id ?? null });
+    // 📈 The request log (shared/requests.js): a student's ask of a known song and what happened to it.
+    const asked = (song, outcome, extra = {}) => {
+      if (!teacher && this.room?.open) logAsk(this.room, askEntry(song, outcome, { device: a.device, ...extra }));
+    };
     if (!id) return no('unavailable', 'We could not find that song.');
     // A Spotify song only while the host plays through Spotify (Spotify's Developer Policy). A
     // page with old results after the teacher switched services gets this.
@@ -1593,6 +1612,7 @@ export class Room extends DurableObject {
     const tooLongNo = (song) => {
       const long = tooLong(song, this.room.settings);
       if (!long) return false;
+      asked(song, 'refused', { reason: 'too_long' });
       this.send(ws, { t: 'suggested', ok: false, reason: 'too_long', message: TOO_LONG, song: id, why: { id: 'too_long', evidence: long.evidence } });
       return true;
     };
@@ -1600,6 +1620,7 @@ export class Room extends DurableObject {
     const sameArtistNo = (song) => {
       const waiting = artistWaiting(this.room, song);
       if (!waiting) return false;
+      asked(song, 'refused', { reason: 'same_artist' });
       this.send(ws, { t: 'suggested', ok: false, reason: 'same_artist', message: refusalMessage(this.room, 'same_artist', id), song: id, why: sameArtistWhy(waiting) });
       return true;
     };
@@ -1607,12 +1628,14 @@ export class Room extends DurableObject {
     const queueNo = (song) => {
       const reason = suggestRefusal(this.room, a.device, id, song);
       if (!reason) return false;
+      asked(song, 'refused', { reason });
       no(reason, refusalMessage(this.room, reason, id, song));
       return true;
     };
     const restingNo = async (song) => {
       const rest = await this.resting(song);
       if (!rest || !this.room?.open) return false;
+      asked(song, 'refused', { reason: 'resting' });
       this.send(ws, {
         t: 'suggested', ok: false, reason: 'resting', message: RESTING, song: id,
         why: { id: 'resting', evidence: RESTING_EVIDENCE }, at: rest.at, until: rest.until,
@@ -1706,6 +1729,7 @@ export class Room extends DurableObject {
       if (!held.ok) {
         if (!(await giveBack()) && changed) await this.commit();
         if (held.reason === 'same_artist' && sameArtistNo(song)) return;
+        asked(song, 'refused', { reason: held.reason });
         return no(held.reason, refusalMessage(this.room, held.reason, id, song));
       }
       if (!teacher) startRest(this.room, a.device); // 📚 the pick is in: back to work
@@ -1715,6 +1739,7 @@ export class Room extends DurableObject {
       if (nightWorthy(song, verdict.ai)) await addToNight(this.env, `look:${banKey(song)}`, [song]);
       console.log(JSON.stringify({ message: 'suggestion waits for review', song: id, ai: verdict.ai?.reason }));
       const { why, detail } = filterWhy(song, verdict);
+      asked(song, 'review', { reason: verdict.unconfirmed ? 'nolyrics' : 'review', why: why?.id, item: held.item.id });
       this.send(ws, { t: 'suggested', ok: false, reason: 'review', message: FILTER_REASONS.review, song: id, why, ...(teacher && detail ? { detail } : {}) });
       return this.commit();
     }
@@ -1723,6 +1748,7 @@ export class Room extends DurableObject {
       const banNote = verdict.reason === 'banned' ? await this.banNote(song) : '';
       const { why, detail } = filterWhy(song, verdict, { banNote });
       if (!this.room?.open) return;
+      asked(song, 'blocked', { reason: verdict.reason, why: why?.id });
       await this.addBlocked({ song, device: a.device, by: nick, why, detail, source: 'filter', action: 'suggest' });
       const refunded = await giveBack(); // the filter said no: the credit comes back
       if (!refunded && changed) await this.commit();
@@ -1737,8 +1763,10 @@ export class Room extends DurableObject {
     if (!added.ok) {
       if (!(await giveBack()) && changed) await this.commit();
       if (added.reason === 'same_artist' && sameArtistNo(song)) return;
+      asked(song, 'refused', { reason: added.reason });
       return no(added.reason, refusalMessage(this.room, added.reason, id, song));
     }
+    asked(song, 'queued', { item: added.item.id });
     if (!teacher) startRest(this.room, a.device); // 📚 the pick is in: back to work
     this.send(ws, { t: 'suggested', ok: true, title: song.title, song: id });
     await this.commit();

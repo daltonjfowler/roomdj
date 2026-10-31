@@ -52,6 +52,7 @@ export { Room } from './room.js';
 export { CouponLedger } from './coupons.js';
 export { CodeLock } from './codelock.js';
 export { LyricsGate } from './lyrics-gate.js';
+export { RequestLog } from './request-log.js';
 import { couponsOn } from './coupons.js';
 
 const KV_SETTINGS = 'settings';

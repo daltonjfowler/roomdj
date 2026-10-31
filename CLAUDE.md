@@ -166,6 +166,7 @@ Claude account).
   `nightShift` from the cron 10 pm-6 am Eastern (NIGHT_HOURS_ET), NIGHT_AI_PER_DAY.
 - `src/search.js`: the search students see (no explicit, blocklist, ban list; clean swaps; no AI).
 - `src/popular.js`: 🔥 Popular on RoomDJ (invariant 40d): `noteAsks` at room close, `refreshPopular` daily.
+- `shared/requests.js` + `src/request-log.js`: 📈 the song request log (invariant 42): rows made at room close, the RequestLog Durable Object (SQLite), CSV for the admin page.
 - `src/songbook.js` + `src/songbook-data.js` (made by `npm run songbook` from
   `scripts/songbook-seeds.mjs`, never edited by hand): the songbook's shelves (invariant 40).
   `shared/songbook.js`: the search filters (`viewResults`, `resultGenres`, `cleanView`).
@@ -681,6 +682,16 @@ Claude account).
    merges every teacher's `asks` into KV popular:v1, a song only when POPULAR_MIN_TEACHERS (2) teachers'
    students asked for it (never one class's taste). Shelf id 'popular' (first button); the student page
    opens it when a student taps an empty search box. Same quickCheck + ✓ Checked only rule as a shelf.
+42. 📈 The song request log (Dalton, 2026-10-30: "saving all student requests ever ... so we can make a
+   dope chart later ... without PII"; shared/requests.js, src/request-log.js). Every STUDENT ask of a
+   known song (never teacher picks) goes on room.askLog with its outcome (queued / review / blocked /
+   refused + reason + AI category) as suggest() decides; at close finishAsks keeps one row per student
+   and song (furthest outcome, first time), adds the fate from the history (played / skipped / failed /
+   playing / not played) and 👍/👎, DROPS the device id, and appends the rows to REQUEST_LOG ('all',
+   SQLite, kept for good). A row NEVER holds a nickname, device id, teacher, room, class code or school;
+   time is the UTC hour only. legal.html says so; a new field needs the legal copy first. Admin page:
+   "Song requests" card + ⬇ Download CSV (GET /api/admin/requests.csv, paged, never a formula cell).
+   Best effort: a failed write loses that room's rows. test: test/requests.test.mjs.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

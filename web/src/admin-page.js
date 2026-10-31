@@ -110,6 +110,31 @@ function render(s) {
     `Cover checks (free teachers): ${t.art} (each has ${t.caps.art} a day)`,
     s.prewarm ? `Chart pre-check: ${s.prewarm.used} AI checks, at song ${s.prewarm.cursor}` : 'Chart pre-check: not run yet today',
   ].map((x) => el('li', x)));
+
+  const q = s.requests;
+  $('#requestsText').textContent = !q ? 'The request log did not answer.'
+    : q.total ? `${q.total.toLocaleString()} requests, ${q.first.slice(0, 10)} to ${q.last.slice(0, 10)}.` : 'No requests yet. Rooms add theirs when they close.';
+}
+
+/** The CSV comes with the sign-in header, so it is fetched, then saved from memory. */
+async function downloadRequests() {
+  const headers = sessionHeaders();
+  if (!headers) return gate();
+  $('#requestsCsv').disabled = true;
+  try {
+    const r = await fetch('/api/admin/requests.csv', { headers });
+    if (!r.ok) return void toast('Could not download the requests.', 'bad');
+    const url = URL.createObjectURL(await r.blob());
+    const a = el('a');
+    a.href = url;
+    a.download = `roomdj-requests-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  } catch {
+    toast('Could not reach RoomDJ. Check the internet and try again.', 'bad');
+  } finally {
+    $('#requestsCsv').disabled = false;
+  }
 }
 
 async function load() {
@@ -141,4 +166,5 @@ $('#linkForm').addEventListener('submit', async (e) => {
   }
 });
 $('#refresh').addEventListener('click', load);
+$('#requestsCsv').addEventListener('click', downloadRequests);
 load();
