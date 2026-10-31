@@ -6,7 +6,7 @@
 // queue, Played already, 😴 Resting, ⏱ Too long, 🎨 Artist waiting, Not allowed + Why?.
 
 import { $, announce, artHtml, esc, keepFocus, spotifyMark, toast } from './dom.js';
-import { QUERY_MAX, whyText } from '../../shared/protocol.js';
+import { QUERY_MAX, SHELVES, whyText } from '../../shared/protocol.js';
 import { tooLong } from '../../shared/classtime.js';
 import { mainArtist, mainArtistName } from '../../shared/filter.js';
 import { restingEvidence, restingUntilLabel, songKey } from '../../shared/repeats.js';
@@ -104,8 +104,9 @@ export function initTeacherSuggest({ send, getState }) {
     return why ? `${button}<button type="button" data-act="twhy" aria-label="${esc(`Why: ${song.title}`)}">Why?</button>` : button;
   }
 
-  /** The filters: shown while there are results; the genre list is the results' own. */
+  /** The list buttons while the search box is empty; the filters while there are results (the genre list is the results' own). */
   function showTools() {
+    $('#tShelves').hidden = Boolean($('#tq').value.trim());
     $('#tTools').hidden = !results.length;
     const genres = resultGenres(results);
     const sel = $('#tGenre');
@@ -119,10 +120,10 @@ export function initTeacherSuggest({ send, getState }) {
   function render() {
     if (!$('#suggestDlg').open) return;
     const shown = viewResults(results, view);
+    showTools(); // the list buttons follow the search box even when the rows stay the same
     const key = JSON.stringify([view, shown.map((song) => [song.id, ...stateOf(song)])]);
     if (key === renderedKey) return;
     renderedKey = key;
-    showTools();
     keepFocus(() => {
       $('#tResults').innerHTML = shown.map((song) => `<li class="fav-item" data-id="${esc(song.id)}">
         ${artHtml(song, 100, { blur: true })}
@@ -145,10 +146,29 @@ export function initTeacherSuggest({ send, getState }) {
     render();
   }
 
+  const shelfAsk = (id) => `shelf:${id}`; // `asked` while a list is open
+  function setShelf(id) {
+    for (const b of $('#tShelfBtns').children) b.setAttribute('aria-pressed', String(b.dataset.shelf === id));
+  }
+
+  /** Open a songbook list (protocol.js SONGBOOK): the room answers 'searchResults' with its id. */
+  function openShelf(id) {
+    if (!SHELVES.some((s) => s.id === id)) return;
+    clearTimeout(searchTimer);
+    asked = shelfAsk(id);
+    setShelf(id);
+    if (!send({ t: 'shelf', shelf: id })) return void ($('#tqMsg').textContent = 'Reconnecting to the room. Try again in a moment.');
+    $('#tqMsg').classList.add('busy');
+    $('#tqMsg').textContent = 'Loading the list…';
+    $('#tResults').classList.add('stale');
+  }
+
   function search() {
     clearTimeout(searchTimer);
     const q = $('#tq').value.trim().slice(0, QUERY_MAX);
+    if (q) setShelf('');
     if (q.length < 2) {
+      if (!q && asked.startsWith('shelf:')) return render(); // a list stays open
       results = [];
       asked = '';
       $('#tqMsg').classList.remove('busy');
@@ -172,6 +192,11 @@ export function initTeacherSuggest({ send, getState }) {
     $('#tq').select();
   }
 
+  $('#tShelfBtns').innerHTML = SHELVES.map((s) => `<button type="button" data-shelf="${esc(s.id)}" aria-pressed="false">${esc(s.label)}</button>`).join('');
+  $('#tShelfBtns').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-shelf]');
+    if (btn) openShelf(btn.dataset.shelf);
+  });
   $('#suggestBtn').addEventListener('click', open);
   $('#tSearchForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -215,7 +240,7 @@ export function initTeacherSuggest({ send, getState }) {
   /** Messages from the room: true when this module took it. */
   function onMessage(msg) {
     if (msg.t === 'searchResults') {
-      if (msg.q !== asked) return true; // an older search
+      if ((msg.shelf ? shelfAsk(msg.shelf) : msg.q) !== asked) return true; // an older search or list
       $('#tqMsg').classList.remove('busy');
       $('#tResults').classList.remove('stale');
       if (msg.error) {
@@ -224,9 +249,12 @@ export function initTeacherSuggest({ send, getState }) {
       } else {
         results = Array.isArray(msg.results) ? msg.results.filter((s) => s?.id) : [];
         for (const s of results) songs.set(s.id, s);
-        $('#tqMsg').textContent = results.length
-          ? `${results.length} ${results.length === 1 ? 'song' : 'songs'} found.`
-          : 'No songs found. Try other words, or just the artist\'s name.';
+        const shelf = msg.shelf && SHELVES.find((s) => s.id === msg.shelf);
+        $('#tqMsg').textContent = shelf
+          ? results.length ? `${shelf.label}: ${results.length} checked ${results.length === 1 ? 'song' : 'songs'}, ${shelf.id === 'popular' ? 'what students ask for most on RoomDJ' : 'most asked first'}.`
+            : shelf.id === 'popular' ? 'Nothing is popular across RoomDJ yet. Pick a list or search for a song.' : 'RoomDJ is still checking the songs on this list. Search for a song instead.'
+          : results.length ? `${results.length} ${results.length === 1 ? 'song' : 'songs'} found.`
+            : 'No songs found. Try other words, or just the artist\'s name.';
       }
       renderedKey = '';
       render();
@@ -285,6 +313,7 @@ export function initTeacherSuggest({ send, getState }) {
     $('#tResults').innerHTML = '';
     $('#tqMsg').textContent = '';
     $('#tq').value = '';
+    setShelf('');
     if ($('#suggestDlg').open) $('#suggestDlg').close();
   }
 

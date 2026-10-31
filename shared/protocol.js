@@ -872,6 +872,8 @@ export const ART_RATE = 20;
 //           { t: 'vote', id, v: -1 | 0 | 1 }           the teacher's one vote (TEACHER_DEVICE)
 //           { t: 'search', q }                         the room's search for the teacher; answered
 //                                                      'searchResults'
+//           { t: 'shelf', shelf }                      a songbook list for the teacher (SONGBOOK);
+//                                                      answered 'searchResults' with `shelf`, q ''
 //           { t: 'next', from, failed? }               current song done: top of queue → nowPlaying.
 //                                                      from = the nowPlaying id the page is moving
 //                                                      on from (null: nothing was playing); ignored

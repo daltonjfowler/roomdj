@@ -224,6 +224,22 @@ try {
   check('host: the 🔎 Suggest a song button shows', await visible(host, '#suggestBtn'));
   check('host snapshot names the teacher for picks', lastState(host)?.teacherName === 'Teacher 1');
 
+  // 📚 The songbook's lists with no search first (Dalton, 2026-10-31: "I shouldn't have to search first").
+  await host.page.click('#suggestBtn');
+  check('Suggest a song: the list buttons show while the box is empty', await visible(host, '#tShelves') && (await host.page.locator('#tShelfBtns button').count()) >= 20);
+  const nShelf = host.msgs.length;
+  await host.page.click('#tShelfBtns button[data-shelf="hiphop"]');
+  const shelfMsg = await until(() => host.msgs.slice(nShelf).find((m) => m.t === 'searchResults' && m.shelf === 'hiphop'), { timeout: 15_000 });
+  check('a list: the room answers with its ✓ Checked songs', shelfMsg?.results?.length > 0 && shelfMsg.results.every((s) => s.check === 'ready'), JSON.stringify(shelfMsg)?.slice(0, 200));
+  check('a list: rows with ➕ Suggest, the button pressed', Boolean(await until(async () => (await host.page.locator('#tResults li[data-id] button[data-act="tsuggest"]').count()) > 0))
+    && (await host.page.getAttribute('#tShelfBtns button[data-shelf="hiphop"]', 'aria-pressed')) === 'true');
+  check('a list: the message names it', /Hip-hop.*checked song/.test(await text(host, '#tqMsg')), await text(host, '#tqMsg'));
+  await host.page.fill('#tq', 'x');
+  check('typing hides the list buttons', Boolean(await until(async () => !(await visible(host, '#tShelves')))));
+  await host.page.fill('#tq', '');
+  check('clearing the box brings them back', Boolean(await until(() => visible(host, '#tShelves'))));
+  await closeDlg(host);
+
   rawHost = await rawSocket(roomId, { role: 'host', token: saved.token });
   const link = await rawHost.ask({ t: 'boardLink' }, (m) => m.t === 'boardLink');
   const ava = await openPage('ava', `?code=${code}`);

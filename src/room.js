@@ -1208,6 +1208,29 @@ export class Room extends DurableObject {
     if (!this.allow('search', device) || !this.allow('roomSearch', 'room')) {
       return json(429, { error: 'rate', message: 'That is a lot of searching. Wait a minute and try again.' });
     }
+    const results = await this.shelfResults(shelf);
+    return new Response(this.artText({ results, shelf }, 'student'), {
+      status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+    });
+  }
+
+  /**
+   * The teacher's list (host 'shelf', protocol.js TEACHER PICKS; Dalton, 2026-10-31: "I shouldn't
+   * have to search first to see options"): the same songs a student's list shows, over the host
+   * socket, answered 'searchResults' with the shelf's id.
+   */
+  async hostShelf(ws, raw) {
+    const shelf = typeof raw === 'string' ? raw : '';
+    const reply = (body) => this.send(ws, { t: 'searchResults', q: '', shelf, ...body });
+    if (!this.room || !isShelf(shelf)) return reply({ results: [], error: 'shelf', message: 'Pick one of the lists.' });
+    if (!this.allow('teacherSearch', 'host') || !this.allow('roomSearch', 'room')) {
+      return reply({ error: 'rate', message: 'That is a lot of searching. Wait a minute and try again.' });
+    }
+    return reply({ results: await this.shelfResults(shelf) });
+  }
+
+  /** A shelf's songs this room's rules let show, ✓ Checked only, in shelf order (kept like search's). */
+  async shelfResults(shelf) {
     const s = this.room.settings;
     const ctx = { blocklist: s.blocklist ?? [], banned: await this.banned(), notMusic: s.blockNotMusic !== false, kidzBop: s.kidzBop };
     const grown = shelf === 'popular' ? [] : await this.grownSongs();
@@ -1221,9 +1244,7 @@ export class Room extends DurableObject {
     const plain = shown.filter((song) => ready.has(song.id)); // remembered like search's: without the tag
     await this.remember(plain);
     await this.loadArt(plain);
-    return new Response(this.artText({ results, shelf }, 'student'), {
-      status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
-    });
+    return results;
   }
 
   /** The shelf songs the chart cron found ✓ Checked (src/songbook.js GROWN_KEY): read like 🔥 Popular. */
@@ -1805,6 +1826,8 @@ export class Room extends DurableObject {
       }
       case 'search':
         return this.hostSearch(ws, msg.q);
+      case 'shelf':
+        return this.hostShelf(ws, msg.shelf);
       case 'next':
       case 'skip': {
         if (!nextIsFor(room, msg.from)) return; // already moved on (its state is on the way)

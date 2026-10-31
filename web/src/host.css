@@ -360,6 +360,9 @@ button.more { padding-inline: 8px; min-width: 32px; }
 .t-tools select.text { width: auto; flex: 1 1 9em; min-width: 0; max-width: 14em; }
 .t-tools .check { white-space: nowrap; font-weight: 600; }
 .t-results { max-height: 50vh; }
+.t-shelves { margin-top: 8px; }
+.t-shelves[hidden] { display: none; }
+.t-shelves .note { margin: 0 0 6px; }
 .t-results .item-tools, .fav-item .item-tools { flex-wrap: wrap; justify-content: flex-end; }
 .item-tools button.status { background: transparent; border-color: var(--line); color: var(--muted); font-weight: 600; }
 .tvote[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }

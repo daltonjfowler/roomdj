@@ -798,6 +798,11 @@
       <input id="tq" class="text" type="search" autocomplete="off" spellcheck="false" placeholder="Song or artist" aria-describedby="tqMsg">
       <button type="submit" class="primary">Search</button>
     </form>
+    <!-- 📚 The songbook's lists while the search box is empty (protocol.js SONGBOOK), like the student page's -->
+    <div id="tShelves" class="t-shelves">
+      <p class="note">Or pick from songs RoomDJ already checked:</p>
+      <div id="tShelfBtns" class="shelf-btns" role="group" aria-label="Lists of checked songs"></div>
+    </div>
     <!-- Search filters (protocol.js SONGBOOK, shared/songbook.js), the same as the student page's -->
     <div id="tTools" class="t-tools" role="group" aria-label="Filter the songs" hidden>
       <label class="check"><input id="tOnlyChecked" type="checkbox"> ✓ Checked only</label>
