@@ -15,6 +15,15 @@ export const DEPTH = {
 /** Songs a list may have in all (hand seeds first): more where the check passes fewer. */
 export const MAX = { hiphop: 700, latin: 450, country: 420 };
 export const MAX_DEFAULT = 340;
+/**
+ * Songs an artist's top songs never bring in (title - artist), Dalton's own calls: the check could
+ * still miss them, so they are not even asked about.
+ */
+export const SKIP = [
+  'Nausea - Jeff Rosenstock', // "nausea is about alcohol" (Dalton, 2026-10-31)
+  'Turtles All the Way Down - Sturgill Simpson', // drugs
+  'You Can Have the Crown - Sturgill Simpson', // weed, swearing
+];
 
 export const ARTISTS = {
   pop: [
@@ -33,6 +42,7 @@ export const ARTISTS = {
     'Muni Long', 'Mario', 'The Weeknd', 'Frank Ocean', 'Anderson .Paak', 'Silk Sonic', 'Megan Thee Stallion', 'Nicki Minaj', 'Big Sean', 'Soulja Boy',
     'Cupid', 'Ludacris', 'Black Eyed Peas', 'Fugees', 'Ms. Lauryn Hill', 'A Tribe Called Quest', 'De La Soul', 'Coolio', 'DJ Khaled', 'Roddy Ricch',
     'Lil Baby', 'Gunna', 'Travis Scott', 'Tyler, The Creator', 'GloRilla', 'Doechii', 'Latto', 'Ice Spice', 'Bryson Tiller', 'Summer Walker',
+    'Aesop Rock',
   ],
   country: [
     'Morgan Wallen', 'Luke Combs', 'Zach Bryan', 'Chris Stapleton', 'Billy Strings', 'Kane Brown', 'Luke Bryan', 'Jason Aldean', 'Blake Shelton',
@@ -80,6 +90,7 @@ export const ARTISTS = {
     'Steve Miller Band', 'The Doobie Brothers', 'Chicago', 'Santana', 'The Doors', 'Jimi Hendrix', 'Cream', 'Eric Clapton', 'The Beach Boys', 'Simon & Garfunkel',
     'The Kinks', 'The Animals', 'The Monkees', 'Buddy Holly', 'Chuck Berry', 'Elvis Presley', 'Little Richard', 'Roy Orbison', 'Bachman-Turner Overdrive', 'Blue Öyster Cult',
     'Bad Company', 'Thin Lizzy', 'Cheap Trick', 'The Cars', 'Billy Joel', 'Elton John', 'David Bowie', 'Pat Benatar', 'REO Speedwagon', 'Kenny Loggins',
+    'Pink Floyd',
   ],
   indie: [
     'Nirvana', 'Pearl Jam', 'Soundgarden', 'R.E.M.', 'Radiohead', 'The Cranberries', 'The Smashing Pumpkins', 'Weezer', 'Oasis', 'Blur',
@@ -88,6 +99,7 @@ export const ARTISTS = {
     'Clairo', 'beabadoobee', 'Wallows', 'Dayglow', 'Hippo Campus', 'Peach Pit', 'The Marías', 'Djo', 'sombr', 'Young the Giant',
     'WALK THE MOON', 'Bleachers', 'fun.', 'Portugal. The Man', 'Death Cab for Cutie', 'The Shins', 'Fleet Foxes', 'The National', 'Arcade Fire', 'Franz Ferdinand',
     'The Wombats', 'Catfish and the Bottlemen', 'Phoebe Bridgers', 'boygenius', 'Lana Del Rey', 'Lorde', 'Alanis Morissette', 'Stone Temple Pilots', 'Alice In Chains', 'Bush',
+    'Men I Trust', 'Kate Bollinger', 'natalie jinju', 'Suki Waterhouse', 'Mac DeMarco', 'Phoenix',
   ],
   punk: [
     'Green Day', 'blink-182', 'The Offspring', 'Sum 41', 'Fall Out Boy', 'Paramore', 'My Chemical Romance', 'All Time Low', 'Simple Plan', 'Good Charlotte',
@@ -95,6 +107,7 @@ export const ARTISTS = {
     'Boys Like Girls', 'Ramones', 'The Clash', 'Bad Religion', 'Rise Against', 'Pennywise', 'NOFX', 'Rancid', 'Dropkick Murphys', 'Social Distortion',
     'The Interrupters', 'Reel Big Fish', 'Less Than Jake', 'Bowling For Soup', 'Motion City Soundtrack', 'PVRIS', 'Waterparks', 'Pierce The Veil', 'Sleeping With Sirens', 'Meet Me @ The Altar',
     'Turnstile', 'Descendents', 'Buzzcocks', 'The Used', 'Hawthorne Heights', 'Dashboard Confessional', 'Story of the Year', 'Relient K', 'Hey Monday', 'Real Friends',
+    'Jeff Rosenstock', 'Streetlight Manifesto',
   ],
   metal: [
     'Metallica', 'Iron Maiden', 'Black Sabbath', 'Ozzy Osbourne', 'Judas Priest', 'Megadeth', 'Anthrax', 'Pantera', 'System Of A Down', 'Korn',
@@ -109,6 +122,7 @@ export const ARTISTS = {
     'Donna Summer', 'Gloria Gaynor', 'Commodores', 'Lionel Richie', 'Parliament', 'James Brown', 'Sly & The Family Stone', 'Prince', 'Chaka Khan', 'Luther Vandross',
     'Amy Winehouse', 'Leon Bridges', 'Vulfpeck', 'Cory Wong', 'Jungle', 'Durand Jones & The Indications', 'Charles Bradley', 'Sharon Jones & The Dap-Kings', 'Curtis Mayfield', 'The Isley Brothers',
     "The O'Jays", 'The Spinners', 'Daryl Hall & John Oates', 'Wilson Pickett', 'Sam & Dave', 'Martha Reeves & The Vandellas', 'The Drifters', 'The Platters', 'Frankie Valli & The Four Seasons', 'Jackie Wilson',
+    'Anderson .Paak', 'Silk Sonic',
   ],
   reggae: [
     'Bob Marley & The Wailers', 'Peter Tosh', 'Jimmy Cliff', 'Toots & The Maytals', 'UB40', 'Inner Circle', 'Ziggy Marley', 'Stephen Marley', 'Burning Spear', 'Desmond Dekker',

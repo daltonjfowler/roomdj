@@ -122,6 +122,12 @@ export const MORE = {
     // Billy Strings (Dalton, 2026-10-31: "Add Billy strings songs to country").
     ['Away From the Mire', 'Billy Strings'], ['Meet Me at the Creek', 'Billy Strings'], ['Hide and Seek', 'Billy Strings'], ['Love and Regret', 'Billy Strings'],
     ['Leaders', 'Billy Strings'], ['Taking Water', 'Billy Strings'], ['In the Morning Light', 'Billy Strings'],
+    // Sturgill Simpson / Johnny Blue Skies, hand-picked only (Dalton, 2026-10-31: "any appropriate
+    // songs"; scripts/songbook-artists.mjs SKIP keeps the others out), and Tony Rice's "Freeborn Man".
+    ['Long White Line', 'Sturgill Simpson'], ['Living the Dream', 'Sturgill Simpson'], ['Life of Sin', 'Sturgill Simpson'], ['Breakers Roar', 'Sturgill Simpson'],
+    ['Welcome to Earth (Pollywog)', 'Sturgill Simpson'], ['All Around You', 'Sturgill Simpson'], ['In Bloom', 'Sturgill Simpson'], ['Oh Sarah', 'Sturgill Simpson'],
+    ['Who I Am', 'Johnny Blue Skies'], ['If the Sun Never Rises Again', 'Johnny Blue Skies'], ['Swamp of Sadness', 'Johnny Blue Skies'], ['Right Kind of Dream', 'Johnny Blue Skies'],
+    ['Freeborn Man', 'Tony Rice'],
     ['Need You Now', 'Lady A'], ['Cruise', 'Florida Georgia Line'], ['H.O.L.Y.', 'Florida Georgia Line'], ['Meant to Be', 'Bebe Rexha'],
     ['Body Like A Back Road', 'Sam Hunt'], ['Die A Happy Man', 'Thomas Rhett'], ['Life Changes', 'Thomas Rhett'], ['Remember You Young', 'Thomas Rhett'],
     ['Before He Cheats', 'Carrie Underwood'], ['Jesus, Take the Wheel', 'Carrie Underwood'], ['Cowboy Casanova', 'Carrie Underwood'], ['Wagon Wheel', 'Darius Rucker'],

@@ -11,7 +11,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { baseTitle, banKey, mainArtist, normalizeWords } from '../shared/filter.js';
 import { itunesSearchUrl, parseItunes, toSong } from '../shared/itunes.js';
-import { ARTISTS, DEPTH, MAX, MAX_DEFAULT } from './songbook-artists.mjs';
+import { ARTISTS, DEPTH, MAX, MAX_DEFAULT, SKIP } from './songbook-artists.mjs';
 import { SEEDS, SHELF_ORDER } from './songbook-seeds.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -64,12 +64,13 @@ function pick(results, [title, artist], shelf) {
   };
 }
 
+const SKIPPED = new Set(SKIP.map((s) => s.split(' - ')).map(([title, artist]) => `${baseTitle(title) || normalizeWords(title)}|${mainArtist(artist)}`));
 const HOLIDAY = /\b(christmas|xmas|santa|jingle|navidad|holiday|hanukkah|new year)\b/;
 
 /**
  * An artist's most popular songs on iTunes (scripts/songbook-artists.mjs): its own (not a feature),
  * never explicit (not even a clean edit), no live / remix / acoustic versions, no holiday songs, 1 to
- * 7 minutes, one per title, at most `k`.
+ * 7 minutes, one per title, none on the SKIP list, at most `k`.
  */
 async function artistTop(artist, k) {
   const url = `https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&entity=song&attribute=artistTerm&limit=60&country=US`;
@@ -81,7 +82,7 @@ async function artistTop(artist, k) {
     if (extraVersion(s.title, s.album, '') || HOLIDAY.test(normalizeWords(`${s.title} ${s.album}`)) || /holiday/i.test(s.genre ?? '')) continue;
     if (!(s.durationMs >= 60_000 && s.durationMs <= 7 * 60_000)) continue;
     const title = baseTitle(s.title) || normalizeWords(s.title);
-    if (titles.has(title)) continue;
+    if (titles.has(title) || SKIPPED.has(`${title}|${who}`)) continue;
     titles.add(title);
     out.push(s);
     if (out.length >= k) break;

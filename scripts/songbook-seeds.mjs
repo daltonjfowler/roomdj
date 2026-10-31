@@ -49,6 +49,11 @@ export const SEEDS = {
   ],
   hiphop: [
     ['Hotline Bling', 'Drake'], ["God's Plan", 'Drake'], ['One Dance', 'Drake'], ["Hold On, We're Going Home", 'Drake'],
+    // Anderson .Paak (Dalton, 2026-10-31).
+    ['Come Down', 'Anderson .Paak'], ['Am I Wrong', 'Anderson .Paak'], ['Make It Better', 'Anderson .Paak'], ['Tints', 'Anderson .Paak'],
+    ['Bubblin', 'Anderson .Paak'], ['Leave the Door Open', 'Silk Sonic'], ['Smokin Out the Window', 'Silk Sonic'], ['Fire in the Sky', 'Anderson .Paak'],
+    // Aesop Rock (Dalton, 2026-10-31).
+    ['None Shall Pass', 'Aesop Rock'], ['Daylight', 'Aesop Rock'], ['Kirby', 'Aesop Rock'], ['Long Legged Larry', 'Aesop Rock'],
     ['Toosie Slide', 'Drake'], ['In My Feelings', 'Drake'], ['Passionfruit', 'Drake'], ['Nice For What', 'Drake'],
     ['Laugh Now Cry Later', 'Drake'], ['Started From the Bottom', 'Drake'], ['Work', 'Rihanna'], ['Controlla', 'Drake'],
     ['Fake Love', 'Drake'], ['Headlines', 'Drake'], ['Take Care', 'Drake'], ['Too Good', 'Drake'],

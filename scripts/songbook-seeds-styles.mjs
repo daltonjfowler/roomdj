@@ -9,6 +9,11 @@
 export const STYLES = {
   classicrock: [
     ["Bohemian Rhapsody", "Queen"], ["Don't Stop Me Now", "Queen"], ["Another One Bites the Dust", "Queen"], ["We Will Rock You", "Queen"],
+    // Dalton, 2026-10-31: Rush, The Who, Pink Floyd, Led Zeppelin.
+    ["Tom Sawyer", "Rush"], ["Limelight", "Rush"], ["The Spirit of Radio", "Rush"], ["Closer to the Heart", "Rush"],
+    ["Baba O'Riley", "The Who"], ["Pinball Wizard", "The Who"], ["Won't Get Fooled Again", "The Who"], ["My Generation", "The Who"],
+    ["Comfortably Numb", "Pink Floyd"], ["Wish You Were Here", "Pink Floyd"], ["Another Brick in the Wall, Pt. 2", "Pink Floyd"], ["Time", "Pink Floyd"],
+    ["Stairway to Heaven", "Led Zeppelin"], ["Immigrant Song", "Led Zeppelin"], ["Kashmir", "Led Zeppelin"], ["Black Dog", "Led Zeppelin"],
     ["Hey Jude", "The Beatles"], ["Here Comes the Sun", "The Beatles"], ["Let It Be", "The Beatles"], ["Twist and Shout", "The Beatles"],
     ["Don't Stop Believin'", "Journey"], ["Any Way You Want It", "Journey"], ["Separate Ways (Worlds Apart)", "Journey"], ["Livin' on a Prayer", "Bon Jovi"],
     ["Go Your Own Way", "Fleetwood Mac"], ["Dreams", "Fleetwood Mac"], ["The Chain", "Fleetwood Mac"], ["Mr. Blue Sky", "Electric Light Orchestra"],
@@ -43,6 +48,10 @@ export const STYLES = {
   ],
   metal: [
     ["Enter Sandman", "Metallica"], ["Nothing Else Matters", "Metallica"], ["The Unforgiven", "Metallica"], ["Master of Puppets", "Metallica"],
+    // Dalton, 2026-10-31: System Of A Down, Korn.
+    ["Toxicity", "System Of A Down"], ["Aerials", "System Of A Down"], ["Chop Suey!", "System Of A Down"], ["Lonely Day", "System Of A Down"],
+    ["Coming Undone", "Korn"],
+    ["Falling Away from Me", "Korn"], ["Got the Life", "Korn"],
     ["Iron Man", "Black Sabbath"], ["Paranoid", "Black Sabbath"], ["Crazy Train", "Ozzy Osbourne"], ["Bark at the Moon", "Ozzy Osbourne"],
     ["The Trooper", "Iron Maiden"], ["Run to the Hills", "Iron Maiden"], ["Aces High", "Iron Maiden"], ["Breaking the Law", "Judas Priest"],
     ["Painkiller", "Judas Priest"], ["Holy Diver", "Dio"], ["Ace of Spades", "Motörhead"], ["Symphony of Destruction", "Megadeth"],
@@ -59,6 +68,8 @@ export const STYLES = {
   ],
   punk: [
     ["Blitzkrieg Bop", "Ramones"], ["I Wanna Be Sedated", "Ramones"], ["Rockaway Beach", "Ramones"], ["Sheena Is a Punk Rocker", "Ramones"],
+    // Jeff Rosenstock (Dalton, 2026-10-31: "my favorite artist"); never "Nausea" (scripts/songbook-artists.mjs SKIP).
+    ["Wave Goodnight to Me", "Jeff Rosenstock"], ["Leave It in the Sun", "Jeff Rosenstock"], ["Hey Allison!", "Jeff Rosenstock"], ["Festival Song", "Jeff Rosenstock"],
     ["Pet Sematary", "Ramones"], ["Should I Stay or Should I Go", "The Clash"], ["London Calling", "The Clash"], ["Rock the Casbah", "The Clash"],
     ["Train in Vain", "The Clash"], ["Dancing With Myself", "Billy Idol"], ["Rebel Yell", "Billy Idol"], ["Teenage Kicks", "The Undertones"],
     ["Ever Fallen in Love (With Someone You Shouldn't've)", "Buzzcocks"], ["Rise Above", "Black Flag"], ["Self Esteem", "The Offspring"], ["The Kids Aren't Alright", "The Offspring"],
@@ -89,19 +100,32 @@ export const STYLES = {
   ],
   ska: [
     ["A Message to You Rudy", "The Specials"], ["Ghost Town", "The Specials"], ["One Step Beyond", "Madness"], ["Our House", "Madness"],
+    // Streetlight Manifesto (Dalton, 2026-10-31): on Reggae & ska and, as ska punk, on Punk.
+    ["We Will Fall Together", "Streetlight Manifesto"], ["Would You Be Impressed?", "Streetlight Manifesto"], ["Somewhere in the Between", "Streetlight Manifesto"], ["The Three of Us", "Streetlight Manifesto"],
     ["Baggy Trousers", "Madness"], ["Mirror in the Bathroom", "The English Beat"], ["Save It for Later", "The English Beat"], ["Israelites", "Desmond Dekker"],
     ["007 (Shanty Town)", "Desmond Dekker"], ["My Boy Lollipop", "Millie Small"], ["Monkey Man", "Toots & The Maytals"], ["Pressure Drop", "Toots & The Maytals"],
     ["Simmer Down", "The Wailers"], ["Guns of Navarone", "The Skatalites"], ["Sell Out", "Reel Big Fish"], ["Take On Me", "Reel Big Fish"],
     ["The Impression That I Get", "The Mighty Mighty Bosstones"], ["Where'd You Go?", "The Mighty Mighty Bosstones"], ["Spiderwebs", "No Doubt"], ["Just a Girl", "No Doubt"],
     ["Don't Speak", "No Doubt"], ["Sunday Morning", "No Doubt"], ["What I Got", "Sublime"], ["Ruby Soho", "Rancid"],
-    ["Time Bomb", "Rancid"], ["Gainesville Rock City", "Less Than Jake"], ["The Science of Selling Yourself Short", "Less Than Jake"], ["Point/Counterpoint", "Streetlight Manifesto"],
-    ["We Will Fall Together", "Streetlight Manifesto"], ["Keasbey Nights", "Catch 22"], ["Superman", "Goldfinger"], ["Here in Your Bedroom", "Goldfinger"],
+    ["Time Bomb", "Rancid"], ["Gainesville Rock City", "Less Than Jake"], ["The Science of Selling Yourself Short", "Less Than Jake"], 
+    ["Keasbey Nights", "Catch 22"], ["Superman", "Goldfinger"], ["Here in Your Bedroom", "Goldfinger"],
     ["Come On Eileen", "Save Ferris"], ["She's Kerosene", "The Interrupters"], ["Take Back the Power", "The Interrupters"], ["Gave You Everything", "The Interrupters"],
     ["On My Radio", "The Selecter"], ["Too Much Pressure", "The Selecter"], ["Lorraine", "Bad Manners"], ["Knowledge", "Operation Ivy"],
     ["Sound System", "Operation Ivy"], ["Super Rad!", "The Aquabats!"], ["Pizza Day", "The Aquabats!"], ["Al Capone", "Prince Buster"],
   ],
   indie: [
     ["Sweater Weather", "The Neighbourhood"], ["The Night We Met", "Lord Huron"], ["Riptide", "Vance Joy"], ["Ho Hey", "The Lumineers"],
+    // Dalton, 2026-10-31: Pearl Jam, Phoenix, Tame Impala, Nirvana.
+    ["About a Girl", "Nirvana"], ["Something in the Way", "Nirvana"],
+    ["Black", "Pearl Jam"], ["Yellow Ledbetter", "Pearl Jam"], ["Jeremy", "Pearl Jam"], ["Just Breathe", "Pearl Jam"],
+    ["1901", "Phoenix"], ["Lisztomania", "Phoenix"], ["If I Ever Feel Better", "Phoenix"], ["Entertainment", "Phoenix"],
+    ["The Less I Know the Better", "Tame Impala"], ["Let It Happen", "Tame Impala"], ["Feels Like We Only Go Backwards", "Tame Impala"], ["Borderline", "Tame Impala"],
+    // Dalton, 2026-10-31: Men I Trust, Kate Bollinger, natalie jinju, Suki Waterhouse, Mac DeMarco.
+    ["Show Me How", "Men I Trust"], ["Tailwhip", "Men I Trust"], ["Lauren", "Men I Trust"], ["Numb", "Men I Trust"],
+    ["Who Am I But Someone", "Kate Bollinger"], ["Lady in the Darkness", "Kate Bollinger"], ["Candy", "Kate Bollinger"], ["Postcard from a Cloud", "Kate Bollinger"],
+    ["all the time", "natalie jinju"], ["crush!", "natalie jinju"], ["songs that remind me of you", "natalie jinju"], ["honeybee", "natalie jinju"],
+    ["Good Looking", "Suki Waterhouse"], ["Johanna", "Suki Waterhouse"], ["My Fun", "Suki Waterhouse"], ["Supersonic (my existence)", "Suki Waterhouse"],
+    ["Chamber of Reflection", "Mac DeMarco"], ["My Kind of Woman", "Mac DeMarco"], ["Freaking Out the Neighborhood", "Mac DeMarco"], ["Salad Days", "Mac DeMarco"],
     ["Ophelia", "The Lumineers"], ["Stubborn Love", "The Lumineers"], ["Little Talks", "Of Monsters and Men"], ["Home", "Edward Sharpe & The Magnetic Zeros"],
     ["Electric Feel", "MGMT"], ["Kids", "MGMT"], ["Take a Walk", "Passion Pit"], ["Young Folks", "Peter Bjorn and John"],
     ["1901", "Phoenix"], ["Lisztomania", "Phoenix"], ["Do I Wanna Know?", "Arctic Monkeys"], ["505", "Arctic Monkeys"],
@@ -145,6 +169,8 @@ export const STYLES = {
   ],
   soul: [
     ["My Girl", "The Temptations"], ["Ain't No Mountain High Enough", "Marvin Gaye & Tammi Terrell"], ["Signed, Sealed, Delivered (I'm Yours)", "Stevie Wonder"], ["Superstition", "Stevie Wonder"],
+    // Anderson .Paak and Silk Sonic (Dalton, 2026-10-31).
+    ["Leave the Door Open", "Silk Sonic"], ["Smokin Out the Window", "Silk Sonic"], ["Skate", "Silk Sonic"], ["Come Down", "Anderson .Paak"],
     ["Sir Duke", "Stevie Wonder"], ["Isn't She Lovely", "Stevie Wonder"], ["Higher Ground", "Stevie Wonder"], ["I Want You Back", "The Jackson 5"],
     ["ABC", "The Jackson 5"], ["I'll Be There", "The Jackson 5"], ["Respect", "Aretha Franklin"], ["Think", "Aretha Franklin"],
     ["Stand by Me", "Ben E. King"], ["Lean on Me", "Bill Withers"], ["Lovely Day", "Bill Withers"], ["Ain't No Sunshine", "Bill Withers"],

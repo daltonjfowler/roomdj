@@ -691,7 +691,7 @@ Claude account).
    ska into 🌴 Reggae & ska (ska punk seeds on both), Dance renamed 🪩 Dance & EDM. Fill:
    scripts/songbook-artists.mjs: per list, its hand seeds' artists + ARTISTS, each artist's top DEPTH
    iTunes songs (artistTerm search, never explicit, not even a clean edit; no versions, no holiday
-   songs), every artist's #1 first, up to MAX a list. The cron checks every list's #1, then every #2
+   songs, none on SKIP: Dalton's per-song calls), every artist's #1 first, up to MAX a list. The cron checks every list's #1, then every #2
    (songbookToCheck), and a ✓ Checked seed joins KV songbook:v1:grown even with no genre shelf
    (growShelves seeds), so lists fill with no archive rebuild (GROWN_MAX 7000). PREWARM_BOOST: a
    weekend catch-up (Sat 2026-10-31 19:00 UTC to Mon 2026-11-02 10:00 UTC, no classes): 25 songs a
