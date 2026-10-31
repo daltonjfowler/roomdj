@@ -268,7 +268,7 @@ export const SHELVES = Object.freeze([
   { id: 'focus', label: '📚 Focus (no words)' },
 ]);
 /** Most songs one shelf sends (its top ranked ones). */
-export const SHELF_MAX = 80;
+export const SHELF_MAX = 150;
 export const POPULAR_MAX = 60;
 export const POPULAR_MIN_TEACHERS = 2;
 export const RESULT_SORTS = Object.freeze(['popular', 'newest', 'oldest', 'title']);

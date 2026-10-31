@@ -169,6 +169,8 @@ Claude account).
 - `shared/requests.js` + `src/request-log.js`: 📈 the song request log (invariant 42): rows made at room close, the RequestLog Durable Object (SQLite), CSV for the admin page.
 - `src/songbook.js` + `src/songbook-data.js` (made by `npm run songbook` from
   `scripts/songbook-seeds.mjs`, never edited by hand): the songbook's shelves (invariant 40).
+  `src/songbook-archive-data.js` (made by `npm run songbook:archive`, never edited by hand): every
+  song the live checker had passed, by genre (invariant 40e).
   `shared/songbook.js`: the search filters (`viewResults`, `resultGenres`, `cleanView`).
 - `src/youtube.js`: YouTube Data API search for the host's YouTube player (secret
   `YOUTUBE_API_KEY`; KV `yt:<trackId>` for 30 days, `yt:quota` while the day's quota is used up).
@@ -660,6 +662,16 @@ Claude account).
    the day's charts, same budget, one pass per list (KV prewarm:v1:songbook { made, at }, no expiry).
    GET /api/rooms/:room/songbook?shelf= (Room.songbook): the room's quickCheck, then withReady, and ONLY
    ✓ Checked ('ready') songs are sent. The student page shows the shelves while the search box is empty.
+   (e) More on the shelves (Dalton, 2026-10-30: "SO MANY approved but only list like 15 under pop"):
+   a shelf (up to SHELF_MAX 150) = checked seeds, then the cron's finds (KV songbook:v1:grown), then
+   the archive, then unchecked seeds (at most SHELF_READS KV reads). Archive = `npm run songbook:archive`
+   (READ-ONLY on live KV: verdict:v<PROMPT_VERSION>:<itunes id> OK + readyToPlay, iTunes lookup, by
+   genre via archiveShelves; run it again now and then, and ALWAYS after a prompt bump: an archive from
+   an older prompt is not trusted). The cron (src/prewarm.js): after the charts and the songbook it
+   checks iTunes' top songs per genre (GENRE_IDS); every song a run finds ✓ Checked is looked up on
+   iTunes and joins KV songbook:v1:grown (shelfWorthy, archiveShelves; dropped on a prompt bump).
+   Known songs cost no AI and count only against PREWARM_SCAN_PER_RUN. Archive and grown songs are
+   ✓ Checked with no KV read (archiveReady); the room's quickCheck (bans, words, Kidz Bop) still runs.
    (b) Hand-checked songs (shared/filter.js HOUSE_OK, houseOk): Dalton's own per-song calls for every
    teacher, like a teacher's Allow (source 'house', no AI or lyrics call). Only the clean edit (the
    explicit flag still refuses), bans, blocked words, 🙉 and Instrumentals only still count. Add ONLY

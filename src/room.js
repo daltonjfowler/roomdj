@@ -91,7 +91,7 @@ import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
 import { NIGHT_SEARCH_MAX, addToNight, nightSong, nightWorthy } from './night.js';
 import { lookupCatalog, roomCatalog } from './catalog.js';
 import { readBanned, searchAllowed } from './search.js';
-import { isShelf, shelfSongs } from './songbook.js';
+import { GROWN_KEY, SHELF_READS, archiveReady, isShelf, readGrown, shelfSongs } from './songbook.js';
 import { ASKS_KV, noteAsks, readAsks, readPopular } from './popular.js';
 import { askEntry, finishAsks, logAsk, requestLog } from '../shared/requests.js';
 import { claimCode, codeHash, codeInUse, deleteCodeRoute, putCodeRoute, releaseCode } from './codes.js';
@@ -265,6 +265,7 @@ export class Room extends DurableObject {
     this.favorites = null;
     /** 🔥 Popular on RoomDJ (src/popular.js), read at most once a POPULAR_MEM_MS: { list, at }. */
     this.popular = null;
+    this.grown = null;
     /** The teacher's repeat record (KV `recent`), read at most once a RECENT_FRESH_MS: { map, at }. */
     this.rest = null;
     this.restWrittenAt = 0;
@@ -1209,8 +1210,13 @@ export class Room extends DurableObject {
     }
     const s = this.room.settings;
     const ctx = { blocklist: s.blocklist ?? [], banned: await this.banned(), notMusic: s.blockNotMusic !== false, kidzBop: s.kidzBop };
-    const shown = (shelf === 'popular' ? await this.popularSongs() : shelfSongs(shelf)).filter((song) => !quickCheck(song, ctx));
-    const results = (await this.withReady(shown, SHELF_MAX)).filter((song) => song.check === 'ready');
+    const grown = shelf === 'popular' ? [] : await this.grownSongs();
+    const shown = (shelf === 'popular' ? await this.popularSongs() : shelfSongs(shelf, undefined, undefined, grown)).filter((song) => !quickCheck(song, ctx));
+    // The archive's and the cron's songs are ✓ Checked already (src/songbook.js archiveReady): no KV read.
+    const pre = shelf === 'popular' ? new Set() : archiveReady({ instrumentalsOnly: s.instrumentalsOnly === true }, undefined, grown);
+    const known = shown.filter((song) => pre.has(banKey(song))).map((song) => ({ ...song, check: 'ready' }));
+    const asked = await this.withReady(shown.filter((song) => !pre.has(banKey(song))), shelf === 'popular' ? SHELF_MAX : SHELF_READS);
+    const results = [...known, ...asked.filter((song) => song.check === 'ready')].slice(0, SHELF_MAX);
     const ready = new Set(results.map((song) => song.id));
     const plain = shown.filter((song) => ready.has(song.id)); // remembered like search's: without the tag
     await this.remember(plain);
@@ -1218,6 +1224,20 @@ export class Room extends DurableObject {
     return new Response(this.artText({ results, shelf }, 'student'), {
       status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
     });
+  }
+
+  /** The shelf songs the chart cron found ✓ Checked (src/songbook.js GROWN_KEY): read like 🔥 Popular. */
+  async grownSongs() {
+    if (!this.grown || Date.now() - this.grown.at > POPULAR_MEM_MS) {
+      let list = [];
+      try {
+        list = readGrown(await this.env.CLASS_KV?.get(GROWN_KEY, 'json'));
+      } catch (e) {
+        console.error(JSON.stringify({ message: 'grown shelves read failed', error: String(e) }));
+      }
+      this.grown = { list, at: Date.now() };
+    }
+    return this.grown.list;
   }
 
   /** 🔥 Popular on RoomDJ (src/popular.js): KV read at most once a POPULAR_MEM_MS per room. */

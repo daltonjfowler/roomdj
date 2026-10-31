@@ -6,7 +6,9 @@ import { SHELF_MAX, SHELVES } from '../shared/protocol.js';
 import { banKey, houseOk } from '../shared/filter.js';
 import { cleanView, resultGenres, viewResults } from '../shared/songbook.js';
 import { SONGBOOK_MADE, SONGBOOK_SONGS } from '../src/songbook-data.js';
-import { isShelf, shelfSongs, songbookToCheck } from '../src/songbook.js';
+import { ARCHIVE_SONGS, ARCHIVE_VERSION } from '../src/songbook-archive-data.js';
+import { PROMPT_VERSION } from '../shared/filter.js';
+import { SHELF_SCAN, addGrown, archiveReady, archiveShelves, isShelf, readGrown, shelfSongs, shelfWorthy, songbookToCheck } from '../src/songbook.js';
 
 const r = (id, over = {}) => ({ id: `it:${id}`, title: `Song ${id}`, artist: `Artist ${id}`, genre: 'Pop', year: 2020, check: 'unchecked', ...over });
 
@@ -28,16 +30,16 @@ test('songbook data: playable iTunes songs on known shelves, never explicit, ran
   assert.ok(bling, 'Hotline Bling is on the hip-hop shelf');
 });
 
-test('shelfSongs: one shelf, rank order, at most SHELF_MAX, plain songs', () => {
+test('shelfSongs: one shelf, rank order, at most SHELF_SCAN, plain songs', () => {
   const songs = [
     { ...r(1), shelf: 'pop', rank: 2 }, { ...r(2), shelf: 'pop', rank: 1 }, { ...r(3), shelf: 'rock', rank: 1 },
-    ...Array.from({ length: SHELF_MAX + 5 }, (_, i) => ({ ...r(100 + i), shelf: 'dance', rank: i + 1 })),
+    ...Array.from({ length: SHELF_SCAN + 5 }, (_, i) => ({ ...r(100 + i), shelf: 'dance', rank: i + 1 })),
   ];
-  assert.deepEqual(shelfSongs('pop', songs).map((s) => s.id), ['it:2', 'it:1']);
-  assert.equal(shelfSongs('pop', songs)[0].shelf, undefined);
-  assert.equal(shelfSongs('pop', songs)[0].rank, undefined);
-  assert.equal(shelfSongs('dance', songs).length, SHELF_MAX);
-  assert.deepEqual(shelfSongs('nope', songs), []);
+  assert.deepEqual(shelfSongs('pop', songs, []).map((s) => s.id), ['it:2', 'it:1']);
+  assert.equal(shelfSongs('pop', songs, [])[0].shelf, undefined);
+  assert.equal(shelfSongs('pop', songs, [])[0].rank, undefined);
+  assert.equal(shelfSongs('dance', songs, []).length, SHELF_SCAN);
+  assert.deepEqual(shelfSongs('nope', songs, []), []);
   assert.equal(isShelf('pop'), true);
   assert.equal(isShelf('__proto__'), false);
 });
@@ -76,4 +78,57 @@ test('resultGenres and cleanView', () => {
   assert.deepEqual(cleanView({ checked: 'yes', sort: 'loudest', genre: 7 }), { checked: false, genre: '', sort: 'popular' });
   assert.deepEqual(cleanView(null), { checked: false, genre: '', sort: 'popular' });
   assert.deepEqual(cleanView({ checked: true, sort: 'newest', genre: 'Pop' }), { checked: true, genre: 'Pop', sort: 'newest' });
+});
+
+test("shelfSongs with the archive and the cron's finds: checked seeds, finds, archive, then unchecked seeds", () => {
+  const seeds = [
+    { ...r(1), shelf: 'pop', rank: 1 }, // not checked yet
+    { ...r(2), shelf: 'pop', rank: 2 }, // in the archive
+    { ...r(3, { title: 'Hotline Bling', artist: 'Drake' }), shelf: 'pop', rank: 3 }, // hand-checked
+  ];
+  const archive = [{ ...r(2), shelves: ['pop'] }, { ...r(10), shelves: ['pop', 'throwbacks'], instrumental: true }, { ...r(11), shelves: ['rock'] }];
+  const grown = [{ ...r(20), shelves: ['pop'] }, { ...r(10), shelves: ['pop'] }];
+  assert.deepEqual(shelfSongs('pop', seeds, archive, grown).map((s) => s.id), ['it:2', 'it:3', 'it:20', 'it:10', 'it:1']);
+  assert.equal(shelfSongs('pop', seeds, archive, grown)[3].shelves, undefined, 'plain songs');
+  assert.deepEqual(shelfSongs('throwbacks', seeds, archive).map((s) => s.id), ['it:10']);
+  // ✓ Checked with no KV read: the archive (current prompt) and the finds; Instrumentals only: no-words ones.
+  const keys = (set) => [...set].sort();
+  assert.deepEqual(keys(archiveReady({}, archive, grown, PROMPT_VERSION)), keys(new Set([...archive, ...grown].map(banKey))));
+  assert.deepEqual(keys(archiveReady({}, archive, [], PROMPT_VERSION - 1)), [], "an older prompt's archive: read KV");
+  assert.deepEqual(keys(archiveReady({ instrumentalsOnly: true }, archive, grown, PROMPT_VERSION)), [banKey(archive[1])]);
+});
+
+test('archiveShelves and shelfWorthy', () => {
+  assert.deepEqual(archiveShelves({ genre: 'Pop', year: 2024 }), ['pop']);
+  assert.deepEqual(archiveShelves({ genre: 'Hip-Hop/Rap', year: 2005 }), ['hiphop', 'throwbacks']);
+  assert.deepEqual(archiveShelves({ genre: 'K-Pop', year: 2025 }), ['kpop']);
+  assert.deepEqual(archiveShelves({ genre: 'Alternative', year: 2010 }), ['rock']);
+  assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }), [], 'no words not known: not Focus');
+  assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }, { instrumental: true }), ['focus']);
+  assert.deepEqual(archiveShelves({ genre: 'Holiday', year: 2020 }), []);
+  assert.equal(shelfWorthy(r(1, { explicit: 'notExplicit' })), true);
+  assert.equal(shelfWorthy(r(1, { explicit: 'explicit' })), false);
+  assert.equal(shelfWorthy(r(1, { title: 'Golden (Sped Up)' })), false);
+  assert.equal(shelfWorthy(r(1, { artist: 'KIDZ BOP Kids' })), false);
+});
+
+test('grown: new finds first, one per song, older prompts dropped', () => {
+  const a = { ...r(1), shelves: ['pop'] };
+  const b = { ...r(2), shelves: ['rock'] };
+  const kept = addGrown([a], [b, { ...a, id: 'it:99' }]);
+  assert.deepEqual(kept.list.map((s) => s.id), ['it:2', 'it:99']);
+  assert.equal(kept.v, PROMPT_VERSION);
+  assert.deepEqual(readGrown(kept).map((s) => s.id), ['it:2', 'it:99']);
+  assert.deepEqual(readGrown({ ...kept, v: PROMPT_VERSION - 1 }), []);
+  assert.deepEqual(readGrown(null), []);
+});
+
+test('archive data: from the current prompt, every song shelfWorthy and on a real shelf', () => {
+  assert.equal(ARCHIVE_VERSION, PROMPT_VERSION, 'run npm run songbook:archive after a prompt change');
+  assert.ok(ARCHIVE_SONGS.length > 100, `a real archive (${ARCHIVE_SONGS.length})`);
+  for (const s of ARCHIVE_SONGS) {
+    assert.ok(shelfWorthy(s), s.title);
+    assert.ok(s.shelves.length && s.shelves.every(isShelf), s.title);
+    assert.match(s.previewUrl, /^https:\/\//);
+  }
 });

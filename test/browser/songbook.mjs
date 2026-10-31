@@ -93,6 +93,11 @@ try {
   check('hip-hop: never an explicit version', hip.results.every((s) => s.explicit !== 'explicit'));
   const popList = await (await shelf(room, dev, 'pop')).json();
   check('pop: the song with a seeded OK verdict is listed', popList.results.some((s) => banKey(s) === banKey(pop)), `${pop.title}; got ${popList.results.map((s) => s.title).join(', ')}`);
+  // The archive (npm run songbook:archive) fills the shelves with no KV verdicts at all.
+  check('pop: 100+ songs from the archive, all ✓ Checked', popList.results.length >= 100 && popList.results.every((s) => s.check === 'ready'), `${popList.results.length}`);
+  const rock = await (await shelf(room, dev, 'rock')).json();
+  check('rock: 50+ songs', rock.results.length >= 50, `${rock.results.length}`);
+  console.log(`  shelves: pop ${popList.results.length}, rock ${rock.results.length}, hip-hop ${hip.results.length}`);
 
   // ---- The page ----
   for (const [w, h] of [[1366, 768], [390, 844]]) {

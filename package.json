@@ -12,6 +12,7 @@
     "deploy": "npm run build && wrangler deploy",
     "test": "node --test \"test/*.test.mjs\"",
     "songbook": "node scripts/songbook.mjs",
+    "songbook:archive": "node scripts/songbook-archive.mjs",
     "test:browser": "node test/browser/flows.mjs",
     "test:spotify": "node test/browser/spotify.mjs",
     "test:youtube": "node test/browser/youtube.mjs",
