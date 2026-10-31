@@ -254,29 +254,29 @@ export const QUERY_MAX = 80;
 // never teacher picks) in every teacher's rooms, merged once a day (src/popular.js), a song only when
 // POPULAR_MIN_TEACHERS teachers' students asked for it. The student page opens it when the student
 // taps an empty search box.
+// Consolidated (Dalton, 2026-10-31: "analyze the list and consolidate as needed to offer the MOST
+// important and descriptive genres"), most asked first: grunge joined Alternative & indie, pop punk and
+// emo joined Punk, ska joined Reggae (ska punk shows on both). A song may be on several lists.
 export const SHELVES = Object.freeze([
   { id: 'popular', label: '🔥 Popular on RoomDJ' },
   { id: 'pop', label: '🎤 Pop' },
   { id: 'hiphop', label: '🎧 Hip-hop & R&B' },
+  { id: 'country', label: '🤠 Country' },
+  { id: 'rock', label: '🎸 Rock' },
+  { id: 'latin', label: '💃 Latin' },
   { id: 'kpop', label: '💜 K-pop' },
+  { id: 'dance', label: '🪩 Dance & EDM' },
   { id: 'movies', label: '🎬 Movies & musicals' },
   { id: 'throwbacks', label: '📻 Throwbacks' },
-  { id: 'rock', label: '🎸 Rock' },
   { id: 'classicrock', label: '📼 Classic rock' },
-  { id: 'grunge', label: "🌧️ Grunge & '90s alt" },
+  { id: 'indie', label: '🌿 Alternative & indie' },
+  { id: 'punk', label: '🧷 Punk & pop punk' },
   { id: 'metal', label: '🤘 Metal' },
-  { id: 'punk', label: '🧷 Punk' },
-  { id: 'poppunk', label: '🛹 Pop punk & emo' },
-  { id: 'ska', label: '🎺 Ska' },
-  { id: 'indie', label: '🌿 Indie' },
-  { id: 'country', label: '🤠 Country' },
-  { id: 'latin', label: '💃 Latin' },
-  { id: 'reggae', label: '🌴 Reggae' },
-  { id: 'afrobeats', label: '🌍 Afrobeats' },
   { id: 'soul', label: '🕺 Soul, funk & Motown' },
+  { id: 'reggae', label: '🌴 Reggae & ska' },
+  { id: 'afrobeats', label: '🌍 Afrobeats' },
   { id: 'jazz', label: '🎷 Jazz & blues' },
   { id: 'classical', label: '🎻 Classical' },
-  { id: 'dance', label: '🪩 Dance' },
   { id: 'focus', label: '📚 Focus (no words)' },
 ]);
 /** Most songs one shelf sends (its top ranked ones). */

@@ -32,7 +32,7 @@ const GENRE_SHELF = [
   [/^(rock|alternative|hard rock|metal|indie rock|indie pop|punk|classic rock|pop\/rock|soft rock|adult alternative|american trad rock|britpop|new wave|rock & roll|emo|pop punk|grunge|arena rock|british invasion|southern rock|glam rock|prog-rock\/art rock|psychedelic|blues-rock|hair metal|college rock|goth rock)$/, 'rock'],
   [/^(country|americana|contemporary country|honky tonk|bluegrass|country rock)$/, 'country'],
   [/^(latin|pop latino|urbano latino|música mexicana|musica mexicana|regional mexicano|reggaeton|salsa y tropical|latin urban|música tropical|latin pop)$/, 'latin'],
-  [/^(dance|electronic|house|techno|electronica|edm|trance|dubstep|disco)$/, 'dance'],
+  [/^(dance|electronic|house|techno|electronica|edm|trance|dubstep|disco|drum & bass|hardstyle|breakbeat|uk garage|garage|bass|progressive house|deep house|tech house|big room|future bass|electro house)$/, 'dance'],
 ];
 const FOCUS_GENRES = /^(classical|instrumental|new age|ambient|soundtrack|original score|piano|jazz|lo-fi|easy listening|video game)$/;
 const THROWBACK_YEAR = 2009;
@@ -44,13 +44,11 @@ const THROWBACK_YEAR = 2009;
 const ROCKISH = /^(rock|hard rock|alternative|pop\/rock|american trad rock|roots rock)$/;
 const STYLE_SHELF = [
   ['classicrock', (g, y) => /^(classic rock|arena rock|british invasion|rock & roll|southern rock|glam rock|prog-rock\/art rock|psychedelic|blues-rock|rockabilly|surf|jam bands)$/.test(g) || (ROCKISH.test(g) && y > 0 && y <= 1989)],
-  ['grunge', (g, y) => g === 'grunge' || (/^(alternative|college rock)$/.test(g) && y >= 1989 && y <= 1999)],
   ['metal', (g) => /^(metal|heavy metal|hair metal|death metal\/black metal|metalcore|nu metal)$/.test(g)],
-  ['punk', (g) => /^(punk|punk rock|hardcore punk)$/.test(g)],
-  ['poppunk', (g) => /^(pop punk|emo)$/.test(g)],
-  ['ska', (g) => /^(ska|ska punk|two tone)$/.test(g)],
-  ['indie', (g) => /^(indie rock|indie pop|indie|college rock|indie folk)$/.test(g)],
-  ['reggae', (g) => /^(reggae|roots reggae|modern dancehall|dancehall|dub|lovers rock|ska)$/.test(g)],
+  ['punk', (g) => /^(punk|punk rock|hardcore punk|pop punk|emo|ska punk)$/.test(g)],
+  // Alternative & indie: indie, and grunge / '90s alternative.
+  ['indie', (g, y) => /^(indie rock|indie pop|indie|college rock|indie folk|grunge)$/.test(g) || (/^(alternative|college rock)$/.test(g) && y >= 1989 && y <= 1999)],
+  ['reggae', (g) => /^(reggae|roots reggae|modern dancehall|dancehall|dub|lovers rock|ska|two tone|rocksteady)$/.test(g)],
   ['afrobeats', (g) => /^(afrobeats|afro-beat|afro-pop|afropop|afro house|amapiano|african|afro-fusion)$/.test(g)],
   ['soul', (g, y) => /^(soul|motown|funk|disco|doo wop|neo-soul|quiet storm)$/.test(g) || (g === 'r&b/soul' && y > 0 && y <= 1989)],
   ['classical', (g) => /^(classical|orchestral|opera|baroque era|classical era|romantic era|chamber music|choral|art song|modern era|medieval era|renaissance)$/.test(g)],
@@ -105,7 +103,7 @@ export function shelfWorthy(song) {
 
 export const GROWN_KEY = 'songbook:v1:grown';
 /** Songs kept, newest finds first (about 500 bytes each: well under KV's 25 MB). */
-export const GROWN_MAX = 4000;
+export const GROWN_MAX = 7000;
 
 /**
  * KV GROWN_KEY → its songs, or [] when missing or from an older prompt. Each one's `shelves` are
@@ -130,9 +128,18 @@ export function addGrown(list, found, version = PROMPT_VERSION) {
   return { v: version, list: out.slice(0, GROWN_MAX) };
 }
 
-/** Songs already on a shelf without the cron (seeds and archive): the cron does not add them again. */
-export function bakedKeys(songs = SONGBOOK_SONGS, archive = ARCHIVE_SONGS) {
-  return new Set([...songs, ...archive].map(banKey).filter(Boolean));
+/** Songs ✓ Checked on the shelves without the cron (the archive): the cron does not add them again. */
+export function bakedKeys(archive = ARCHIVE_SONGS) {
+  return new Set(archive.map(banKey).filter(Boolean));
+}
+
+/**
+ * The seeds (banKeys). A seed the cron finds ✓ Checked joins the grown list even when no shelf takes
+ * its genre: then the room trusts it with no KV read, so a list fills as the cron checks its seeds
+ * (Dalton, 2026-10-31: "fill the list ... so we have a full list"), no archive rebuild needed.
+ */
+export function seedKeys(songs = SONGBOOK_SONGS) {
+  return new Set(songs.map(banKey).filter(Boolean));
 }
 
 /** The archive is from the checker's current prompt: its songs are ✓ Checked with no KV read. */
@@ -171,11 +178,14 @@ export function archiveReady({ instrumentalsOnly = false } = {}, archive = ARCHI
   return new Set(all.filter((s) => !instrumentalsOnly || s.instrumental === true).map(banKey));
 }
 
-/** Every songbook song the cron should check: one per song (banKey), not the hand-checked ones. */
+/**
+ * Every songbook song the cron should check: one per song (banKey), not the hand-checked ones, every
+ * list's #1, then every list's #2... (so the lists fill evenly as the cron goes).
+ */
 export function songbookToCheck(songs = SONGBOOK_SONGS) {
   const seen = new Set();
   const out = [];
-  for (const s of songs) {
+  for (const s of songs.map((s, i) => [s, i]).sort((a, b) => (a[0].rank || 0) - (b[0].rank || 0) || a[1] - b[1]).map(([s]) => s)) {
     const key = banKey(s);
     if (!key || seen.has(key) || houseOk(s)) continue;
     seen.add(key);

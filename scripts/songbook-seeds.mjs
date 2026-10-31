@@ -210,8 +210,20 @@ export const SEEDS = {
 
 // More common songs (scripts/songbook-seeds-more.mjs), after each shelf's own.
 for (const [shelf, more] of Object.entries(MORE)) SEEDS[shelf].push(...more);
-// The style shelves (scripts/songbook-seeds-styles.mjs).
-Object.assign(SEEDS, STYLES);
+// The style shelves (scripts/songbook-seeds-styles.mjs), merged where lists were consolidated
+// (shared/protocol.js SHELVES): each list's songs taken in turn, so each keeps a place near the top.
+const inTurn = (...lists) => {
+  const out = [];
+  for (let i = 0; lists.some((l) => i < l.length); i++) for (const l of lists) if (i < l.length) out.push(l[i]);
+  return out;
+};
+const SKA_PUNK = new Set(['Reel Big Fish', 'The Mighty Mighty Bosstones', 'Less Than Jake', 'Streetlight Manifesto', 'Catch 22', 'Goldfinger', 'The Interrupters', 'Operation Ivy', 'The Aquabats!']);
+const { grunge, poppunk, ska, ...styles } = STYLES;
+Object.assign(SEEDS, styles, {
+  indie: inTurn(styles.indie, grunge),
+  punk: inTurn(poppunk, styles.punk, ska.filter(([, artist]) => SKA_PUNK.has(artist))),
+  reggae: inTurn(styles.reggae, ska),
+});
 
 /** Shelves in the order a student sees them. */
-export const SHELF_ORDER = ['pop', 'hiphop', 'kpop', 'movies', 'throwbacks', 'rock', 'classicrock', 'grunge', 'metal', 'punk', 'poppunk', 'ska', 'indie', 'country', 'latin', 'reggae', 'afrobeats', 'soul', 'jazz', 'classical', 'dance', 'focus'];
+export const SHELF_ORDER = ['pop', 'hiphop', 'country', 'rock', 'latin', 'kpop', 'dance', 'movies', 'throwbacks', 'classicrock', 'indie', 'punk', 'metal', 'soul', 'reggae', 'afrobeats', 'jazz', 'classical', 'focus'];

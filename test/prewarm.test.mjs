@@ -1,9 +1,9 @@
 // src/prewarm.js: chart songs are checked before classes suggest them, within a daily AI cap.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PREWARM_AI_PER_DAY, PREWARM_NIGHT_PER_RUN, PREWARM_PER_RUN, PREWARM_SCAN_PER_RUN, chartSong, genreChartSong, growShelves, prewarm } from '../src/prewarm.js';
+import { PREWARM_AI_PER_DAY, PREWARM_BOOST, PREWARM_NIGHT_PER_RUN, PREWARM_PER_RUN, PREWARM_SCAN_PER_RUN, chartSong, genreChartSong, growShelves, prewarm } from '../src/prewarm.js';
 import { GROWN_KEY, readGrown } from '../src/songbook.js';
-import { PROMPT_VERSION, verdictKey } from '../shared/filter.js';
+import { PROMPT_VERSION, banKey, verdictKey } from '../shared/filter.js';
 
 function fakeKv() {
   const map = new Map();
@@ -142,4 +142,23 @@ test('prewarm: more songs a run at night (New York), the same daily cap', async 
   const lyricsFetch = async () => new Response('[]', { headers: { 'content-type': 'application/json' } });
   const night = await prewarm(env, { now: Date.UTC(2026, 9, 31, 6), fetchImpl: feed(300), lyricsFetch, songbook: [] }); // 2 am ET
   assert.equal(night.checked, PREWARM_NIGHT_PER_RUN);
+});
+
+test('prewarm: the weekend catch-up runs more songs a run, then ends by itself', async () => {
+  const env = { CLASS_KV: fakeKv(), AI: { run: async () => ({ response: '{"instrumental":false,"verdict":"OK","category":null,"evidence":""}' }) } };
+  const lyricsFetch = async () => new Response('[]', { headers: { 'content-type': 'application/json' } });
+  const during = await prewarm(env, { now: PREWARM_BOOST.from + 3_600_000, fetchImpl: feed(300), lyricsFetch, songbook: [] });
+  assert.equal(during.checked, PREWARM_BOOST.perRun);
+  assert.ok(PREWARM_BOOST.perDay > PREWARM_AI_PER_DAY);
+  const after = await prewarm({ ...env, CLASS_KV: fakeKv() }, { now: PREWARM_BOOST.until + 6 * 3_600_000, fetchImpl: feed(300), lyricsFetch, songbook: [] }); // Monday 11 am ET: a school day
+  assert.equal(after.checked, PREWARM_PER_RUN);
+});
+
+test('growShelves: a ✓ Checked seed joins the grown list even when no shelf takes its genre', async () => {
+  const env = { CLASS_KV: fakeKv() };
+  const found = [{ id: 'it:7001', title: 'Genre Song 1', artist: 'Band 1' }];
+  const holiday = async () => Response.json({ results: [itunes(1, { primaryGenreName: 'Holiday', releaseDate: '2024-01-01T00:00:00Z' })] });
+  assert.equal(await growShelves(env, found, holiday, new Set(), new Set()), 0, 'not a seed, no shelf: left out');
+  assert.equal(await growShelves(env, found, holiday, new Set(), new Set([banKey(found[0])])), 1);
+  assert.deepEqual(readGrown(JSON.parse(env.CLASS_KV.map.get(GROWN_KEY))).map((s) => s.id), ['it:7001']);
 });

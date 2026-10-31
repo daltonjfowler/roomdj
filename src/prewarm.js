@@ -19,7 +19,7 @@ import { aiThemeCheck, banKey, checkFromKv } from '../shared/filter.js';
 import { parseItunes, toSong } from '../shared/itunes.js';
 import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
 import { nightHours } from './night.js';
-import { GROWN_KEY, SONGBOOK_MADE, addGrown, archiveShelves, bakedKeys, readGrown, shelfWorthy, songbookToCheck } from './songbook.js';
+import { GROWN_KEY, SONGBOOK_MADE, addGrown, archiveShelves, bakedKeys, readGrown, seedKeys, shelfWorthy, songbookToCheck } from './songbook.js';
 
 // Dalton, 2026-10-31: "get more now of common songs in prep for broader release". About 33 neurons
 // a call (llama 3.3), so the cap is about 40k neurons a day at most (~$0.30 a day over the free 10k);
@@ -31,6 +31,13 @@ export const PREWARM_NIGHT_PER_RUN = 30;
 /** Songs a run looks at in all (known ones are a KV read or two each, no AI). */
 export const PREWARM_SCAN_PER_RUN = 40;
 export const PREWARM_NIGHT_SCAN_PER_RUN = 150;
+/**
+ * A weekend catch-up (Dalton, 2026-10-31: "fill the list by checking for appropriate music so we have
+ * a full list"): from Saturday afternoon until Monday 5 am New York, no classes on, more songs a run
+ * and a bigger daily cap for the new songbook. 25 a run: at LYRICS_PATIENT_MS (20 s) each at worst,
+ * a run still ends well inside a cron's 15 minutes. About 33 neurons an AI call: ~$1.80 a day at most.
+ */
+export const PREWARM_BOOST = Object.freeze({ from: Date.UTC(2026, 9, 31, 19), until: Date.UTC(2026, 10, 2, 10), perRun: 25, scan: 200, perDay: 5000 });
 // iTunes top songs per genre, US: Pop, Hip-Hop/Rap, R&B/Soul, Rock, Alternative, Country, Latin,
 // Dance, Electronic, Soundtrack, K-Pop, Classical, Singer/Songwriter; then the style shelves'
 // (src/songbook.js STYLE_SHELF): Metal, Hard Rock, Punk, Pop Punk, Grunge, Ska, Reggae, Indie Rock,
@@ -117,7 +124,7 @@ async function genreSongs(env, day, fetchImpl) {
  * explicitness, then kept when shelfWorthy and a shelf takes their genre. A failed lookup only waits:
  * the chart songs come round again. → how many joined
  */
-export async function growShelves(env, found, fetchImpl, baked = bakedKeys()) {
+export async function growShelves(env, found, fetchImpl, baked = bakedKeys(), seeds = seedKeys()) {
   if (!found.length) return 0;
   const grown = readGrown(await env.CLASS_KV.get(GROWN_KEY, 'json'));
   const have = new Set([...grown.map(banKey), ...baked]);
@@ -137,7 +144,7 @@ export async function growShelves(env, found, fetchImpl, baked = bakedKeys()) {
     const song = toSong(raw);
     if (!song || !shelfWorthy(song) || have.has(banKey(song))) continue;
     const shelves = archiveShelves(song);
-    if (shelves.length) add.push({ ...song, shelves });
+    if (shelves.length || seeds.has(banKey(song))) add.push({ ...song, shelves });
   }
   if (!add.length) return 0;
   await env.CLASS_KV.put(GROWN_KEY, JSON.stringify(addGrown(grown, add)));
@@ -171,18 +178,20 @@ async function todaysSongs(env, day, fetchImpl) {
 }
 
 /** One cron run. → { checked, asked, used } (for the log and tests). */
-export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyricsFetch, songbook = songbookToCheck(), songbookMade = SONGBOOK_MADE, baked } = {}) {
+export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyricsFetch, songbook = songbookToCheck(), songbookMade = SONGBOOK_MADE, baked, seeds } = {}) {
+  const boost = now >= PREWARM_BOOST.from && now < PREWARM_BOOST.until;
+  const perDay = boost ? PREWARM_BOOST.perDay : PREWARM_AI_PER_DAY;
   if (!env.CLASS_KV || !env.AI) return { checked: 0, asked: 0, used: 0 };
   const day = new Date(now).toISOString().slice(0, 10);
   const stateKey = `prewarm:v1:state:${day}`;
   const state = (await env.CLASS_KV.get(stateKey, 'json')) ?? { cursor: 0, used: 0 };
   state.genre ??= 0;
-  if (state.used >= PREWARM_AI_PER_DAY) return { checked: 0, asked: 0, used: state.used };
+  if (state.used >= perDay) return { checked: 0, asked: 0, used: state.used };
   const songs = await todaysSongs(env, day, fetchImpl);
   let checked = 0, asked = 0, scanned = 0;
   const ready = []; // songs this run found ✓ Checked (growShelves)
   const budget = async () => {
-    if (state.used >= PREWARM_AI_PER_DAY) return false;
+    if (state.used >= perDay) return false;
     state.used++;
     asked++;
     return true;
@@ -206,9 +215,9 @@ export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyrics
     if (asked > before) checked++; // a known song cost no AI call: only the scan counts
   };
   const night = nightHours(now);
-  const perRun = night ? PREWARM_NIGHT_PER_RUN : PREWARM_PER_RUN;
-  const scanMax = night ? PREWARM_NIGHT_SCAN_PER_RUN : PREWARM_SCAN_PER_RUN;
-  const more = () => checked < perRun && scanned < scanMax && state.used < PREWARM_AI_PER_DAY;
+  const perRun = boost ? PREWARM_BOOST.perRun : night ? PREWARM_NIGHT_PER_RUN : PREWARM_PER_RUN;
+  const scanMax = boost ? PREWARM_BOOST.scan : night ? PREWARM_NIGHT_SCAN_PER_RUN : PREWARM_SCAN_PER_RUN;
+  const more = () => checked < perRun && scanned < scanMax && state.used < perDay;
   while (state.cursor < songs.length && more()) await check(songs[state.cursor++]);
   // The songbook, after the charts (one pass per list).
   let book = null;
@@ -225,7 +234,7 @@ export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyrics
     genres = await genreSongs(env, day, fetchImpl);
     while (state.genre < genres.length && more()) await check(genres[state.genre++]);
   }
-  const grew = await growShelves(env, ready, fetchImpl, baked).catch((e) => {
+  const grew = await growShelves(env, ready, fetchImpl, baked, seeds).catch((e) => {
     console.error(JSON.stringify({ message: 'prewarm shelves failed', error: String(e) }));
     return 0;
   });

@@ -11,6 +11,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { baseTitle, banKey, mainArtist, normalizeWords } from '../shared/filter.js';
 import { itunesSearchUrl, parseItunes, toSong } from '../shared/itunes.js';
+import { ARTISTS, DEPTH, MAX, MAX_DEFAULT } from './songbook-artists.mjs';
 import { SEEDS, SHELF_ORDER } from './songbook-seeds.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,11 +23,13 @@ const VERSION_WORDS = /\b(live|remix|sped up|slowed|nightcore|karaoke|acoustic|i
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const cache = process.argv.includes('--fresh') ? {} : JSON.parse(await readFile(CACHE, 'utf8').catch(() => '{}'));
 
-async function search(term) {
+async function search(term, url = itunesSearchUrl(term)) {
   if (cache[term]) return cache[term];
   for (let tries = 0; tries < 4; tries++) {
     await sleep(GAP_MS);
-    const r = await fetch(itunesSearchUrl(term)).catch(() => null);
+    const r = await fetch(url).catch(() => null);
+    // iTunes says 400/404 for some terms (an artist name like "SNAP!"): nothing there, not a busy server.
+    if (r?.status === 400 || r?.status === 404) return (cache[term] = []);
     if (r?.ok) {
       const results = parseItunes(await r.text()) ?? [];
       cache[term] = results;
@@ -61,6 +64,31 @@ function pick(results, [title, artist], shelf) {
   };
 }
 
+const HOLIDAY = /\b(christmas|xmas|santa|jingle|navidad|holiday|hanukkah|new year)\b/;
+
+/**
+ * An artist's most popular songs on iTunes (scripts/songbook-artists.mjs): its own (not a feature),
+ * never explicit (not even a clean edit), no live / remix / acoustic versions, no holiday songs, 1 to
+ * 7 minutes, one per title, at most `k`.
+ */
+async function artistTop(artist, k) {
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&entity=song&attribute=artistTerm&limit=60&country=US`;
+  const who = mainArtist(artist);
+  const out = [];
+  const titles = new Set();
+  for (const s of (await search(`artist:${artist}`, url)).map(toSong).filter(Boolean)) {
+    if (mainArtist(s.artist) !== who || s.explicit !== 'notExplicit' || /kidz bop/i.test(s.artist)) continue;
+    if (extraVersion(s.title, s.album, '') || HOLIDAY.test(normalizeWords(`${s.title} ${s.album}`)) || /holiday/i.test(s.genre ?? '')) continue;
+    if (!(s.durationMs >= 60_000 && s.durationMs <= 7 * 60_000)) continue;
+    const title = baseTitle(s.title) || normalizeWords(s.title);
+    if (titles.has(title)) continue;
+    titles.add(title);
+    out.push(s);
+    if (out.length >= k) break;
+  }
+  return out;
+}
+
 const songs = [];
 const missing = [];
 const seen = new Set();
@@ -79,7 +107,27 @@ for (const shelf of SHELF_ORDER) {
     seen.add(key);
     songs.push({ ...found.song, shelf, rank: ++rank, ...(seed[2] === 'song' ? { songOnly: true } : {}) });
   }
-  console.log(`${shelf}: ${rank} of ${SEEDS[shelf].length}`);
+  // Then each list artist's most popular songs, every artist's #1 first, up to the list's MAX.
+  const seeded = rank;
+  if (DEPTH[shelf]) {
+    const max = MAX[shelf] ?? MAX_DEFAULT;
+    const names = [...SEEDS[shelf].filter((s) => s[2] !== 'song').map((s) => s[1]), ...(ARTISTS[shelf] ?? [])];
+    const artists = [...new Map(names.map((a) => [mainArtist(a), a])).values()].filter((a) => mainArtist(a));
+    const tops = [];
+    for (const artist of artists) tops.push(await artistTop(artist, DEPTH[shelf]));
+    for (let i = 0; i < DEPTH[shelf]; i++) {
+      for (const top of tops) {
+        const song = top[i];
+        if (!song || rank >= max) continue;
+        const key = `${shelf}|${banKey(song)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        songs.push({ ...song, shelf, rank: ++rank });
+      }
+    }
+    await writeFile(CACHE, JSON.stringify(cache));
+  }
+  console.log(`${shelf}: ${seeded} of ${SEEDS[shelf].length} seeds${rank > seeded ? `, +${rank - seeded} artists' top songs` : ''}`);
   await mkdir(dirname(CACHE), { recursive: true });
   await writeFile(CACHE, JSON.stringify(cache));
 }

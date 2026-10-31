@@ -119,6 +119,9 @@ export const MORE = {
     ['Tennessee Whiskey', 'Chris Stapleton'], ['Fast Car', 'Luke Combs'], ['Beautiful Crazy', 'Luke Combs'], ['Hurricane', 'Luke Combs'],
     ['Last Night', 'Morgan Wallen'], ['Thinkin\' Bout Me', 'Morgan Wallen'], ['Wasted On You', 'Morgan Wallen'], ['Whiskey Glasses', 'Morgan Wallen'],
     ['A Bar Song (Tipsy)', 'Shaboozey'], ['Pink Skies', 'Zach Bryan'], ['Something in the Orange', 'Zach Bryan'], ['I Remember Everything', 'Zach Bryan'],
+    // Billy Strings (Dalton, 2026-10-31: "Add Billy strings songs to country").
+    ['Away From the Mire', 'Billy Strings'], ['Meet Me at the Creek', 'Billy Strings'], ['Hide and Seek', 'Billy Strings'], ['Love and Regret', 'Billy Strings'],
+    ['Leaders', 'Billy Strings'], ['Taking Water', 'Billy Strings'], ['In the Morning Light', 'Billy Strings'],
     ['Need You Now', 'Lady A'], ['Cruise', 'Florida Georgia Line'], ['H.O.L.Y.', 'Florida Georgia Line'], ['Meant to Be', 'Bebe Rexha'],
     ['Body Like A Back Road', 'Sam Hunt'], ['Die A Happy Man', 'Thomas Rhett'], ['Life Changes', 'Thomas Rhett'], ['Remember You Young', 'Thomas Rhett'],
     ['Before He Cheats', 'Carrie Underwood'], ['Jesus, Take the Wheel', 'Carrie Underwood'], ['Cowboy Casanova', 'Carrie Underwood'], ['Wagon Wheel', 'Darius Rucker'],

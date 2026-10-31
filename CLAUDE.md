@@ -684,7 +684,18 @@ Claude account).
    pop star with one pop punk hit). readGrown works each grown song's shelves out again, so a new
    shelf picks up old finds; re-run `npm run songbook:archive` after changing the rules. The cron also
    reads the style genres' iTunes charts (GENRE_IDS). Phones show the list buttons as a 3-row
-   sideways strip (student.css).
+   sideways strip (style.css; the host's 🔎 Suggest a song has the same buttons, host 'shelf').
+   (g) Consolidated + filled (Dalton, 2026-10-31: "analyze the list and consolidate as needed to offer
+   the MOST important and descriptive genres", "fill the list ... so we have a full list"): 20 lists,
+   most asked first. Grunge folded into 🌿 Alternative & indie, pop punk/emo into 🧷 Punk & pop punk,
+   ska into 🌴 Reggae & ska (ska punk seeds on both), Dance renamed 🪩 Dance & EDM. Fill:
+   scripts/songbook-artists.mjs: per list, its hand seeds' artists + ARTISTS, each artist's top DEPTH
+   iTunes songs (artistTerm search, never explicit, not even a clean edit; no versions, no holiday
+   songs), every artist's #1 first, up to MAX a list. The cron checks every list's #1, then every #2
+   (songbookToCheck), and a ✓ Checked seed joins KV songbook:v1:grown even with no genre shelf
+   (growShelves seeds), so lists fill with no archive rebuild (GROWN_MAX 7000). PREWARM_BOOST: a
+   weekend catch-up (Sat 2026-10-31 19:00 UTC to Mon 2026-11-02 10:00 UTC, no classes): 25 songs a
+   run, 5000 a day; it ends by itself.
    (b) Hand-checked songs (shared/filter.js HOUSE_OK, houseOk): Dalton's own per-song calls for every
    teacher, like a teacher's Allow (source 'house', no AI or lyrics call). Only the clean edit (the
    explicit flag still refuses), bans, blocked words, 🙉 and Instrumentals only still count. Add ONLY
