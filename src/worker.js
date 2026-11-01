@@ -30,7 +30,7 @@ import { claimCode, codeHash, codeInUse, legacyCodeHash, putCodeRoute, readCodeR
 import { addressOf, lockout } from './lockout.js';
 import { readBanned } from './search.js';
 import { banKey, checkFromKv, quickCheck } from '../shared/filter.js';
-import { GROWN_KEY, SHELF_READS, archiveReady, isShelf, readGrown, shelfSongs } from './songbook.js';
+import { GROWN_KEY, SHELF_READS, archiveReady, isShelf, readGrown, shelfSongs, spreadArtists } from './songbook.js';
 import { songId } from '../shared/catalog.js';
 import { artKey, artState } from '../shared/art.js';
 import { cachedArtVerdict } from './art.js';
@@ -481,7 +481,7 @@ async function browseShelfResults(env, shelf) {
   const ask = shown.filter((song) => !pre.has(banKey(song))).slice(0, shelf === 'popular' ? SHELF_MAX : SHELF_READS);
   const checks = await Promise.all(ask.map((song) => checkFromKv(song, env, { scope: (k) => `browse-none:${k}`, kidzBop: ctx.kidzBop })));
   const ready = new Set([...pre, ...ask.filter((_, i) => checks[i] === 'ready').map(banKey)]);
-  const results = shown.filter((song) => ready.has(banKey(song))).slice(0, SHELF_MAX);
+  const results = spreadArtists(shown.filter((song) => ready.has(banKey(song))).slice(0, SHELF_MAX));
   // 🖼 Covers like browseCheck: the KV art cache only, the first few read.
   return Promise.all(results.map(async (song, i) => {
     const key = artKey(song.artwork);

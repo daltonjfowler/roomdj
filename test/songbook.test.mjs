@@ -156,3 +156,11 @@ test('archive data: from the current prompt, every song shelfWorthy and on a rea
     assert.match(s.previewUrl, /^https:\/\//);
   }
 });
+
+test('a list mixes its artists: every first song, then every second (no Taylor Swift block)', async () => {
+  const { spreadArtists } = await import('../src/songbook.js');
+  const s = (title, artist) => ({ title, artist });
+  const list = [s('a1', 'Lady Gaga & Bruno Mars'), s('t1', 'Taylor Swift'), s('t2', 'Taylor Swift'), s('t3', 'Taylor Swift'), s('g2', 'Lady Gaga'), s('b1', 'Billie Eilish')];
+  assert.deepEqual(spreadArtists(list).map((x) => x.title), ['a1', 't1', 'b1', 't2', 'g2', 't3']);
+  assert.deepEqual(spreadArtists([]), []);
+});

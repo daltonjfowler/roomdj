@@ -183,6 +183,24 @@ export function shelfSongs(id, songs = SONGBOOK_SONGS, archive = ARCHIVE_SONGS, 
 }
 
 /**
+ * A list with its artists mixed (Dalton, 2026-11-01: "vary the list it's all Taylor Swift"): every
+ * artist's first song in list order, then every artist's second song, and so on. The seeds come in
+ * artist blocks, so without this one artist could fill the top of a list.
+ */
+export function spreadArtists(songs) {
+  const n = new Map();
+  return songs
+    .map((song, i) => {
+      const a = mainArtist(song.artist) || `#${i}`;
+      const round = n.get(a) ?? 0;
+      n.set(a, round + 1);
+      return { song, round, i };
+    })
+    .sort((x, y) => x.round - y.round || x.i - y.i)
+    .map((x) => x.song);
+}
+
+/**
  * Songs this room may tag ✓ Checked without reading KV (banKeys): the archive's while it is from the
  * current prompt, and the cron's finds (readGrown keeps only the current prompt's). Under
  * Instrumentals only, only the ones known to have no words.

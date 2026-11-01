@@ -91,7 +91,7 @@ import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
 import { NIGHT_SEARCH_MAX, addToNight, nightSong, nightWorthy } from './night.js';
 import { lookupCatalog, roomCatalog } from './catalog.js';
 import { readBanned, searchAllowed } from './search.js';
-import { GROWN_KEY, SHELF_READS, archiveReady, isShelf, readGrown, shelfSongs } from './songbook.js';
+import { GROWN_KEY, SHELF_READS, archiveReady, isShelf, readGrown, shelfSongs, spreadArtists } from './songbook.js';
 import { ASKS_KV, noteAsks, readAsks, readPopular } from './popular.js';
 import { askEntry, finishAsks, logAsk, requestLog } from '../shared/requests.js';
 import { claimCode, codeHash, codeInUse, deleteCodeRoute, putCodeRoute, releaseCode } from './codes.js';
@@ -1248,7 +1248,7 @@ export class Room extends DurableObject {
     const pre = shelf === 'popular' ? new Set() : archiveReady({ instrumentalsOnly: s.instrumentalsOnly === true }, undefined, grown);
     const known = shown.filter((song) => pre.has(banKey(song))).map((song) => ({ ...song, check: 'ready' }));
     const asked = await this.withReady(shown.filter((song) => !pre.has(banKey(song))), shelf === 'popular' ? SHELF_MAX : SHELF_READS);
-    const results = [...known, ...asked.filter((song) => song.check === 'ready')].slice(0, SHELF_MAX);
+    const results = spreadArtists([...known, ...asked.filter((song) => song.check === 'ready')].slice(0, SHELF_MAX));
     const ready = new Set(results.map((song) => song.id));
     const plain = shown.filter((song) => ready.has(song.id)); // remembered like search's: without the tag
     await this.remember(plain);
