@@ -53,7 +53,23 @@ function teacherRow(t, note, isOff) {
   const acts = el('span', undefined, 'acts');
   acts.append(rename, toggle);
   li.append(acts);
+  const stats = actText(t.act);
+  if (stats) li.append(el('span', stats, 'note act'));
   return li;
+}
+
+const n = (x, one, many) => `${(x ?? 0).toLocaleString()} ${x === 1 ? one : many}`;
+const day = (at) => new Date(at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+/** A teacher's tally line (src/teacher-activity.js; rooms closed since 2026-11-01), or ''. */
+function actText(a) {
+  if (!a) return '';
+  return [
+    a.openUntil ? `🟢 room open until ${new Date(a.openUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : '',
+    a.rooms ? `${n(a.rooms, 'room', 'rooms')}, ${n(a.plays, 'song', 'songs')} played, ${n(a.asks, 'request', 'requests')}, ${n(a.students, 'student', 'students')}` : 'no rooms closed yet',
+    a.lastAt ? `last room ${day(a.lastAt)}` : '',
+    a.allows ? n(a.allows, 'Allow', 'Allows') : '',
+  ].filter(Boolean).join(' · ');
 }
 
 /** A list and its "Turned off" section (`kind`: 'teacher' | 'free'). */
@@ -116,9 +132,28 @@ function render(s) {
     s.prewarm ? `Chart pre-check: ${s.prewarm.used} AI checks, at song ${s.prewarm.cursor}` : 'Chart pre-check: not run yet today',
   ].map((x) => el('li', x)));
 
+  // 🎵 The song checker (src/checked-count.js) and the Allows on this page's teachers.
+  const c = s.checked;
+  const allows = [...s.teachers, ...s.free.list].reduce((sum, t) => sum + (t.act?.allows ?? 0), 0);
+  $('#checkerList').replaceChildren(...(c ? [
+    `✓ Checked, OK to play: ${c.ready.toLocaleString()}`,
+    `AI said ok, waiting on the lyrics check: ${c.waiting.toLocaleString()}`,
+    `Blocked, not appropriate: ${c.blocked.toLocaleString()}`,
+    `Other (not sure, or no answer yet): ${Math.max(0, c.seen - c.ready - c.waiting - c.blocked).toLocaleString()}`,
+    `Looked at in all: ${c.seen.toLocaleString()}${c.counting ? ' so far (first count still running)' : `, counted ${day(c.at)} ${new Date(c.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`}`,
+  ] : ['The first count runs over the next few hours.']).concat(`Teacher Allows: ${allows.toLocaleString()}`).map((x) => el('li', x)));
+
   const q = s.requests;
   $('#requestsText').textContent = !q ? 'The request log did not answer.'
-    : q.total ? `${q.total.toLocaleString()} requests, ${q.first.slice(0, 10)} to ${q.last.slice(0, 10)}.` : 'No requests yet. Rooms add theirs when they close.';
+    : q.total ? `${q.total.toLocaleString()} requests, ${q.first.slice(0, 10)} to ${q.last.slice(0, 10)}${q.week !== undefined ? ` (${q.week.toLocaleString()} in the last 7 days)` : ''}.` : 'No requests yet. Rooms add theirs when they close.';
+  const o = q?.outcomes ?? {}, f = q?.fates ?? {};
+  $('#requestsList').replaceChildren(...(q?.total ? [
+    `Went in the queue: ${(o.queued ?? 0).toLocaleString()} · waited for the teacher: ${(o.review ?? 0).toLocaleString()}`,
+    `Blocked by the filter: ${(o.blocked ?? 0).toLocaleString()} · refused by a room rule: ${(o.refused ?? 0).toLocaleString()}`,
+    `Played to the end: ${(f.played ?? 0).toLocaleString()} · skipped: ${(f.skipped ?? 0).toLocaleString()} · never got a turn: ${(f['not played'] ?? 0).toLocaleString()}`,
+  ] : []).map((x) => el('li', x)));
+  $('#topList').replaceChildren(...(q?.top ?? []).map((t) => el('li', `${t.title} · ${t.artist} (${n(t.n, 'play', 'plays')})`)));
+  $('#topWrap').hidden = !q?.top?.length;
 }
 
 /** The CSV comes with the sign-in header, so it is fetched, then saved from memory. */

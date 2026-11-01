@@ -14,11 +14,15 @@ import { OWN_PROFILE_PREFIX, PROFILE_ID_PATTERN } from '../shared/protocol.js';
 import { PROMPT_VERSION } from '../shared/filter.js';
 import { FREE_CAPS } from './free.js';
 import { readChecked } from './checked-count.js';
+import { ACTIVITY_PREFIX } from './teacher-activity.js';
+import { readOpenRooms } from './open-rooms.js';
+import { teacherKvKey } from './teacher-kv.js';
 import { KV_PROFILES, ensureProfiles } from './profiles.js';
 import { teacherSession } from './auth.js';
 import { CSV_COLUMNS, csvLines, requestLog } from '../shared/requests.js';
 
 const MAX_BODY = 2048;
+const MORE_MAX = 100;
 const NOT_FOUND = { error: 'not_found', message: 'No such API.' };
 
 function json(status, body) {
@@ -89,7 +93,7 @@ async function changeFreeTeacher(env, id, body) {
 async function stats(env) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
-  const [list, links, own, sessions, use, verdicts, prewarm, requests, checked] = await Promise.all([
+  const [list, links, own, sessions, use, verdicts, prewarm, requests, checked, acts] = await Promise.all([
     ensureProfiles(env),
     listAll(env, 'link:v1:', 1),
     listAll(env, 'prof:v1:'),
@@ -99,6 +103,7 @@ async function stats(env) {
     env.CLASS_KV.get(`prewarm:v1:state:${today}`, 'json'),
     requestLog(env)?.summary().catch(() => null) ?? null,
     readChecked(env), // ✓ Checked songs, counted by the cron (src/checked-count.js)
+    listAll(env, ACTIVITY_PREFIX, 1), // each teacher's tally (src/teacher-activity.js)
   ]);
   const linked = new Set(await Promise.all(links.keys.map((k) => env.CLASS_KV.get(k.name))));
   const teachers = list.map((p) => ({
@@ -110,6 +115,23 @@ async function stats(env) {
     const id = k.name.slice('prof:v1:'.length);
     return { id, name: k.metadata?.name ?? '', createdAt: k.metadata?.createdAt ?? 0, ...(k.metadata?.archived ? { archived: true } : {}), today: useToday.get(id) ?? {} };
   });
+  // 📊 More on each teacher (Dalton, 2026-11-01): the tally from closed rooms, a room open now, and
+  // their Allows. Two KV reads a teacher (the newest MORE_MAX free teachers only).
+  const tally = new Map(acts.keys.map((k) => [k.name.slice(ACTIVITY_PREFIX.length), k.metadata ?? {}]));
+  const more = async (profile) => {
+    const [open, allows] = await Promise.all([
+      readOpenRooms(env, profile).catch(() => []),
+      env.CLASS_KV.list({ prefix: teacherKvKey('approved:', profile), limit: 1000 }).then((r) => r.keys.length, () => null),
+    ]);
+    return { ...(tally.get(profile.id) ?? {}), openUntil: Math.max(0, ...open.map((o) => o.until ?? 0)) || null, allows };
+  };
+  const newest = [...free].sort((a, b) => b.createdAt - a.createdAt).slice(0, MORE_MAX);
+  const [listMore, freeMore] = await Promise.all([
+    Promise.all(list.map(more)),
+    Promise.all(newest.map((f) => more({ id: f.id }))),
+  ]);
+  teachers.forEach((t, i) => Object.assign(t, { act: listMore[i] }));
+  newest.forEach((f, i) => Object.assign(f, { act: freeMore[i] }));
   const perDay = {};
   for (const f of free) {
     const d = new Date(f.createdAt).toISOString().slice(0, 10);

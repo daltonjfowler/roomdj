@@ -25,6 +25,7 @@
 @media (max-width: 620px) { .link-form { grid-template-columns: 1fr; } }
 /* A teacher's buttons stay together, on the right (their own line on a phone) */
 .admin-list .acts { display: flex; gap: 6px; margin-left: auto; }
+.admin-list .act { flex-basis: 100%; font-size: .9em; }
 /* "Turned off" teachers, out of the way under each list */
 .admin-off { margin-top: 4px; }
 .admin-off summary { cursor: pointer; color: var(--muted); padding: 4px 0; }

@@ -36,9 +36,20 @@ export class RequestLog extends DurableObject {
     return { rows, last: rows.length ? rows[rows.length - 1].rid : null };
   }
 
-  /** → { total, first, last } (hours, UTC) */
-  async summary() {
+  /**
+   * → { total, first, last, week, outcomes, fates, top } (hours, UTC): week = the last 7 days;
+   * outcomes / fates = rows by outcome and by fate; top = the 5 songs played to the end most.
+   */
+  async summary(now = Date.now()) {
     const r = this.sql.exec('SELECT COUNT(*) AS total, MIN(hour) AS first, MAX(hour) AS last FROM asks').one();
-    return { total: r.total, first: r.first ?? null, last: r.last ?? null };
+    const since = new Date(now - 7 * 86_400_000).toISOString().slice(0, 13);
+    const by = (col) => Object.fromEntries(this.sql.exec(`SELECT ${col} AS k, COUNT(*) AS n FROM asks GROUP BY ${col}`).toArray().map((x) => [x.k || 'none', x.n]));
+    const top = this.sql.exec(`SELECT MIN(title) AS title, MIN(artist) AS artist, COUNT(*) AS n FROM asks WHERE fate = 'played'
+      GROUP BY lower(title), lower(artist) ORDER BY n DESC LIMIT 5`).toArray();
+    return {
+      total: r.total, first: r.first ?? null, last: r.last ?? null,
+      week: this.sql.exec('SELECT COUNT(*) AS n FROM asks WHERE hour >= ?', since).one().n,
+      outcomes: by('outcome'), fates: by('fate'), top,
+    };
   }
 }

@@ -218,6 +218,9 @@ try {
   const tiles = await dalton.page.textContent('#nTeachers').catch(() => '');
   check('admin: the numbers load', await visible(dalton.page, '#dash') && /\d/.test(tiles), tiles);
   check('admin: the teacher list shows who signed in', /Teacher 1[\s\S]*signed in/.test(await dalton.page.textContent('#teacherList')));
+  check('admin: each teacher has a tally line', /no rooms closed yet|played/.test(await dalton.page.textContent('#teacherList')));
+  const checker = await dalton.page.textContent('#checkerList');
+  check('admin: the song checker card shows, with the teacher Allows', /Teacher Allows: \d/.test(checker), checker);
   if (process.env.SHOTS) await dalton.page.screenshot({ path: `${process.env.SHOTS}/admin.png`, fullPage: true });
   await dalton.page.goto(`${BASE}/host/`);
   await waitFor(dalton.page, '#keyForm');

@@ -711,7 +711,12 @@ Claude account).
    and bans, DEFAULT_SETTINGS (so 🙏 Gospel stays off), ✓ Checked only, cached per isolate 5 minutes.
    The page shows the same list buttons and genre / sort menus (no Suggest button). The admin page's
    "✓ Checked songs" tile comes from src/checked-count.js: the cron reads 200 per-song verdicts a run
-   and keeps the last full count in KV stats:v1:checked.
+   and keeps the last full count in KV stats:v1:checked (ready / waiting on lyrics / blocked / seen,
+   the admin's Song checker card). Each teacher's tally (src/teacher-activity.js, KV act:v1:<profile
+   id>, value = metadata) grows when a room closes: rooms, songs played, requests, students, last
+   room. Counts only, never a song, nickname or device. The admin page adds "room open now" and the
+   teacher's Allows (two KV reads a teacher), and the request log's summary() its outcomes, fates,
+   last 7 days and top 5 played.
    (b) Hand-checked songs (shared/filter.js HOUSE_OK, houseOk): Dalton's own per-song calls for every
    teacher, like a teacher's Allow (source 'house', no AI or lyrics call). Only the clean edit (the
    explicit flag still refuses), bans, blocked words, 🙉 and Instrumentals only still count. Add ONLY

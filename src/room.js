@@ -105,6 +105,7 @@ import { artistWaiting, boardSnapshot, sameArtistWhy, teacherName, unplay } from
 import { BOARDS_MAX, BOARD_TOKEN_PATTERN, PROGRESS_RATE } from '../shared/protocol.js';
 import { addSigninToken, boardMessage, boardTokens, cleanBoardInfo, cleanProgress, replaceLinkToken } from '../shared/board.js';
 import { addOpenRoom, removeOpenRoom, updateOpenRooms } from './open-rooms.js';
+import { addActivity, roomTally } from './teacher-activity.js';
 import { REPEAT_MIN_MS, REST_WRITE_MS } from '../shared/protocol.js';
 import {
   mergeRecent, notePlayed, pruneRecent, readRecent, recentValue, restingFor, restingList,
@@ -996,6 +997,13 @@ export class Room extends DurableObject {
         await this.asksAtClose();
       } catch (e) {
         console.error(JSON.stringify({ message: 'asks at close failed', error: String(e) }));
+      }
+      try {
+        // 📊 The teacher's running tally for the admin page (src/teacher-activity.js): counts only.
+        const asks = finishAsks(this.room.askLog ?? [], this.room.history ?? []).length;
+        if (this.profile?.id) await addActivity(this.env, this.profile.id, roomTally(this.room, asks));
+      } catch (e) {
+        console.error(JSON.stringify({ message: 'teacher activity at close failed', error: String(e) }));
       }
       try {
         await this.requestsAtClose();

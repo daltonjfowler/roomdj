@@ -33,15 +33,15 @@ test('the cron counts ✓ Checked songs a slice at a time, then keeps the full c
   const env = { CLASS_KV: kv };
   assert.equal(await readChecked(env), null);
   await countChecked(env, { reads: 3 });
-  assert.deepEqual(await readChecked(env), { ready: 2, seen: 3, counting: true });
+  assert.deepEqual(await readChecked(env), { ready: 2, waiting: 1, blocked: 0, seen: 3, counting: true });
   await countChecked(env, { reads: 3, now: 5 });
-  assert.deepEqual(await readChecked(env), { ready: 2, seen: 4, at: 5 });
+  assert.deepEqual(await readChecked(env), { ready: 2, waiting: 1, blocked: 1, seen: 4, at: 5 });
   // The next pass starts over and keeps showing the last full count meanwhile.
   kv.map.set(`${p}song:e|x`, ok);
   await countChecked(env, { reads: 3, now: 6 });
-  assert.deepEqual(await readChecked(env), { ready: 2, seen: 4, at: 5 });
+  assert.deepEqual(await readChecked(env), { ready: 2, waiting: 1, blocked: 1, seen: 4, at: 5 });
   await countChecked(env, { reads: 3, now: 7 });
-  assert.deepEqual(await readChecked(env), { ready: 3, seen: 5, at: 7 });
+  assert.deepEqual(await readChecked(env), { ready: 3, waiting: 1, blocked: 1, seen: 5, at: 7 });
 });
 
 test('a count from an older prompt version is not shown, and starts over', async () => {
@@ -49,5 +49,18 @@ test('a count from an older prompt version is not shown, and starts over', async
   const env = { CLASS_KV: kv };
   assert.equal(await readChecked(env), null);
   await countChecked(env, { now: 2 });
-  assert.deepEqual(await readChecked(env), { ready: 1, seen: 1, at: 2 });
+  assert.deepEqual(await readChecked(env), { ready: 1, waiting: 0, blocked: 0, seen: 1, at: 2 });
+});
+
+test("a closed room adds to its teacher's tally: counts only", async () => {
+  const { addActivity, roomTally } = await import('../src/teacher-activity.js');
+  const map = new Map();
+  const env = { CLASS_KV: { async get(k) { return map.has(k) ? JSON.parse(map.get(k).v) : null; }, async put(k, v, o) { map.set(k, { v, meta: o?.metadata }); } } };
+  const room = { history: [{ status: 'finished' }, { status: 'skipped' }, { status: 'finished' }], admitted: ['d1', 'd2', 'd3'] };
+  assert.deepEqual(roomTally(room, 4), { plays: 2, asks: 4, students: 3 });
+  await addActivity(env, 'own-abc', roomTally(room, 4), 10);
+  const t = await addActivity(env, 'own-abc', roomTally({ history: [{ status: 'finished' }], admitted: ['d1'] }, 1), 20);
+  assert.deepEqual(t, { rooms: 2, plays: 3, asks: 5, students: 4, lastAt: 20 });
+  assert.deepEqual(map.get('act:v1:own-abc').meta, t);
+  assert.equal(await addActivity(env, 'Not An Id!', roomTally(room)), null);
 });
