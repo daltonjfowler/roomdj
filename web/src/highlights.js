@@ -9,7 +9,7 @@
 import './highlights.css';
 import { $, announce, artHtml, ask, esc, keepFocus, toast } from './dom.js';
 import { recapText } from '../../shared/highlights.js';
-import { SHELVES, byLabel } from '../../shared/protocol.js';
+import { byLabel } from '../../shared/protocol.js';
 import { pickStats } from '../../shared/stats.js';
 import { initRecapShow } from './recap-show.js';
 import { cueFor } from '../../shared/recap-music.js';
@@ -223,23 +223,9 @@ export function initHighlights({ send, duck = () => {}, boards = () => 0, isBig 
   });
 
   // ---- 🎨 Settings switches (shared/protocol.js DEFAULT_SETTINGS) ----
-  // 🎲 Autoplay's lists: a tick box per song list (Gospel only while its switch is on).
-  $('#autoplayLists').innerHTML = SHELVES.map((s) => `<label class="check" data-shelf="${esc(s.id)}"${s.setting ? ` data-setting="${esc(s.setting)}"` : ''}>
-    <input type="checkbox" value="${esc(s.id)}"> ${esc(s.label)}</label>`).join('');
-  function showAutoplayLists() {
-    $('#autoplayLists').hidden = !$('#setAutoplay').checked;
-    for (const l of $('#autoplayLists').querySelectorAll('[data-setting="gospelShelf"]')) l.hidden = !$('#setGospel').checked;
-  }
-  $('#setAutoplay').addEventListener('change', showAutoplayLists);
-  $('#setGospel').addEventListener('change', showAutoplayLists);
-
   function fillSettings(s) {
     $('#setShowFav').checked = s.showFavorites !== false;
     $('#setGospel').checked = s.gospelShelf === true;
-    $('#setAutoplay').checked = s.autoplay === true;
-    const lists = new Set(Array.isArray(s.autoplayShelves) ? s.autoplayShelves : []);
-    for (const box of $('#autoplayLists').querySelectorAll('input')) box.checked = lists.has(box.value);
-    showAutoplayLists();
     $('#setBackToBack').checked = s.noBackToBackArtist === true;
     $('#setOnePerArtist').checked = s.oneSongPerArtist === true;
   }
@@ -247,8 +233,6 @@ export function initHighlights({ send, duck = () => {}, boards = () => 0, isBig 
     return {
       showFavorites: $('#setShowFav').checked,
       gospelShelf: $('#setGospel').checked,
-      autoplay: $('#setAutoplay').checked,
-      autoplayShelves: [...$('#autoplayLists').querySelectorAll('input:checked')].map((box) => box.value),
       noBackToBackArtist: $('#setBackToBack').checked,
       oneSongPerArtist: $('#setOnePerArtist').checked,
     };

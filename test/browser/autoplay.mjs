@@ -169,17 +169,30 @@ try {
   const first = await stateOf(host, () => true);
   check('a new room carries the saved autoplay choice', first.settings.autoplay === true && first.settings.autoplayShelves.join() === 'pop,rock', JSON.stringify(first.settings.autoplayShelves));
 
-  // Settings: the switch shows in Simple, with a tick box per list (Gospel hidden while its switch is off).
-  await host.page.click('#settingsBtn');
-  await host.page.waitForSelector('#settingsDlg[open]');
-  await host.page.click('#settingsDlg [role="tab"]:has-text("Songs")').catch(() => {});
-  check('settings: 🎲 Autoplay is on, its lists show, Pop and Rock ticked', await host.page.isChecked('#setAutoplay')
+  // By Background music: the 🎲 Autoplay button opens its panel, a tick box per list (Gospel hidden while its switch is off).
+  check('the button says Autoplay is on', (await host.page.textContent('#autoplayEdit'))?.includes('On'));
+  await host.page.click('#autoplayEdit');
+  check('panel: 🎲 Autoplay is on, its lists show, Pop and Rock ticked', await host.page.isChecked('#setAutoplay')
     && (await visible(host, '#autoplayLists')) && await host.page.isChecked('#autoplayLists input[value="pop"]')
     && await host.page.isChecked('#autoplayLists input[value="rock"]') && !(await host.page.isChecked('#autoplayLists input[value="country"]')));
-  check('settings: no Gospel box while the Gospel list is off', !(await visible(host, '#autoplayLists [data-shelf="gospel"]')));
+  check('panel: no Gospel box while the Gospel list is off', !(await visible(host, '#autoplayLists [data-shelf="gospel"]')));
+  // A tick saves at once: the room and the teacher's saved settings both get Country.
+  await host.page.check('#autoplayLists input[value="country"]');
+  const ticked = await stateOf(host, (s) => s.settings.autoplayShelves.includes('country'));
+  check('a tick saves to the room at once', Boolean(ticked), JSON.stringify(lastState(host)?.settings?.autoplayShelves));
+  let saved = null;
+  for (let i = 0; i < 20 && !saved?.autoplayShelves?.includes('country'); i++) {
+    await host.page.waitForTimeout(250);
+    saved = await (await api('/api/teacher/settings')).json();
+  }
+  check('and to the saved settings for the next room', saved?.autoplayShelves?.includes('country'), JSON.stringify(saved?.autoplayShelves));
+  await host.page.click('#autoplayDone');
+  await host.page.click('#settingsBtn');
+  await host.page.waitForSelector('#settingsDlg[open]');
   await host.page.setChecked(await reveal(host.page, '#setAi'), false);
   await host.page.click('#applySettings');
   await stateOf(host, (s) => !s.settings.aiCheck);
+  check('saving Settings keeps Autoplay as it was', lastState(host)?.settings?.autoplay === true && lastState(host).settings.autoplayShelves.includes('country'));
   const hostWs = await rawSocket(roomId, { role: 'host', token });
   raws.push(hostWs);
   hostWs.send({ t: 'settings', settings: { blockUnknownSongs: false, cooldownDays: null, maxSongMinutes: null, autoplay: true, autoplayShelves: ['pop', 'rock'] } });

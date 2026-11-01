@@ -277,6 +277,7 @@
           <div class="filler-row">
             <button id="fillerBtn" type="button" aria-pressed="false">▶ Background music</button>
             <button id="fillerEdit" type="button" class="linkbtn" aria-expanded="false" aria-controls="fillerForm">Background music link</button>
+            <button id="autoplayEdit" type="button" class="linkbtn" aria-expanded="false" aria-controls="autoplayForm">🎲 Autoplay: Off</button>
           </div>
           <p id="fillerNow" class="note"></p>
           <form id="fillerForm" class="filler-form" hidden>
@@ -292,6 +293,16 @@
               <button id="fillerSave" class="primary" type="submit">Save</button>
             </div>
           </form>
+          <!-- 🎲 Autoplay (shared/autoplay.js; host.js): each change saves at once, for this room and the next -->
+          <div id="autoplayForm" class="filler-form" hidden>
+            <label class="check switch-row"><input id="setAutoplay" class="switch" type="checkbox" role="switch" aria-describedby="autoplayHelp">
+              <span>🎲 Autoplay</span><span class="switch-state" aria-hidden="true"></span></label>
+            <small id="autoplayHelp" class="switch-help">When the queue is empty and you have no background music link, RoomDJ plays a popular ✓ Checked song from the lists you tick. It shows as 🎲 RoomDJ in the queue.</small>
+            <div id="autoplayLists" class="autoplay-lists" role="group" aria-label="Autoplay picks from these lists"></div>
+            <div class="filler-row">
+              <button id="autoplayDone" type="button">Done</button>
+            </div>
+          </div>
           <!-- YouTube's player for background music: on screen while it plays -->
           <div id="fillerBox" class="yt-box" hidden></div>
         </div>
@@ -487,11 +498,6 @@
           <label class="check switch-row"><input id="setGospel" class="switch" type="checkbox" role="switch" aria-describedby="gospelHelp">
             <span>🙏 Gospel &amp; Christian list</span><span class="switch-state" aria-hidden="true"></span></label>
           <small id="gospelHelp" class="switch-help">Adds a Gospel &amp; Christian list to the song lists you and your students can browse. Off unless you turn it on. Songs still go through the song check.</small>
-          <!-- 🎲 Autoplay (shared/autoplay.js) -->
-          <label class="check switch-row"><input id="setAutoplay" class="switch" type="checkbox" role="switch" aria-describedby="autoplayHelp">
-            <span>🎲 Autoplay</span><span class="switch-state" aria-hidden="true"></span></label>
-          <small id="autoplayHelp" class="switch-help">When the queue is empty and you have no background music link, RoomDJ plays a random ✓ Checked song from the lists you tick. It shows as 🎲 RoomDJ in the queue.</small>
-          <div id="autoplayLists" class="autoplay-lists" role="group" aria-label="Autoplay picks from these lists"></div>
         </fieldset>
         <!-- highlights.js: the artist rules -->
         <fieldset class="field fav-field set-group" data-adv>

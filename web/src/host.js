@@ -40,7 +40,7 @@ import { acceptDisclaimer, checkSignin, finish, forgetSignin, login, sessionHead
 import { cleanClientId } from '../../shared/accounts.js';
 import { isFreeTeacher } from '../../shared/protocol.js';
 import { initTeacherSuggest } from './teacher-suggest.js';
-import { NEXT_LOCK_S, PUSH_TAG, byLabel } from '../../shared/protocol.js';
+import { NEXT_LOCK_S, PUSH_TAG, SHELVES, byLabel } from '../../shared/protocol.js';
 import { BACK_TO_WORK_MINUTES, DEFAULT_SETTINGS, DOWNVOTE_CHOICES, UPVOTE_CHOICES } from '../../shared/protocol.js';
 import { clockLeft } from '../../shared/backtowork.js';
 import { FOCUS_MINUTES } from '../../shared/focus.js';
@@ -1002,6 +1002,7 @@ function render(s) {
   classTime.render(s); // class end note, cleanup banner (and the fade, onCleanup)
   highlights.render(s); // Top 5 (dialog, and the board in cleanup mode)
   boardHost.render(s); // "📺 Board connected"
+  showAutoplay(s); // 🎲 Autoplay: On / Off
   if (room && s.until !== room.until) {
     room.until = s.until; // "Change times": the saved entry lasts until the new class end
     hostStore.set(room);
@@ -1391,6 +1392,50 @@ function askAutoplay(s) {
   autoplayAsked = Date.now();
   send({ t: 'autoplay' });
 }
+
+// 🎲 Autoplay's choices sit by Background music (Dalton, 2026-11-01). Each change goes to this room
+// and to the teacher's saved settings at once (only these two fields), so the next room starts the same.
+$('#autoplayLists').innerHTML = SHELVES.map((s) => `<label class="check" data-shelf="${esc(s.id)}"${s.setting ? ` data-setting="${esc(s.setting)}"` : ''}>
+  <input type="checkbox" value="${esc(s.id)}"> ${esc(s.label)}</label>`).join('');
+function showAutoplay(s, fill = false) {
+  const set = s?.settings ?? DEFAULT_SETTINGS;
+  $('#autoplayEdit').textContent = `🎲 Autoplay: ${set.autoplay === true ? 'On' : 'Off'}`;
+  if (fill) {
+    $('#setAutoplay').checked = set.autoplay === true;
+    const lists = new Set(Array.isArray(set.autoplayShelves) ? set.autoplayShelves : []);
+    for (const box of $('#autoplayLists').querySelectorAll('input')) box.checked = lists.has(box.value);
+  }
+  $('#autoplayLists').hidden = !$('#setAutoplay').checked;
+  for (const l of $('#autoplayLists').querySelectorAll('[data-setting="gospelShelf"]')) l.hidden = set.gospelShelf !== true;
+}
+function closeAutoplay() {
+  $('#autoplayForm').hidden = true;
+  $('#autoplayEdit').setAttribute('aria-expanded', 'false');
+}
+$('#autoplayEdit').addEventListener('click', () => {
+  if (!$('#autoplayForm').hidden) return closeAutoplay();
+  showAutoplay(state, true);
+  $('#autoplayForm').hidden = false;
+  $('#autoplayEdit').setAttribute('aria-expanded', 'true');
+  $('#setAutoplay').focus();
+});
+$('#autoplayDone').addEventListener('click', () => {
+  closeAutoplay();
+  $('#autoplayEdit').focus();
+});
+$('#autoplayForm').addEventListener('change', () => {
+  if (!state) return;
+  const settings = {
+    autoplay: $('#setAutoplay').checked,
+    autoplayShelves: [...$('#autoplayLists').querySelectorAll('input:checked')].map((box) => box.value),
+  };
+  showAutoplay(state);
+  if (!send({ t: 'settings', settings })) return;
+  if (settings.autoplay && state.nowPlaying == null && state.queue.length === 0) autoplayAsked = 0; // try now
+  fetch('/api/teacher/settings', { method: 'PUT', headers: teacherHeaders(state.profile ?? currentProfile()?.id), body: JSON.stringify(settings) })
+    .then((r) => r.ok || toast('Autoplay changed for this room, but it could not be saved for your next rooms.', 'warn'))
+    .catch(() => {});
+});
 
 // 🎯 Focus time (shared/focus.js): every student's picks and votes pause for FOCUS_MINUTES, timed
 // from the snapshot's focusLeft. The button starts it, or ends it early while it runs.
