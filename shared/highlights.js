@@ -35,6 +35,7 @@ export function startPlay(state, item, { up, down, score }, now = Date.now()) {
   state.history.push({
     id: item.id, song: item.song, device: item.device ?? null, by: item.by, up, down, score, at: now, status: 'playing',
     ...(item.teacher === true ? { teacher: true } : {}), // a teacher pick (protocol.js TEACHER PICKS)
+    ...(item.autoplay === true ? { autoplay: true } : {}), // 🎲 autoplay's pick (shared/autoplay.js)
     ...(item.ghost === 1 ? { ghost: 1 } : {}), // its ghost 👍 (protocol.js GHOST VOTE)
   });
   if (state.history.length > HISTORY_MAX) state.history.splice(0, state.history.length - HISTORY_MAX);
@@ -74,7 +75,7 @@ export function relabelHistory(state, device, nick, { forget = false } = {}) {
 }
 
 const shortSong = (song) => ({ id: song.id, title: song.title, artist: song.artist, artwork: song.artwork ?? '' });
-const teacherTag = (e) => (e.teacher === true ? { teacher: true } : {});
+const teacherTag = (e) => ({ ...(e.teacher === true ? { teacher: true } : {}), ...(e.autoplay === true ? { autoplay: true } : {}) });
 
 /** A room's 👎 mode (protocol.js DOWNVOTE MODE) from its settings; anything unknown reads 'shown' (as before). */
 export function downvoteModeOf(settings) {

@@ -121,6 +121,8 @@ export function migrateRoomState(state, { testAiOff = false } = {}) {
   state.profile ??= null;
   state.settings.showFavorites ??= DEFAULT_SETTINGS.showFavorites;
   state.settings.gospelShelf ??= false;
+  state.settings.autoplay ??= false; // 🎲 rooms saved before autoplay
+  state.settings.autoplayShelves ??= [...DEFAULT_SETTINGS.autoplayShelves];
   state.settings.noBackToBackArtist ??= false;
   state.settings.oneSongPerArtist ??= false;
   // Rooms saved before repeats: song keys from the history, the cooldown as the default.
@@ -786,6 +788,7 @@ function itemView(item, device, rules = { floor: false, downs: true, hide: false
     jumped: item.jumped ? { by: item.jumped.by, at: item.jumped.at } : null,
     pushed: item.pushed ? { at: item.pushed.at } : null,
     ...(item.teacher === true ? { teacher: true } : {}),
+    ...(item.autoplay === true ? { autoplay: true } : {}), // 🎲 shown as "🎲 RoomDJ" (protocol.js byLabel)
     // GHOST VOTE: only the host may learn a 👍 is a ghost; everyone else just sees the 👍.
     ...(ghost === 1 && device === null ? { ghost: 1 } : {}),
   };

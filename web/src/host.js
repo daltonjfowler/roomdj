@@ -44,6 +44,7 @@ import { NEXT_LOCK_S, PUSH_TAG, byLabel } from '../../shared/protocol.js';
 import { BACK_TO_WORK_MINUTES, DEFAULT_SETTINGS, DOWNVOTE_CHOICES, UPVOTE_CHOICES } from '../../shared/protocol.js';
 import { clockLeft } from '../../shared/backtowork.js';
 import { FOCUS_MINUTES } from '../../shared/focus.js';
+import { AUTOPLAY_GAP_MS } from '../../shared/autoplay.js';
 import { afterShow, holdForShow } from '../../shared/recap-music.js';
 import { initRecapAudio } from './recap-audio.js';
 import { closeMenu, menuButtonOf, openMenu, openMenuIn } from './menu.js';
@@ -910,7 +911,15 @@ function onMessage(msg) {
       syncPlayback();
       // Background music: off in cleanup mode; back when nothing plays and the queue is empty.
       filler.setBlocked(msg.state.cleanup === true);
-      if (!msg.state.nowPlaying && msg.state.queue.length === 0) filler.event('idle');
+      if (!msg.state.nowPlaying && msg.state.queue.length === 0) {
+        filler.event('idle');
+        askAutoplay(msg.state);
+      }
+      break;
+    case 'autoplayed':
+      // 🎲 Autoplay's pick (shared/autoplay.js): it plays like any queue song.
+      if (msg.ok) toast(`🎲 Autoplay: "${msg.title}" by ${msg.artist}.`, 'ok');
+      else toast(msg.message || 'Autoplay found no song to play right now.', 'warn', 9000);
       break;
     case 'blocked':
       blocked = Array.isArray(msg.list) ? msg.list : [];
@@ -1371,6 +1380,17 @@ function send(msg) {
 
 // ---- Toolbar ----
 $('#lockBtn').addEventListener('click', () => state && send({ t: 'lock', on: !state.locked }));
+
+// 🎲 Autoplay (shared/autoplay.js): the music is started, nothing plays, the queue is empty and no
+// background music link is set: the room adds a random ✓ Checked song from the teacher's lists.
+// The room keeps its own AUTOPLAY_GAP_MS too; this only stops one ask per state message.
+let autoplayAsked = 0;
+function askAutoplay(s) {
+  if (!started || s.cleanup || s.settings?.autoplay !== true || filler.hasLink) return;
+  if (Date.now() - autoplayAsked < AUTOPLAY_GAP_MS) return;
+  autoplayAsked = Date.now();
+  send({ t: 'autoplay' });
+}
 
 // 🎯 Focus time (shared/focus.js): every student's picks and votes pause for FOCUS_MINUTES, timed
 // from the snapshot's focusLeft. The button starts it, or ends it early while it runs.
@@ -2166,6 +2186,7 @@ $('#startBtn').addEventListener('click', () => {
   updateButtons();
   if (loadedId) playNow();
   else syncPlayback();
+  if (state && !state.nowPlaying && state.queue.length === 0) askAutoplay(state); // 🎲 an empty room at the start
 });
 $('#playBtn').addEventListener('click', () => {
   if (paused) {

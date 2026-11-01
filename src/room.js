@@ -75,6 +75,8 @@ import { ART_RATE, JUMP_COST, SUGGEST_COST } from '../shared/protocol.js';
 import { ART_WAIT_MS, artFields, artJson, artKey, validArtKey } from '../shared/art.js';
 import { cachedArtVerdict, checkCover, putTeacherArtOk, teacherArtOk } from './art.js';
 import { focusMessage, focusRefusal, setFocus } from '../shared/focus.js';
+import { AUTOPLAY_TRIES, autoplayDue, autoplayPicks, autoplayShelves, shuffle } from '../shared/autoplay.js';
+
 import { backToWorkMessage, backToWorkOn, clearRests, letBackIn, restRefusal, startRest } from '../shared/backtowork.js';
 import { SPOTIFY, catalogOf, legacySong, songId } from '../shared/catalog.js';
 import { approveSong, banKey, checkFromKv, filterSong, quickCheck } from '../shared/filter.js';
@@ -115,6 +117,8 @@ import {
   bumpFavorite, favoritesValue, hostFavorites, pinFavorite, readFavorites, recapOf, relabelHistory, removeFavorite,
   studentFavorites, topFive, downvoteModeOf, netOf, shownScore,
 } from '../shared/highlights.js';
+
+const AUTOPLAY_NAME = 'RoomDJ'; // 🎲 who autoplay's picks are by (Dalton, 2026-11-01)
 
 /** KV key of the teacher's ⭐ Class favorites (protocol.js FAVORITES); songs only. */
 const KV_FAVORITES = 'favorites';
@@ -1257,6 +1261,27 @@ export class Room extends DurableObject {
     return results;
   }
 
+  /**
+   * 🎲 Autoplay (shared/autoplay.js): nothing plays and the queue is empty, so add a random ✓ Checked
+   * song from the teacher's chosen lists, through suggest() as a teacher pick labeled "RoomDJ". The
+   * host hears { t: 'autoplayed' }. At most once per AUTOPLAY_GAP_MS, refused tries included.
+   */
+  async autoplay(ws) {
+    if (!autoplayDue(this.room, this.autoplayAt ?? 0)) return;
+    this.autoplayAt = Date.now();
+    for (const shelf of shuffle(autoplayShelves(this.room.settings))) {
+      const songs = autoplayPicks(this.room, await this.shelfResults(shelf)).slice(0, AUTOPLAY_TRIES);
+      for (const song of songs) {
+        if (!this.room?.open || this.room.nowPlaying || this.room.queue.length) return;
+        await this.suggest(null, { device: TEACHER_DEVICE, autoplay: true }, song.id); // its answers go nowhere
+        if (this.room?.queue.some((q) => q.song.id === song.id)) {
+          return this.send(ws, { t: 'autoplayed', ok: true, title: song.title, artist: song.artist });
+        }
+      }
+    }
+    this.send(ws, { t: 'autoplayed', ok: false, message: 'Autoplay found no song to play from your lists right now. Try adding more lists in Settings.' });
+  }
+
   /** The shelf songs the chart cron found ✓ Checked (src/songbook.js GROWN_KEY): read like 🔥 Popular. */
   async grownSongs() {
     if (!this.grown || Date.now() - this.grown.at > POPULAR_MEM_MS) {
@@ -1712,7 +1737,7 @@ export class Room extends DurableObject {
     // The teacher never pays (and has no balance), and has a gentler limit of their own.
     const credits = teacher ? null : creditsOf(this.room, a.device); // null: credits are off
     if (credits !== null && credits < SUGGEST_COST) return no('credits', refusalMessage(this.room, 'credits', id));
-    if (!(teacher ? this.allow('teacherSuggest', 'host') : this.allow('suggest', a.device) && this.allow('roomSuggest', 'room'))) {
+    if (!(teacher ? a.autoplay || this.allow('teacherSuggest', 'host') : this.allow('suggest', a.device) && this.allow('roomSuggest', 'room'))) {
       return no('rate', 'That is a lot of suggestions. Wait a minute and try again.');
     }
     const paid = teacher ? 0 : (spendCredits(this.room, a.device, SUGGEST_COST) ?? 0);
@@ -1778,7 +1803,7 @@ export class Room extends DurableObject {
         changed = true;
       }
     }
-    const nick = teacher ? teacherName(this.room) : (this.room.students[a.device]?.nick ?? a.nick);
+    const nick = teacher ? (a.autoplay ? AUTOPLAY_NAME : teacherName(this.room)) : (this.room.students[a.device]?.nick ?? a.nick);
     if (!verdict.ok && verdict.reason === 'review') {
       // The AI did not know it (or failed): the teacher decides. Queue rules are checked again.
       // The credit is held with it: Allow keeps it, Remove gives it back, Ban does not.
@@ -1827,6 +1852,7 @@ export class Room extends DurableObject {
       asked(song, 'refused', { reason: added.reason });
       return no(added.reason, refusalMessage(this.room, added.reason, id, song));
     }
+    if (a.autoplay) added.item.autoplay = true; // 🎲 "RoomDJ" picked it (shared/autoplay.js)
     asked(song, 'queued', { item: added.item.id });
     if (!teacher) startRest(this.room, a.device); // 📚 the pick is in: back to work
     this.send(ws, { t: 'suggested', ok: true, title: song.title, song: id });
@@ -2019,6 +2045,8 @@ export class Room extends DurableObject {
       case 'focus':
         setFocus(room, msg.on === true);
         return this.commit();
+      case 'autoplay':
+        return this.autoplay(ws);
       case 'service': {
         // What the host page plays through (a Spotify room would search Spotify's catalog, which
         // stays off), and whether this page answers the room's iTunes lookups.

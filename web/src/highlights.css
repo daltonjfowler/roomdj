@@ -89,3 +89,7 @@
 .big .now-panel:has(.top5-board:not([hidden])) :is(#nowLabel, #nowPlaying, .progress, .controls, #ytBox, #ytNote) { display: none !important; }
 .big .top5-board .top5-item { padding: .6vh .8vw; }
 .big .top5-board .art { width: clamp(40px, 6.5vh, 72px); height: clamp(40px, 6.5vh, 72px); }
+
+/* 🎲 Autoplay's lists (Settings, Songs) */
+.autoplay-lists { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 8px; }
+.autoplay-lists .check { font-size: .95em; }

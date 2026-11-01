@@ -764,6 +764,16 @@ Claude account).
    screen's 💌 button opens a ready message to copy or email: RoomDJ sends and keeps nothing.
    No Sub plans: Dalton, 2026-11-01, a sub link would mean account sharing. test: test/focus.test.mjs,
    npm run test:focus.
+44. 🎲 Autoplay (Dalton, 2026-11-01: "if no songs are queued and you don't pick a fallback playlist it'll
+   play a random song from the genres you check off", "attribution ... to RoomDJ"; shared/autoplay.js).
+   Settings autoplay (off by default) + autoplayShelves (SHELVES ids, default pop + throwbacks), in the
+   Songs tab, shown in Simple. The host asks { t: 'autoplay' } only when the music is started, nothing
+   plays, the queue is empty, it is not cleanup and NO background music link is set. The room checks
+   for itself (autoplayDue, AUTOPLAY_GAP_MS), takes a shuffled list the room may show (Gospel only while
+   gospelShelf is on), its ✓ Checked songs (shelfResults: this room's rules), skips songs waiting or
+   played, and runs suggest() as a teacher pick with a.autoplay: same filter, repeats and artist rules,
+   no teacher pick rate. The item is by "RoomDJ" with autoplay: true (byLabel "🎲 RoomDJ"). The host
+   hears { t: 'autoplayed' }. test: test/autoplay.test.mjs, npm run test:autoplay.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

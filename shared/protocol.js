@@ -312,6 +312,7 @@ export const TEACHER_SEARCH_RATE = 30;
 export const PUSH_TAG = '⏫ Teacher pick · plays next';
 export function byLabel(item) {
   const by = typeof item?.by === 'string' ? item.by : '';
+  if (item?.autoplay === true) return `🎲 ${by}`; // 🎲 autoplay's pick (shared/autoplay.js): "RoomDJ"
   return item?.teacher === true ? `🍎 ${by}` : by;
 }
 /** Most songs a room's "Needs a look" list holds at once. */
@@ -378,6 +379,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   //                   'kidzbop'). Saved settings and rooms without it read as 'check'.
   gospelShelf: false, // 🙏 the Gospel & Christian list (SONGBOOK above; Dalton, 2026-10-31: "a setting that's off
   //                     by default"): off = students and the teacher never see it. Saved settings and rooms without it read as false.
+  autoplay: false, // 🎲 autoplay (shared/autoplay.js; Dalton, 2026-11-01): when nothing plays, the queue is empty and
+  //                  no background music link is set, the room adds a random ✓ Checked song from autoplayShelves.
+  autoplayShelves: ['pop', 'throwbacks'], // 🎲 the song lists (SHELVES ids) autoplay picks from
   maxDownvotes: 3, // 👎 per student per class (DOWNVOTE LIMIT below): a whole number 1..20, null = unlimited.
   //                  Saved settings and rooms without it read as 3.
   upvotes: true, // 👍 votes on or off (UPVOTE LIMIT below). Saved settings and rooms without it read as true.
@@ -941,6 +945,8 @@ export const ART_RATE = 20;
 //                                                      nickname in this room again
 //           { t: 'lock', on: boolean }                 stop / allow new suggestions
 //           { t: 'focus', on: boolean }                🎯 focus time: start (FOCUS_MINUTES) / end now (shared/focus.js)
+//           { t: 'autoplay' }                          🎲 nothing plays and the queue is empty: add a random
+//                                                      ✓ Checked song from autoplayShelves → { t: 'autoplayed', ok, title, artist, message }
 //           { t: 'credits', device, amount }           give one student 1 to CREDIT_GRANT_MAX credits
 //           { t: 'credits', all: true, amount }        ... or every student in the room
 //           { t: 'credits', device, set }              set one student's balance (0 to CREDITS_MAX).

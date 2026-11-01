@@ -1,7 +1,7 @@
 // Room / teacher settings checks. The Worker and the Room refuse anything that does not pass.
 // A missing field takes its default, so a page may send only the fields it changes.
 
-import { BACK_TO_WORK_MINUTES, COOLDOWN_DAYS, DEFAULT_SETTINGS, DOWNVOTE_MODES, SETTINGS_LIMITS } from './protocol.js';
+import { BACK_TO_WORK_MINUTES, COOLDOWN_DAYS, DEFAULT_SETTINGS, DOWNVOTE_MODES, SETTINGS_LIMITS, SHELVES } from './protocol.js';
 import { screenNote } from './reasons.js';
 
 const BELL_TIME = /^([01]?\d|2[0-3]):([0-5]\d)$/;
@@ -175,6 +175,15 @@ function bellOffsetSeconds(errors, value) {
   return intInRange(errors, 'The bell offset (seconds)', value, SETTINGS_LIMITS.bellOffsetSeconds);
 }
 
+/** 🎲 Autoplay's song lists: known SHELVES ids, each once. */
+function autoplayShelves(errors, value) {
+  if (!Array.isArray(value) || value.some((id) => !SHELVES.some((s) => s.id === id))) {
+    errors.push('Autoplay lists must be song lists from the list.');
+    return null;
+  }
+  return [...new Set(value)];
+}
+
 /**
  * @param {unknown} input
  * @param {{ testAiOff?: boolean }} [o] testAiOff: the local-only TEST_AI_OFF=on (.dev.vars, browser
@@ -202,6 +211,8 @@ export function validateSettings(input, { testAiOff = false } = {}) {
     periodMinutes: intInRange(errors, 'Class period length (minutes)', pick('periodMinutes'), SETTINGS_LIMITS.periodMinutes),
     showFavorites: bool(errors, 'Class favorites', pick('showFavorites')),
     gospelShelf: bool(errors, 'Gospel & Christian list', pick('gospelShelf')),
+    autoplay: bool(errors, 'Autoplay', pick('autoplay')),
+    autoplayShelves: autoplayShelves(errors, pick('autoplayShelves')),
     noBackToBackArtist: bool(errors, 'No back-to-back artist', pick('noBackToBackArtist')),
     oneSongPerArtist: bool(errors, 'One song per artist', pick('oneSongPerArtist')),
     cooldownDays: cooldownDays(errors, pick('cooldownDays')),
