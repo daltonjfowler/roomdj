@@ -940,6 +940,7 @@ export const ART_RATE = 20;
 //                                                      the new nickname), and nobody may use the old
 //                                                      nickname in this room again
 //           { t: 'lock', on: boolean }                 stop / allow new suggestions
+//           { t: 'focus', on: boolean }                🎯 focus time: start (FOCUS_MINUTES) / end now (shared/focus.js)
 //           { t: 'credits', device, amount }           give one student 1 to CREDIT_GRANT_MAX credits
 //           { t: 'credits', all: true, amount }        ... or every student in the room
 //           { t: 'credits', device, set }              set one student's balance (0 to CREDITS_MAX).

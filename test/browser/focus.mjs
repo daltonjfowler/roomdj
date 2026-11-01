@@ -329,6 +329,25 @@ try {
   await until(() => boWs.state());
   check('another student: not resting', boWs.state().you.restUntil === null);
 
+  // 🎯 Focus time (shared/focus.js): one tap pauses every student's picks and votes; End now undoes it.
+  await host.page.click(await reveal(host.page, '#focusBtn'));
+  check('focus: the room says about 5 minutes left', Boolean(await stateOf(host, (s) => s.focusLeft > 290_000 && s.focusLeft <= 300_000)));
+  check('focus: the teacher sees the countdown banner', (await visible(host, '#focusNote')) && /Focus time: students cannot pick songs or vote for [45]:\d\d/.test(await text(host, '#focusText')));
+  check('focus: Ava gets the 🎯 card, not the 📚 one', Boolean(await until(async () => (await view(ava)) === 'rest'))
+    && (await text(ava, '#restTitle')) === '🎯 Focus time!' && /Your teacher paused song picks and votes\. Back in 5 minutes\./.test(await text(ava, '#restText')));
+  const f1 = await boWs.ask({ t: 'suggest', song: songs.d.id }, (m) => m.t === 'suggested');
+  check('focus: a suggestion is refused, reason focus', f1?.ok === false && f1.reason === 'focus' && /^🎯 Focus time! Song picks and votes are back in 5 minutes\.$/.test(f1.message), JSON.stringify(f1));
+  const f2 = await boWs.ask({ t: 'vote', id: itemA.id, v: 1 }, (m) => m.t === 'error' || (m.t === 'state' && m.state.queue.find((x) => x.id === itemA.id)?.myVote === 1));
+  check('focus: a vote is refused too', f2?.t === 'error' && f2.error === 'focus', JSON.stringify(f2));
+  const f3 = await hostWs.ask({ t: 'vote', id: itemA.id, v: 0 }, (m) => m.t === 'error' || (m.t === 'state' && m.state.queue.find((x) => x.id === itemA.id)?.myVote === 0));
+  check('focus: the teacher is never held', f3?.t === 'state', JSON.stringify(f3));
+  await host.page.click('#focusEnd');
+  check('focus: End now ends it for the room', Boolean(await stateOf(host, (s) => s.focusLeft === 0)));
+  check("focus: Ava's room view returns", Boolean(await until(async () => (await view(ava)) === 'room')), await view(ava));
+  check('focus: the banner goes', !(await visible(host, '#focusNote')));
+  const f4 = await boWs.ask({ t: 'vote', id: itemA.id, v: 1 }, (m) => m.t === 'error' || (m.t === 'state' && m.state.queue.find((x) => x.id === itemA.id)?.myVote === 1));
+  check('focus: votes go through again', f4?.t === 'state', JSON.stringify(f4));
+
   for (const p of pages) check(`no console errors on ${p.name}`, p.errors.length === 0, p.errors.join(' | '));
   hostWs.send({ t: 'close' });
   await wait(500);

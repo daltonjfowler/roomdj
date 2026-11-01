@@ -755,6 +755,15 @@ Claude account).
    time is the UTC hour only. legal.html says so; a new field needs the legal copy first. Admin page:
    "Song requests" card + ⬇ Download CSV (GET /api/admin/requests.csv, paged, never a formula cell).
    Best effort: a failed write loses that room's rows. test: test/requests.test.mjs.
+43. 🎯 Focus time + 💌 Tell a teacher (Dalton, 2026-11-01: "lock out all students for 5 minute button",
+   "love the rec button"; shared/focus.js). The 🏠 Room menu's Focus button sets RoomState.focusUntil
+   (FOCUS_MINUTES from now); until then the room refuses every STUDENT suggest, jump and vote (reason /
+   error 'focus', before anything is checked or charged), never the teacher. No alarm: pages count down
+   from the snapshot's focusLeft and the server checks the time on each message. The student page shows
+   the 📚 back-to-work card titled "🎯 Focus time!"; the host shows a banner with End now. The closed
+   screen's 💌 button opens a ready message to copy or email: RoomDJ sends and keeps nothing.
+   No Sub plans: Dalton, 2026-11-01, a sub link would mean account sharing. test: test/focus.test.mjs,
+   npm run test:focus.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

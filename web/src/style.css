@@ -78,6 +78,7 @@ button.linkbtn:hover:not(:disabled) { color: var(--accent); background: none; }
 .banner { margin: 0; padding: 10px 14px; border-radius: 10px; border: 1px solid; font-weight: 600; }
 .banner.warn { color: var(--warn); background: var(--warn-soft); border-color: var(--warn); }
 .banner.bad { color: var(--bad); background: var(--bad-soft); border-color: var(--bad); }
+.focus-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .banner.info { color: var(--ink); background: var(--accent-soft); border-color: var(--accent-line); }
 .conn-banner { margin: 10px 16px 0; }
 .conn-banner button { margin: 0 4px; font-weight: 700; }

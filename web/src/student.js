@@ -44,6 +44,7 @@ const OTHER_REASONS = {
   same_artist: 'A song by that artist is already waiting. Pick a different artist, or wait until it plays.',
   resting: 'That song played not long ago, so it is resting. Pick a different song.',
   back_to_work: '📚 Back to work! You can suggest again soon.',
+  focus: '🎯 Focus time! Song picks and votes are back soon.',
 };
 const JUMP_NEED = `You need ${JUMP_COST} credits to jump a song. Ask your teacher for more.`;
 const DOWN_SPENT = "You've used your 👎 for this class. You can still 👍 songs you like."; // protocol.js DOWNVOTE LIMIT
@@ -79,7 +80,7 @@ const REFUSED_LABEL = {
   explicit: 'Not allowed', blocklist: 'Not allowed', banned: 'Not allowed', theme: 'Not allowed', kidzbop: 'Not allowed', played: 'Played already',
 };
 // A refusal that is "wait", not "no": the toast is amber, not red.
-const WAIT_REASONS = new Set(['limit', 'locked', 'duplicate', 'rate', 'reviewFull', 'unavailable', 'queueFull', 'credits', 'cleanup', 'too_long', 'same_artist', 'resting', 'back_to_work']);
+const WAIT_REASONS = new Set(['limit', 'locked', 'duplicate', 'rate', 'reviewFull', 'unavailable', 'queueFull', 'credits', 'cleanup', 'too_long', 'same_artist', 'resting', 'back_to_work', 'focus']);
 // Max song length (shared/classtime.js): the result says so before anyone tries (the server checks too).
 const TOO_LONG = '⏱ Too long';
 const longWhy = (song) => {
@@ -489,6 +490,8 @@ function onMessage(msg) {
         tell(`"${msg.title}" joined the queue. Ask your friends to vote for it!`, 'ok');
       } else if (msg.reason === 'back_to_work') {
         restRefused(msg);
+      } else if (msg.reason === 'focus') {
+        focusRefused(msg);
       } else if (msg.reason === 'review') {
         // Not a refusal: the teacher decides, and a 'reviewed' message follows.
         checking.add(msg.song);
@@ -535,6 +538,7 @@ function onMessage(msg) {
     case 'jumped':
       jumping.delete(msg.id);
       if (msg.reason === 'back_to_work') restRefused(msg);
+      else if (msg.reason === 'focus') focusRefused(msg);
       else if (msg.ok) tell(`⚡ "${msg.title}" plays next!`, 'ok');
       else tell(msg.message || 'That jump did not work.', msg.reason === 'credits' || msg.reason === 'rate' ? 'warn' : 'bad', 7000);
       if (state) renderQueue(state.queue);
@@ -574,7 +578,7 @@ function onMessage(msg) {
         // A newer tab on this device took over; this one can take it back.
         showEnd('RoomDJ is open in another tab', 'This tab stopped because RoomDJ is open in another tab on this device.',
           { label: 'Use this tab instead', room });
-      } else if (['back_to_work', 'downvotes', 'downvotes_off', 'upvotes', 'upvotes_off', 'vote_final'].includes(msg.error)) {
+      } else if (['back_to_work', 'focus', 'downvotes', 'downvotes_off', 'upvotes', 'upvotes_off', 'vote_final'].includes(msg.error)) {
         // A vote while resting, a 👎 over the limit (this page thought it had one left) or a 👎 while the
         // teacher has 👎 off (protocol.js DOWNVOTE MODE; the snapshot may not have arrived yet): undo it on the page.
         const undo = voteUndo.get(msg.id);
@@ -590,6 +594,7 @@ function onMessage(msg) {
         else if (msg.error === 'upvotes') tell(msg.message || UP_SPENT, 'warn', 7000);
         else if (msg.error === 'upvotes_off') tell(msg.message || '👍 is turned off in this class.', 'warn', 7000);
         else if (msg.error === 'vote_final') tell(msg.message || VOTE_FINAL, 'warn', 5000);
+        else if (msg.error === 'focus') focusRefused(msg);
         else restRefused(msg);
       } else {
         pending.clear();
@@ -671,7 +676,7 @@ function scheduleRender(s) {
 function render(s) {
   state = s;
   voteUndo.clear(); // the server's counts
-  setRest(s.you);
+  setRest(s.you, s.focusLeft);
   showBell(s); // 🔔 the bell countdown (bell-pill.js)
   // "Ms Rivera's class": the room's own teacher (null for a room opened before teacher profiles).
   const classOf = s.teacher ? `${s.teacher}'s class` : '';
@@ -1082,14 +1087,24 @@ $('#nowPlaying').addEventListener('click', (e) => {
 // tab changes nothing). One calm card replaces search, the queue and the votes, with a countdown.
 // Timed from the snapshot's restLeft (relative ms), never this computer's clock.
 let restEnd = 0; // Date.now() when the rest ends (0: not resting)
+let focusEnd = 0; // 🎯 Date.now() when the teacher's focus time ends (shared/focus.js; 0: none)
 let restShown = false;
 let restTimer = 0;
 const voteUndo = new Map(); // item id → { up, down, myVote } before this page's vote (a refused vote is undone)
-const restingNow = () => restEnd > Date.now();
+const restingNow = () => Math.max(restEnd, focusEnd) > Date.now();
 
-function setRest(you) {
+function setRest(you, focusLeft = 0) {
   const left = Number(you?.restLeft) || 0;
   restEnd = you?.restUntil && left > 0 ? Date.now() + left : 0;
+  focusEnd = Number(focusLeft) > 0 ? Date.now() + Number(focusLeft) : 0;
+  renderRest();
+}
+/** The server said focus (msg.left ms): the teacher's focus time is on. */
+function focusRefused(msg) {
+  const left = Number(msg.left) || 0;
+  if (left > 0) focusEnd = Date.now() + left;
+  tell(msg.message || OTHER_REASONS.focus, 'warn', 7000);
+  renderResults();
   renderRest();
 }
 /** The server said back_to_work (msg.left ms): rest now. */
@@ -1105,14 +1120,17 @@ function renderRest() {
   clearTimeout(restTimer);
   restTimer = 0;
   const now = Date.now();
-  const left = restEnd - now;
+  const focus = focusEnd > now && focusEnd >= restEnd; // 🎯 the teacher's focus time outlasts a rest
+  const left = Math.max(restEnd, focusEnd) - now;
   const resting = left > 0;
   const roomEl = $('#roomScreen');
   roomEl.classList.toggle('resting', resting);
   $('#restScreen').hidden = !resting;
   if (resting) {
     const mins = Math.max(1, Math.ceil(left / 60_000));
-    $('#restText').textContent = `Your pick is in. Check back in ${plural(mins, 'minute')}.`;
+    $('#restTitle').textContent = focus ? '🎯 Focus time!' : '📚 Back to work!';
+    $('#restText').textContent = focus ? `Your teacher paused song picks and votes. Back in ${plural(mins, 'minute')}.`
+      : `Your pick is in. Check back in ${plural(mins, 'minute')}.`;
     $('#restClock').textContent = clockLeft(left);
     const playing = state?.nowPlaying;
     $('#restNow').hidden = !playing;
@@ -1124,7 +1142,7 @@ function renderRest() {
     restShown = resting;
     if (resting) {
       $('#restTitle').focus();
-      announce(`Back to work! ${$('#restText').textContent}`);
+      announce(`${focus ? 'Focus time!' : 'Back to work!'} ${$('#restText').textContent}`);
     } else {
       announce('You can suggest again.');
       const at = document.activeElement;

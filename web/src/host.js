@@ -43,6 +43,7 @@ import { initTeacherSuggest } from './teacher-suggest.js';
 import { NEXT_LOCK_S, PUSH_TAG, byLabel } from '../../shared/protocol.js';
 import { BACK_TO_WORK_MINUTES, DEFAULT_SETTINGS, DOWNVOTE_CHOICES, UPVOTE_CHOICES } from '../../shared/protocol.js';
 import { clockLeft } from '../../shared/backtowork.js';
+import { FOCUS_MINUTES } from '../../shared/focus.js';
 import { afterShow, holdForShow } from '../../shared/recap-music.js';
 import { initRecapAudio } from './recap-audio.js';
 import { closeMenu, menuButtonOf, openMenu, openMenuIn } from './menu.js';
@@ -792,6 +793,27 @@ $('#closeAllBtn').addEventListener('click', async () => {
   }
 });
 
+// ---- 💌 Tell a teacher (Dalton, 2026-11-01): a message to copy or email. Nothing is sent from here. ----
+const TELL_TEXT = 'Hey! I have been using RoomDJ in class. Students suggest songs from their devices and vote on what plays next, '
+  + 'and it checks every song (explicit tags, blocked words and the lyrics) before it plays. Anything it is not sure about waits for me. '
+  + 'It is free: https://roomdj.com';
+$('#tellBtn').addEventListener('click', () => {
+  if (!$('#tellText').value) $('#tellText').value = TELL_TEXT;
+  $('#tellDlg').showModal();
+});
+$('#tellCopy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('#tellText').value);
+    toast('Copied. Paste it in an email or a message to a teacher.', 'ok');
+  } catch {
+    $('#tellText').select();
+    toast('Press Ctrl+C to copy the message.', 'warn');
+  }
+});
+$('#tellMail').addEventListener('click', () => {
+  window.location.href = `mailto:?subject=${encodeURIComponent('Music in class: RoomDJ')}&body=${encodeURIComponent($('#tellText').value)}`;
+});
+
 // ---- The room ----
 // No QR code: students may not have phones in school (Dalton). The board shows the address and
 // the code; "Copy join link" gives a link for Google Classroom that fills in the code.
@@ -1022,6 +1044,8 @@ function render(s) {
   $('#lockBtn').textContent = s.locked ? '🔒 Suggestions locked' : '🔓 Suggestions open';
   $('#lockBtn').classList.toggle('on', s.locked);
   $('#lockedNote').hidden = !s.locked;
+  focusUntil = s.focusLeft > 0 ? Date.now() + s.focusLeft : 0;
+  showFocus();
 
   const students = s.students ?? [];
   const online = students.filter((x) => x.online).length;
@@ -1347,6 +1371,31 @@ function send(msg) {
 
 // ---- Toolbar ----
 $('#lockBtn').addEventListener('click', () => state && send({ t: 'lock', on: !state.locked }));
+
+// 🎯 Focus time (shared/focus.js): every student's picks and votes pause for FOCUS_MINUTES, timed
+// from the snapshot's focusLeft. The button starts it, or ends it early while it runs.
+let focusUntil = 0;
+let focusTick = 0;
+function showFocus() {
+  clearTimeout(focusTick);
+  const left = focusUntil - Date.now();
+  const on = left > 0;
+  $('#focusBtn').setAttribute('aria-checked', String(on));
+  $('#focusBtn').classList.toggle('on', on);
+  $('#focusBtn').textContent = on ? `🎯 Focus time: ${clockLeft(left)} (end now)` : `🎯 Focus time (${FOCUS_MINUTES} min)`;
+  $('#roomMenuFocus').hidden = !on;
+  $('#focusNote').hidden = !on;
+  if (on) {
+    $('#focusText').textContent = `🎯 Focus time: students cannot pick songs or vote for ${clockLeft(left)}.`;
+    focusTick = setTimeout(showFocus, (left % 1000 || 1000) + 5);
+  }
+}
+function toggleFocus(on) {
+  if (!state || !send({ t: 'focus', on })) return;
+  announce(on ? `Focus time: ${FOCUS_MINUTES} minutes.` : 'Focus time ended.');
+}
+$('#focusBtn').addEventListener('click', () => toggleFocus(!(focusUntil > Date.now())));
+$('#focusEnd').addEventListener('click', () => toggleFocus(false));
 
 // 📚 Back to work (protocol.js BACK TO WORK): when each student's rest ends, timed from the
 // snapshot's restLeft (this computer's clock may differ from the server's a little).

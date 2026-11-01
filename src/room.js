@@ -74,6 +74,7 @@ import {
 import { ART_RATE, JUMP_COST, SUGGEST_COST } from '../shared/protocol.js';
 import { ART_WAIT_MS, artFields, artJson, artKey, validArtKey } from '../shared/art.js';
 import { cachedArtVerdict, checkCover, putTeacherArtOk, teacherArtOk } from './art.js';
+import { focusMessage, focusRefusal, setFocus } from '../shared/focus.js';
 import { backToWorkMessage, backToWorkOn, clearRests, letBackIn, restRefusal, startRest } from '../shared/backtowork.js';
 import { SPOTIFY, catalogOf, legacySong, songId } from '../shared/catalog.js';
 import { approveSong, banKey, checkFromKv, filterSong, quickCheck } from '../shared/filter.js';
@@ -1574,6 +1575,16 @@ export class Room extends DurableObject {
       ws.close(CLOSE.kicked, 'Removed');
       return;
     }
+    // 🎯 Focus time: nobody suggests, jumps or votes until it ends (shared/focus.js).
+    if (msg.t === 'suggest' || msg.t === 'jump' || msg.t === 'vote') {
+      const focus = focusRefusal(this.room, a.device);
+      if (focus) {
+        const refusal = { reason: 'focus', message: focusMessage(focus.left), left: focus.left };
+        if (msg.t === 'vote') return this.send(ws, { t: 'error', error: 'focus', message: refusal.message, left: focus.left, id: String(msg.id ?? '') });
+        if (msg.t === 'jump') return this.send(ws, { t: 'jumped', ok: false, id: String(msg.id ?? ''), ...refusal });
+        return this.send(ws, { t: 'suggested', ok: false, song: songId(msg.song ?? msg.trackId) ?? null, ...refusal });
+      }
+    }
     // 📚 Back to work: a resting device may not suggest or jump (nothing checked or charged). Votes
     // are never refused by a rest, and only a suggestion starts one (protocol.js BACK TO WORK).
     if (msg.t === 'suggest' || msg.t === 'jump') {
@@ -2004,6 +2015,9 @@ export class Room extends DurableObject {
       }
       case 'lock':
         room.locked = msg.on === true;
+        return this.commit();
+      case 'focus':
+        setFocus(room, msg.on === true);
         return this.commit();
       case 'service': {
         // What the host page plays through (a Spotify room would search Spotify's catalog, which

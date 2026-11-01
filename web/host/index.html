@@ -36,11 +36,12 @@
         </div>
       </span>
       <span id="roomMenu" class="menu">
-        <button id="roomMenuBtn" class="menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="roomMenuPop">🏠 Room <span id="roomMenuLock" class="menu-flag" hidden>🔒</span> <span class="caret" aria-hidden="true">▾</span></button>
+        <button id="roomMenuBtn" class="menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="roomMenuPop">🏠 Room <span id="roomMenuLock" class="menu-flag" hidden>🔒</span><span id="roomMenuFocus" class="menu-flag" hidden>🎯</span> <span class="caret" aria-hidden="true">▾</span></button>
         <div id="roomMenuPop" class="menu-pop" role="menu" aria-labelledby="roomMenuBtn" hidden>
           <button id="changeCodeBtn" type="button" role="menuitem" tabindex="-1" title="Put a different class code on the board. Students already in stay in.">🔑 Change code…</button>
           <button id="timesBtn" type="button" role="menuitem" tabindex="-1" title="When class ends (the room closes) and when cleanup starts">🕒 Change times…</button>
           <button id="lockBtn" type="button" role="menuitemcheckbox" aria-checked="false" tabindex="-1" title="Lock to stop new suggestions for now. Votes still count. Unlock any time.">🔓 Suggestions open</button>
+          <button id="focusBtn" type="button" role="menuitemcheckbox" aria-checked="false" tabindex="-1" title="Pause every student's song picks and votes for 5 minutes. The music keeps playing.">🎯 Focus time (5 min)</button>
           <button id="studentsBtn" type="button" role="menuitem" tabindex="-1" title="Who is in the room: credits, votes used, let back in, rename or kick">👥 Students <span id="studentCount" class="menu-count"></span></button>
           <div role="separator"></div>
           <button id="closeBtn" type="button" role="menuitem" tabindex="-1" class="danger" title="End the room now: the music stops and everything in it is deleted">✕ Close room…</button>
@@ -318,6 +319,7 @@
             <h2 id="queueLabel" class="label">Up next <span id="queueCount" class="count"></span></h2>
           </div>
           <p id="lockedNote" class="banner warn" hidden>Suggestions are locked. Students can still vote.</p>
+          <p id="focusNote" class="banner warn focus-note" hidden><span id="focusText">🎯 Focus time</span> <button id="focusEnd" type="button">End now</button></p>
           <ol id="queue" class="queue"></ol>
           <p id="queueEmpty" class="note empty-note" hidden>No songs yet. Students: join with the code and suggest one!</p>
         </section>
@@ -332,6 +334,7 @@
         <p id="closedText" class="note">All of the room's songs, votes and nicknames are deleted.</p>
         <button id="closedRecap" class="big wide" type="button" aria-haspopup="dialog" hidden>🎬 Class recap</button>
         <button id="newRoomBtn" class="primary big wide" type="button">Open a new room</button>
+        <button id="tellBtn" class="ghost wide" type="button" aria-haspopup="dialog">💌 Know a teacher who would like this?</button>
       </div>
     </section>
   </main>
@@ -764,6 +767,21 @@
   </dialog>
 
   <!-- The board (board link, protocol.js BOARD + REMOTE): the projector on a second computer -->
+  <!-- 💌 Tell a teacher (Dalton, 2026-11-01): a ready message to copy or email; nothing is sent or kept by RoomDJ -->
+  <dialog id="tellDlg" class="dialog" aria-labelledby="tellTitle">
+    <form method="dialog">
+      <h2 id="tellTitle">💌 Tell a teacher</h2>
+      <p class="note">Send this to a teacher who would like music in class. Change it however you like. RoomDJ never sees who you send it to.</p>
+      <label class="field" for="tellText">Message</label>
+      <textarea id="tellText" class="text" rows="6"></textarea>
+      <div class="dialog-actions">
+        <button id="tellMail" type="button">✉️ Email it</button>
+        <button id="tellCopy" type="button" class="primary">📋 Copy</button>
+        <button value="done">Done</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="boardDlg" class="dialog" aria-labelledby="boardTitle">
     <form method="dialog">
       <h2 id="boardTitle">📺 Board link</h2>

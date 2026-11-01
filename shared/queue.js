@@ -51,6 +51,7 @@ import { nickKey } from './nick.js';
 import { legacySong, songId } from './catalog.js';
 import { songKey } from './repeats.js';
 import { restView } from './backtowork.js';
+import { focusLeft } from './focus.js';
 import { checksOf } from './checks.js';
 
 const PLAYED_MAX = 1000;
@@ -65,6 +66,7 @@ export function newRoomState(room, settings = DEFAULT_SETTINGS, now = Date.now()
     codeHash: null,
     open: true,
     locked: false,
+    focusUntil: null, // 🎯 focus time ends then (shared/focus.js); null = none
     settings: { ...settings, blocklist: [...settings.blocklist] },
     createdAt: now,
     lastActivity: now,
@@ -822,6 +824,7 @@ export function snapshotFor(state, device, { online = new Set(), boards = 0, now
     teacher: typeof state.profile?.name === 'string' ? state.profile.name : null, // "Ms Rivera's class"
     open: state.open,
     locked: state.locked,
+    focusLeft: focusLeft(state, now), // 🎯 ms of focus time left (shared/focus.js); 0 = none
     nowPlaying: itemView(state.nowPlaying, device, rules, state.nowPlaying?.ghost === 1 ? 1 : 0),
     queue: queue.map((item) => itemView(item, device, rules, ghostFor(item, rules))),
     settings: isHost ? { ...state.settings, blocklist: [...blocklist], bellSchedule: [...(bellSchedule ?? [])] } : publicSettings,
