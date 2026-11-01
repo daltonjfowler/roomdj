@@ -74,6 +74,11 @@ function render(s) {
   $('#nWeek').textContent = days.slice(0, 7).reduce((n, d) => n + (s.free.perDay[d] ?? 0), 0);
   $('#nSessions').textContent = s.sessions;
   $('#nSongs').textContent = s.songs;
+  // ✓ Checked songs (src/checked-count.js): the cron's last full count, or its count so far.
+  $('#nChecked').textContent = s.checked ? `${s.checked.ready.toLocaleString()}${s.checked.counting ? '+' : ''}` : '…';
+  $('#lChecked').textContent = !s.checked ? '✓ Checked songs: first count runs over the next few hours'
+    : s.checked.counting ? '✓ Checked songs so far (first count still running)'
+      : `✓ Checked songs, OK to play (of ${s.checked.seen.toLocaleString()} checked, counted ${new Date(s.checked.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })})`;
 
   const off = (t) => t.status === 'hidden';
   fillTeachers('teacher', s.teachers.filter((t) => !off(t)), s.teachers.filter(off), (t) => STATUS[t.status] ?? t.status, off);

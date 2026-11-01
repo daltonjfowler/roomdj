@@ -77,6 +77,22 @@
           <label class="sr-only" for="bq">Search for a song or an artist</label>
           <input id="bq" class="text" type="search" placeholder="Search for a song or an artist" autocomplete="off" spellcheck="false">
         </form>
+        <!-- 📚 The same lists and sort as in a room, before joining (GET /api/browse/songbook) -->
+        <div id="browseShelves" class="shelves">
+          <p class="note">Or pick from songs RoomDJ already checked:</p>
+          <div id="browseShelfBtns" class="shelf-btns" role="group" aria-label="Lists of checked songs"></div>
+        </div>
+        <div id="browseTools" class="search-tools" role="group" aria-label="Filter the songs" hidden>
+          <label class="sr-only" for="browseGenre">Genre</label>
+          <select id="browseGenre" class="text"><option value="">All genres</option></select>
+          <label class="sr-only" for="browseSort">Sort by</label>
+          <select id="browseSort" class="text">
+            <option value="popular">Most popular</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="title">A to Z</option>
+          </select>
+        </div>
         <p id="browseMsg" class="note search-msg" aria-live="polite"></p>
         <ul id="browseResults" class="results" aria-label="Songs you can suggest after you join"></ul>
       </section>

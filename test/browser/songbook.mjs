@@ -99,6 +99,42 @@ try {
   check('rock: 50+ songs', rock.results.length >= 50, `${rock.results.length}`);
   console.log(`  shelves: pop ${popList.results.length}, rock ${rock.results.length}, hip-hop ${hip.results.length}`);
 
+  // ---- The homepage, before joining (GET /api/browse/songbook) ----
+  const browseShelf = (id, device = dev) => fetch(new URL(`api/browse/songbook?shelf=${id}`, BASE), { headers: device ? { 'x-device': device } : {} });
+  check('homepage list: no device id gets 400', (await browseShelf('pop', null)).status === 400);
+  check('homepage list: an unknown shelf gets 400', (await browseShelf('nope')).status === 400);
+  const bHip = await (await browseShelf('hiphop')).json();
+  check('homepage list: hip-hop has the hand-checked songs, all ✓ Checked, never explicit',
+    bHip.results?.some((s) => /hotline bling/i.test(s.title)) && bHip.results.every((s) => s.check === 'ready' && s.explicit !== 'explicit'), `${bHip.results?.length}`);
+  check('homepage list: 🙏 Gospel stays empty (the default settings keep it off)', (await (await browseShelf('gospel')).json()).results?.length === 0);
+  for (const [w, h] of [[1366, 768], [390, 844]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h } });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(BASE);
+    check(`homepage ${w}px: the list buttons show before joining, no 🙏 Gospel`, (await page.locator('#browseShelfBtns button').count()) >= 20
+      && (await page.locator('#browseShelfBtns button[data-shelf="gospel"]').count()) === 0);
+    await page.click('#browseShelfBtns button[data-shelf="hiphop"]');
+    await page.waitForFunction(() => /checked song/.test(document.querySelector('#browseMsg').textContent), null, { timeout: 10_000 });
+    const rows = await page.locator('#browseResults li').count();
+    check(`homepage ${w}px: hip-hop rows, all ✓ Checked, no Suggest button`, rows > 0 && (await page.locator('#browseResults li:has(.ready-tag)').count()) === rows
+      && (await page.locator('#browseResults button').count()) === 0, `${rows}`);
+    check(`homepage ${w}px: the sort and genre show with a list`, await page.locator('#browseTools').isVisible());
+    await page.selectOption('#browseSort', 'title');
+    const names = await page.locator('#browseResults li .song').evaluateAll((els) => els.map((e) => e.querySelector('.song-title').textContent));
+    check(`homepage ${w}px: A to Z sorts the list and keeps every song`, names.length === rows
+      && names.every((t, i) => !i || names[i - 1].localeCompare(t, undefined, { sensitivity: 'base' }) <= 0), names.slice(0, 5).join(' | '));
+    await page.fill('#bq', 'Drake');
+    await page.waitForFunction(() => /found/.test(document.querySelector('#browseMsg').textContent), null, { timeout: 20_000 });
+    check(`homepage ${w}px: searching hides the list buttons`, await page.locator('#browseShelves').isHidden());
+    check(`homepage ${w}px: no sideways scrolling`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    if (w < 500) await page.screenshot({ path: `${OUT}songbook-homepage-phone.png`, fullPage: true });
+    else await page.screenshot({ path: `${OUT}songbook-homepage.png` });
+    check(`homepage ${w}px: no page errors`, errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   // ---- The page ----
   for (const [w, h] of [[1366, 768], [390, 844]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });

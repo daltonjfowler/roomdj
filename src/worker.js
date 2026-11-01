@@ -20,7 +20,7 @@
 // BOARD_RATE_IP: the board's sign-in (POST /api/teacher/board), which a waiting board asks every
 // 10 s; a school's boards all share the address, so it is generous.
 
-import { DEFAULT_SETTINGS, DEVICE_ID_PATTERN, ROOM_ID_PATTERN } from '../shared/protocol.js';
+import { DEFAULT_SETTINGS, DEVICE_ID_PATTERN, ROOM_ID_PATTERN, SHELF_MAX, SHELVES, shelfShown } from '../shared/protocol.js';
 import { validateSettings } from '../shared/settings.js';
 import { normalizeCode, validateCode, validateUntil } from '../shared/code.js';
 import { shiftTimes, validateTimes } from '../shared/classtime.js';
@@ -29,7 +29,8 @@ import { BOARD_CSP, BOARD_PERMISSIONS, COMMON_HEADERS, CONTENT_SECURITY_POLICY, 
 import { claimCode, codeHash, codeInUse, legacyCodeHash, putCodeRoute, readCodeRoute, releaseCode } from './codes.js';
 import { addressOf, lockout } from './lockout.js';
 import { readBanned } from './search.js';
-import { quickCheck } from '../shared/filter.js';
+import { banKey, checkFromKv, quickCheck } from '../shared/filter.js';
+import { GROWN_KEY, SHELF_READS, archiveReady, isShelf, readGrown, shelfSongs } from './songbook.js';
 import { songId } from '../shared/catalog.js';
 import { artKey, artState } from '../shared/art.js';
 import { cachedArtVerdict } from './art.js';
@@ -42,8 +43,9 @@ import { handleAuth, teacherSession } from './auth.js';
 import { FREE_CAPS, freeUsage, spendFree } from './free.js';
 import { prewarm } from './prewarm.js';
 import { nightHours, nightShift } from './night.js';
-import { refreshPopular } from './popular.js';
+import { readPopular, refreshPopular } from './popular.js';
 import { handleAdmin } from './admin.js';
+import { countChecked } from './checked-count.js';
 import { cleanPath, robotsTag } from './seo.js';
 import { readOpenRooms, removeOpenRoom, updateOpenRooms } from './open-rooms.js';
 import { roomProfile } from '../shared/profiles.js';
@@ -437,6 +439,57 @@ async function browseFilter(env) {
   return value;
 }
 
+// A songbook list before joining (protocol.js SONGBOOK; Dalton, 2026-11-01: the same lists on the
+// homepage): Room.shelfResults with no room. Every teacher's saved blocked words and bans (the
+// strictest, browseFilter) and the default settings, so 🙏 Gospel stays off here. ✓ Checked songs
+// only, from KV and the baked lists, never the AI. Kept in this isolate's memory for a few minutes.
+const BROWSE_SHELF_MS = 5 * 60_000;
+const BROWSE_ART_READS = 50;
+const browseShelves = new Map(); // shelf id -> { at, results }
+async function browseShelf(request, env, url) {
+  const device = request.headers.get('x-device') ?? '';
+  if (!DEVICE_ID_PATTERN.test(device)) return json(400, { error: 'device', message: 'Reload the page and try again.' });
+  const shelf = url.searchParams.get('shelf') ?? '';
+  if (!isShelf(shelf)) return json(400, { error: 'shelf', message: 'Pick one of the lists.' });
+  if (env.SEARCH_RATE && !(await env.SEARCH_RATE.limit({ key: `device ${device}` })).success) {
+    return json(429, { error: 'rate', message: 'That is a lot of searching. Wait a minute and try again.' });
+  }
+  if (env.SEARCH_RATE_IP && !(await env.SEARCH_RATE_IP.limit({ key: addressKey(request) })).success) {
+    return json(429, { error: 'rate', message: 'A lot of searching is coming from your school right now. Wait a minute and try again.' });
+  }
+  const kept = browseShelves.get(shelf);
+  if (kept && Date.now() - kept.at < BROWSE_SHELF_MS) return json(200, { shelf, results: kept.results });
+  const results = await browseShelfResults(env, shelf);
+  browseShelves.set(shelf, { at: Date.now(), results });
+  return json(200, { shelf, results });
+}
+
+async function browseShelfResults(env, shelf) {
+  if (!shelfShown(SHELVES.find((x) => x.id === shelf), DEFAULT_SETTINGS)) return [];
+  const { blocklist, banned, art: artSettings } = await browseFilter(env);
+  const ctx = { blocklist, banned, notMusic: DEFAULT_SETTINGS.blockNotMusic !== false, kidzBop: DEFAULT_SETTINGS.kidzBop };
+  let grown = [];
+  if (shelf !== 'popular') {
+    try {
+      grown = readGrown(await env.CLASS_KV?.get(GROWN_KEY, 'json'));
+    } catch (e) {
+      console.error(JSON.stringify({ message: 'grown shelves read failed', error: String(e) }));
+    }
+  }
+  const shown = (shelf === 'popular' ? await readPopular(env) : shelfSongs(shelf, undefined, undefined, grown)).filter((song) => !quickCheck(song, ctx));
+  const pre = shelf === 'popular' ? new Set() : archiveReady({}, undefined, grown);
+  const ask = shown.filter((song) => !pre.has(banKey(song))).slice(0, shelf === 'popular' ? SHELF_MAX : SHELF_READS);
+  const checks = await Promise.all(ask.map((song) => checkFromKv(song, env, { scope: (k) => `browse-none:${k}`, kidzBop: ctx.kidzBop })));
+  const ready = new Set([...pre, ...ask.filter((_, i) => checks[i] === 'ready').map(banKey)]);
+  const results = shown.filter((song) => ready.has(banKey(song))).slice(0, SHELF_MAX);
+  // 🖼 Covers like browseCheck: the KV art cache only, the first few read.
+  return Promise.all(results.map(async (song, i) => {
+    const key = artKey(song.artwork);
+    const verdict = key && i < BROWSE_ART_READS && artSettings.artCheck && !artSettings.hideAllArt ? (await cachedArtVerdict(env, key))?.verdict ?? null : null;
+    return { ...song, check: 'ready', art: artState(artSettings, { key, verdict }) };
+  }));
+}
+
 // The board's sign-in (protocol.js BOARD SIGN-IN): the teacher's most recently opened room that is
 // live, and a new sign-in board token for it. Only rooms on THIS profile's signpost, and each room
 // checks again that it is this teacher's, so a board never gets another teacher's room. Entries
@@ -602,6 +655,10 @@ async function handleApi(request, env, url) {
     if (request.method !== 'POST') return json(405, { error: 'method', message: 'Use POST.' });
     return joinRoom(request, env);
   }
+  if (url.pathname === '/api/browse/songbook') {
+    if (request.method !== 'GET') return json(405, { error: 'method', message: 'Use GET.' });
+    return browseShelf(request, env, url);
+  }
   if (url.pathname === '/api/browse') {
     if (request.method !== 'POST') return json(405, { error: 'method', message: 'Use POST.' });
     return browseCheck(request, env);
@@ -642,6 +699,7 @@ export default {
       if (nightHours(Date.now())) await nightShift(env).catch((e) => console.error(JSON.stringify({ message: 'night shift failed', error: String(e) })));
       await prewarm(env).catch((e) => console.error(JSON.stringify({ message: 'prewarm failed', error: String(e) })));
       await refreshPopular(env).catch((e) => console.error(JSON.stringify({ message: 'popular failed', error: String(e) })));
+      await countChecked(env).catch((e) => console.error(JSON.stringify({ message: 'checked count failed', error: String(e) })));
     })());
   },
 };

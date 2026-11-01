@@ -1403,9 +1403,12 @@ function onResultClick(e) {
 $('#results').addEventListener('click', onResultClick);
 $('#favResults').addEventListener('click', onResultClick);
 
-// ---- Browse before joining: which songs are allowed (GET /api/search, no room, no AI) ----
+// ---- Browse before joining: which songs are allowed (POST /api/browse), and the lists (GET /api/browse/songbook) ----
 let browseTimer = null;
 let browseAbort = null;
+let browseFound = []; // the songs shown before joining, in the server's order
+let browseNote = ''; // what was found
+let browseShelf = null; // the list open instead of a search
 
 $('#browseForm').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -1414,7 +1417,14 @@ $('#browseForm').addEventListener('submit', (e) => {
 });
 $('#bq').addEventListener('input', () => {
   clearTimeout(browseTimer);
+  const typed = Boolean($('#bq').value.trim());
+  if (typed) setBrowseShelf(null);
+  $('#browseShelves').hidden = typed;
   browseTimer = setTimeout(browse, SEARCH_DELAY_MS);
+});
+// Tapping the empty box shows 🔥 Popular on RoomDJ, like the room's search.
+$('#bq').addEventListener('focus', () => {
+  if (!$('#bq').value.trim() && !browseShelf && !browseFound.length) openBrowseShelf('popular');
 });
 
 /**
@@ -1455,35 +1465,94 @@ async function browseSongs(q, signal) {
 
 async function browse() {
   const q = $('#bq').value.trim();
+  if (!q && browseShelf) return; // a list is open: an empty box keeps it
   browseAbort?.abort();
-  const list = $('#browseResults');
   if (q.length < 2) {
-    list.innerHTML = '';
+    browseFound = [];
     busy('#browseMsg', '#browseResults', false);
-    $('#browseMsg').textContent = q.length === 1 ? 'Keep typing…' : '';
-    return;
+    browseNote = q.length === 1 ? 'Keep typing…' : '';
+    return renderBrowse();
   }
   const abort = (browseAbort = new AbortController());
   busy('#browseMsg', '#browseResults', true);
-  let songs = [];
   try {
     const found = await browseSongs(q, abort.signal);
-    if (found.message) {
-      $('#browseMsg').textContent = found.message;
-    } else {
-      songs = found.songs;
-      $('#browseMsg').textContent = songs.length
-        ? `${songs.length} ${songs.length === 1 ? 'song' : 'songs'} found. Join with the class code to suggest one.`
-        : noneText('songs');
-    }
+    browseFound = found.songs ?? [];
+    browseNote = found.message ?? (browseFound.length ? `${plural(browseFound.length, 'song')} found. Join with the class code to suggest one.` : noneText('songs'));
   } catch (err) {
     if (err.name === 'AbortError') return;
-    $('#browseMsg').textContent = 'Could not search. Check your internet and try again.';
+    browseFound = [];
+    browseNote = 'Could not search. Check your internet and try again.';
   }
   busy('#browseMsg', '#browseResults', false);
-  list.innerHTML = songs.map((song) => `<li class="result" data-id="${esc(song.id)}">
+  renderBrowse();
+}
+
+// The homepage's list buttons: the default settings, so 🙏 Gospel stays off (shelfShown).
+$('#browseShelfBtns').innerHTML = SHELVES.filter((s) => shelfShown(s, null))
+  .map((s) => `<button type="button" data-shelf="${esc(s.id)}" aria-pressed="false">${esc(s.label)}</button>`).join('');
+
+function setBrowseShelf(id) {
+  browseShelf = id;
+  for (const b of $('#browseShelfBtns').children) b.setAttribute('aria-pressed', String(b.dataset.shelf === id));
+}
+
+async function openBrowseShelf(id) {
+  const shelf = SHELVES.find((s) => s.id === id);
+  if (!shelf) return;
+  clearTimeout(browseTimer);
+  browseAbort?.abort();
+  const abort = (browseAbort = new AbortController());
+  setBrowseShelf(id);
+  busy('#browseMsg', '#browseResults', true);
+  try {
+    const r = await fetch(`/api/browse/songbook?shelf=${encodeURIComponent(id)}`, { headers: { 'x-device': deviceId() }, signal: abort.signal });
+    const data = await r.json().catch(() => ({}));
+    browseFound = r.ok && Array.isArray(data.results) ? data.results : [];
+    browseNote = !r.ok ? data.message || 'The list is not working right now. Try again in a moment.'
+      : browseFound.length ? `${shelf.label}: ${plural(browseFound.length, 'checked song')}. Join with the class code to suggest one.`
+        : id === 'popular' ? 'Nothing is popular across RoomDJ yet. Pick a list or search for a song.'
+          : 'RoomDJ is still checking the songs on this list. Search for a song instead.';
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    browseFound = [];
+    browseNote = 'Could not load the list. Check your internet and try again.';
+  }
+  busy('#browseMsg', '#browseResults', false);
+  renderBrowse();
+}
+
+$('#browseShelfBtns').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-shelf]');
+  if (!b) return;
+  if (browseShelf === b.dataset.shelf) {
+    setBrowseShelf(null);
+    browseFound = [];
+    browseNote = '';
+    return renderBrowse();
+  }
+  openBrowseShelf(b.dataset.shelf);
+});
+for (const sel of ['#browseGenre', '#browseSort']) $(sel).addEventListener('change', renderBrowse);
+
+/** The songs found before joining, through the genre and sort (shared/songbook.js viewResults). */
+function renderBrowse() {
+  const genres = resultGenres(browseFound);
+  const sel = $('#browseGenre');
+  const want = genres.join('|');
+  if (sel.dataset.list !== want) {
+    const keep = sel.value;
+    sel.innerHTML = `<option value="">All genres</option>${genres.map((g) => `<option>${esc(g)}</option>`).join('')}`;
+    sel.dataset.list = want;
+    sel.value = genres.includes(keep) ? keep : '';
+  }
+  $('#browseTools').hidden = !browseFound.length;
+  const shown = viewResults(browseFound, { genre: sel.value, sort: $('#browseSort').value });
+  $('#browseMsg').textContent = browseFound.length && shown.length < browseFound.length ? `${browseNote} ${shown.length} shown with your filters.` : browseNote;
+  $('#browseResults').innerHTML = shown.map((song) => `<li class="result" data-id="${esc(song.id)}">
       <div class="song">${songHtml(song, 100, true)}</div>
-      ${song.explicit === 'cleaned' ? cleanTag() : '<span class="tag" title="Not a promise: each song is checked again when you suggest it.">Passed quick check</span>'}
+      ${song.check === 'ready' ? tagsHtml(song.explicit === 'cleaned' ? cleanTag() : '', checkTag('ready'))
+    : song.explicit === 'cleaned' ? cleanTag() : '<span class="tag" title="Not a promise: each song is checked again when you suggest it.">Passed quick check</span>'}
     </li>`).join('');
 }
 

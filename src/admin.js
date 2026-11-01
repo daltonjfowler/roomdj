@@ -13,6 +13,7 @@ import { changeProfile, cleanProfileName, findProfile } from '../shared/profiles
 import { OWN_PROFILE_PREFIX, PROFILE_ID_PATTERN } from '../shared/protocol.js';
 import { PROMPT_VERSION } from '../shared/filter.js';
 import { FREE_CAPS } from './free.js';
+import { readChecked } from './checked-count.js';
 import { KV_PROFILES, ensureProfiles } from './profiles.js';
 import { teacherSession } from './auth.js';
 import { CSV_COLUMNS, csvLines, requestLog } from '../shared/requests.js';
@@ -88,7 +89,7 @@ async function changeFreeTeacher(env, id, body) {
 async function stats(env) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
-  const [list, links, own, sessions, use, verdicts, prewarm, requests] = await Promise.all([
+  const [list, links, own, sessions, use, verdicts, prewarm, requests, checked] = await Promise.all([
     ensureProfiles(env),
     listAll(env, 'link:v1:', 1),
     listAll(env, 'prof:v1:'),
@@ -97,6 +98,7 @@ async function stats(env) {
     listAll(env, `verdict:v${PROMPT_VERSION}:`, 20), // older verdicts are asked again (shared/filter.js)
     env.CLASS_KV.get(`prewarm:v1:state:${today}`, 'json'),
     requestLog(env)?.summary().catch(() => null) ?? null,
+    readChecked(env), // ✓ Checked songs, counted by the cron (src/checked-count.js)
   ]);
   const linked = new Set(await Promise.all(links.keys.map((k) => env.CLASS_KV.get(k.name))));
   const teachers = list.map((p) => ({
@@ -130,6 +132,7 @@ async function stats(env) {
     today: { teachers: todayUse.length, rooms: sum('rooms'), ai: sum('ai'), art: sum('art'), caps: FREE_CAPS },
     prewarm: prewarm ?? null,
     songs: verdicts.more ? `${songs}+` : songs,
+    checked,
     requests: requests ?? null,
   };
 }

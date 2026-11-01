@@ -706,6 +706,12 @@ Claude account).
    check could not finish (lyricsPending: LRCLIB down) goes on the pass's `retry` list (KV
    prewarm:v1:songbook, at most SONGBOOK_RETRY_MAX) and is checked again after the pass; the first
    one still stuck ends that run's retries.
+   (i) The lists on the homepage, before joining (Dalton, 2026-11-01): GET /api/browse/songbook
+   (worker.js browseShelf) is Room.shelfResults with no room: browseFilter's strictest blocked words
+   and bans, DEFAULT_SETTINGS (so 🙏 Gospel stays off), ✓ Checked only, cached per isolate 5 minutes.
+   The page shows the same list buttons and genre / sort menus (no Suggest button). The admin page's
+   "✓ Checked songs" tile comes from src/checked-count.js: the cron reads 200 per-song verdicts a run
+   and keeps the last full count in KV stats:v1:checked.
    (b) Hand-checked songs (shared/filter.js HOUSE_OK, houseOk): Dalton's own per-song calls for every
    teacher, like a teacher's Allow (source 'house', no AI or lyrics call). Only the clean edit (the
    explicit flag still refuses), bans, blocked words, 🙉 and Instrumentals only still count. Add ONLY
