@@ -769,9 +769,11 @@ Claude account).
    Settings autoplay (off by default) + autoplayShelves (SHELVES ids, default pop + throwbacks), in the
    Songs tab, shown in Simple. The host asks { t: 'autoplay' } only when the music is started, nothing
    plays, the queue is empty, it is not cleanup and NO background music link is set. The room checks
-   for itself (autoplayDue, AUTOPLAY_GAP_MS), takes a shuffled list the room may show (Gospel only while
+   for itself (autoplayDue, AUTOPLAY_GAP_MS), takes the ticked lists the room may show (Gospel only while
    gospelShelf is on), its ✓ Checked songs (shelfResults: this room's rules), skips songs waiting or
-   played, and runs suggest() as a teacher pick with a.autoplay: same filter, repeats and artist rules,
+   played, draws by weight (autoplayPicks: top of each list first, 🔥 Popular x POPULAR_BOOST; Dalton:
+   "based on popular songs in the genres highlighted"), and runs suggest() as a teacher pick with
+   a.autoplay: same filter, repeats and artist rules,
    no teacher pick rate. The item is by "RoomDJ" with autoplay: true (byLabel "🎲 RoomDJ"). The host
    hears { t: 'autoplayed' }. test: test/autoplay.test.mjs, npm run test:autoplay.
 

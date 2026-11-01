@@ -75,7 +75,7 @@ import { ART_RATE, JUMP_COST, SUGGEST_COST } from '../shared/protocol.js';
 import { ART_WAIT_MS, artFields, artJson, artKey, validArtKey } from '../shared/art.js';
 import { cachedArtVerdict, checkCover, putTeacherArtOk, teacherArtOk } from './art.js';
 import { focusMessage, focusRefusal, setFocus } from '../shared/focus.js';
-import { AUTOPLAY_TRIES, autoplayDue, autoplayPicks, autoplayShelves, shuffle } from '../shared/autoplay.js';
+import { AUTOPLAY_TRIES, autoplayDue, autoplayPicks, autoplayShelves } from '../shared/autoplay.js';
 
 import { backToWorkMessage, backToWorkOn, clearRests, letBackIn, restRefusal, startRest } from '../shared/backtowork.js';
 import { SPOTIFY, catalogOf, legacySong, songId } from '../shared/catalog.js';
@@ -1262,21 +1262,22 @@ export class Room extends DurableObject {
   }
 
   /**
-   * 🎲 Autoplay (shared/autoplay.js): nothing plays and the queue is empty, so add a random ✓ Checked
-   * song from the teacher's chosen lists, through suggest() as a teacher pick labeled "RoomDJ". The
+   * 🎲 Autoplay (shared/autoplay.js): nothing plays and the queue is empty, so add a ✓ Checked song
+   * from the teacher's chosen lists, popular ones most often (autoplayPicks), through suggest() as a teacher pick labeled "RoomDJ". The
    * host hears { t: 'autoplayed' }. At most once per AUTOPLAY_GAP_MS, refused tries included.
    */
   async autoplay(ws) {
     if (!autoplayDue(this.room, this.autoplayAt ?? 0)) return;
     this.autoplayAt = Date.now();
-    for (const shelf of shuffle(autoplayShelves(this.room.settings))) {
-      const songs = autoplayPicks(this.room, await this.shelfResults(shelf)).slice(0, AUTOPLAY_TRIES);
-      for (const song of songs) {
-        if (!this.room?.open || this.room.nowPlaying || this.room.queue.length) return;
-        await this.suggest(null, { device: TEACHER_DEVICE, autoplay: true }, song.id); // its answers go nowhere
-        if (this.room?.queue.some((q) => q.song.id === song.id)) {
-          return this.send(ws, { t: 'autoplayed', ok: true, title: song.title, artist: song.artist });
-        }
+    const lists = [];
+    for (const shelf of autoplayShelves(this.room.settings)) lists.push(await this.shelfResults(shelf));
+    const popular = new Set((await this.popularSongs()).map(banKey).filter(Boolean)); // 🔥 what classes really play
+    const songs = autoplayPicks(this.room, lists, { isPopular: (song) => popular.has(banKey(song)) }).slice(0, AUTOPLAY_TRIES);
+    for (const song of songs) {
+      if (!this.room?.open || this.room.nowPlaying || this.room.queue.length) return;
+      await this.suggest(null, { device: TEACHER_DEVICE, autoplay: true }, song.id); // its answers go nowhere
+      if (this.room?.queue.some((q) => q.song.id === song.id)) {
+        return this.send(ws, { t: 'autoplayed', ok: true, title: song.title, artist: song.artist });
       }
     }
     this.send(ws, { t: 'autoplayed', ok: false, message: 'Autoplay found no song to play from your lists right now. Try adding more lists in Settings.' });

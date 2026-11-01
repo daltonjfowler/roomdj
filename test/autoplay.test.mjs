@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AUTOPLAY_GAP_MS, autoplayDue, autoplayPicks, autoplayShelves, shuffle } from '../shared/autoplay.js';
+import { AUTOPLAY_GAP_MS, POPULAR_BOOST, autoplayDue, autoplayPicks, autoplayShelves, autoplayWeight } from '../shared/autoplay.js';
 import { DEFAULT_SETTINGS, byLabel } from '../shared/protocol.js';
 import { newRoomState, migrateRoomState } from '../shared/queue.js';
 import { validateSettings } from '../shared/settings.js';
@@ -23,9 +23,31 @@ test('autoplay picks from the ticked lists only (Gospel only while its switch is
   const s = room();
   s.queue = [{ id: 's1', song: { id: 'it:1', title: 'A', artist: 'X' } }];
   s.played = ['it:2'];
-  const picks = autoplayPicks(s, [{ id: 'it:1', title: 'A', artist: 'X' }, { id: 'it:2', title: 'B', artist: 'Y' }, { id: 'it:3', title: 'C', artist: 'Z' }]);
+  const picks = autoplayPicks(s, [[{ id: 'it:1', title: 'A', artist: 'X' }, { id: 'it:2', title: 'B', artist: 'Y' }, { id: 'it:3', title: 'C', artist: 'Z' }]]);
   assert.deepEqual(picks.map((x) => x.id), ['it:3']);
-  assert.deepEqual(shuffle([1, 2, 3], () => 0), [2, 3, 1]);
+});
+
+test('popular first: the top of a list and 🔥 Popular songs come up most, deeper songs still now and then', () => {
+  assert.equal(autoplayWeight(0), 1);
+  assert.equal(autoplayWeight(10), 0.5);
+  assert.equal(autoplayWeight(30, true), POPULAR_BOOST / 4);
+  const list = Array.from({ length: 60 }, (_, i) => ({ id: `it:${i}`, title: `T${i}`, artist: `A${i}` }));
+  const hot = 'it:50'; // deep in its list, but classes play it
+  let seed = 7;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const first = new Map();
+  for (let n = 0; n < 4000; n++) {
+    const id = autoplayPicks(room(), [list], { isPopular: (x) => x.id === hot, rand })[0].id;
+    first.set(id, (first.get(id) ?? 0) + 1);
+  }
+  const share = (ids) => ids.reduce((t, id) => t + (first.get(id) ?? 0), 0) / 4000;
+  const top10 = share(list.slice(0, 10).map((x) => x.id));
+  const bottom10 = share(list.slice(40, 50).map((x) => x.id));
+  assert.ok(top10 > 3 * bottom10, `top 10 ${top10} vs 41st-50th ${bottom10}`);
+  assert.ok(share([hot]) > share(['it:49']) * 2, 'a 🔥 Popular song beats its neighbours');
+  assert.ok(share(list.slice(30).map((x) => x.id)) > 0.05, 'deeper songs still come up');
+  // A song in two lists counts once.
+  assert.equal(autoplayPicks(room(), [list.slice(0, 3), list.slice(0, 3)], { rand }).length, 3);
 });
 
 test('autoplay settings: off by default, lists must be real lists, old rooms read off; its picks say 🎲 RoomDJ', () => {
