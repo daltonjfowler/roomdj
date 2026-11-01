@@ -708,7 +708,9 @@ Claude account).
    one still stuck ends that run's retries.
    (i) The lists on the homepage, before joining (Dalton, 2026-11-01): GET /api/browse/songbook
    (worker.js browseShelf) is Room.shelfResults with no room: browseFilter's strictest blocked words
-   and bans, DEFAULT_SETTINGS (so 🙏 Gospel stays off), ✓ Checked only, cached per isolate 5 minutes.
+   and bans, DEFAULT_SETTINGS, ✓ Checked only, cached per isolate 5 minutes. Every list shows there,
+   🙏 Gospel too (Dalton, 2026-11-01); in a room it still waits for the teacher's switch, which sits on
+   the 🎵 Songs tab in Simple settings.
    The page shows the same list buttons and genre / sort menus (no Suggest button). The admin page's
    "✓ Checked songs" tile comes from src/checked-count.js: the cron reads 200 per-song verdicts a run
    and keeps the last full count in KV stats:v1:checked (ready / waiting on lyrics / blocked / seen,

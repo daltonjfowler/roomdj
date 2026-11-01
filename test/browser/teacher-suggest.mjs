@@ -224,6 +224,15 @@ try {
   check('host: the 🔎 Suggest a song button shows', await visible(host, '#suggestBtn'));
   check('host snapshot names the teacher for picks', lastState(host)?.teacherName === 'Teacher 1');
 
+  // 🙏 The Gospel switch is on the Songs tab in Simple (Dalton, 2026-11-01), off by default.
+  await host.page.click('#settingsBtn');
+  await host.page.waitForSelector('#settingsDlg[open]');
+  await host.page.click('#levelSimple');
+  await host.page.click('#tabSongs');
+  check('settings: the 🙏 Gospel switch shows in Simple, off by default', await host.page.locator('#setGospel').isVisible() && !(await host.page.isChecked('#setGospel')));
+  await host.page.keyboard.press('Escape');
+  await host.page.waitForSelector('#settingsDlg[open]', { state: 'detached', timeout: 5000 }).catch(() => {});
+
   // 📚 The songbook's lists with no search first (Dalton, 2026-10-31: "I shouldn't have to search first").
   await host.page.click('#suggestBtn');
   check('Suggest a song: the list buttons show while the box is empty', await visible(host, '#tShelves') && (await host.page.locator('#tShelfBtns button').count()) >= 20);

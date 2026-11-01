@@ -20,7 +20,7 @@
 // BOARD_RATE_IP: the board's sign-in (POST /api/teacher/board), which a waiting board asks every
 // 10 s; a school's boards all share the address, so it is generous.
 
-import { DEFAULT_SETTINGS, DEVICE_ID_PATTERN, ROOM_ID_PATTERN, SHELF_MAX, SHELVES, shelfShown } from '../shared/protocol.js';
+import { DEFAULT_SETTINGS, DEVICE_ID_PATTERN, ROOM_ID_PATTERN, SHELF_MAX } from '../shared/protocol.js';
 import { validateSettings } from '../shared/settings.js';
 import { normalizeCode, validateCode, validateUntil } from '../shared/code.js';
 import { shiftTimes, validateTimes } from '../shared/classtime.js';
@@ -441,8 +441,9 @@ async function browseFilter(env) {
 
 // A songbook list before joining (protocol.js SONGBOOK; Dalton, 2026-11-01: the same lists on the
 // homepage): Room.shelfResults with no room. Every teacher's saved blocked words and bans (the
-// strictest, browseFilter) and the default settings, so 🙏 Gospel stays off here. ✓ Checked songs
-// only, from KV and the baked lists, never the AI. Kept in this isolate's memory for a few minutes.
+// strictest, browseFilter) and the default settings. Every list shows here, 🙏 Gospel too (Dalton,
+// 2026-11-01: "show gospel on the home page"); in a room it waits for the teacher's switch.
+// ✓ Checked songs only, from KV and the baked lists, never the AI. Kept in this isolate's memory a few minutes.
 const BROWSE_SHELF_MS = 5 * 60_000;
 const BROWSE_ART_READS = 50;
 const browseShelves = new Map(); // shelf id -> { at, results }
@@ -465,7 +466,6 @@ async function browseShelf(request, env, url) {
 }
 
 async function browseShelfResults(env, shelf) {
-  if (!shelfShown(SHELVES.find((x) => x.id === shelf), DEFAULT_SETTINGS)) return [];
   const { blocklist, banned, art: artSettings } = await browseFilter(env);
   const ctx = { blocklist, banned, notMusic: DEFAULT_SETTINGS.blockNotMusic !== false, kidzBop: DEFAULT_SETTINGS.kidzBop };
   let grown = [];

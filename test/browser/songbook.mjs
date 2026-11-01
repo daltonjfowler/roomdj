@@ -106,15 +106,15 @@ try {
   const bHip = await (await browseShelf('hiphop')).json();
   check('homepage list: hip-hop has the hand-checked songs, all ✓ Checked, never explicit',
     bHip.results?.some((s) => /hotline bling/i.test(s.title)) && bHip.results.every((s) => s.check === 'ready' && s.explicit !== 'explicit'), `${bHip.results?.length}`);
-  check('homepage list: 🙏 Gospel stays empty (the default settings keep it off)', (await (await browseShelf('gospel')).json()).results?.length === 0);
+  check('homepage list: 🙏 Gospel answers (every list shows before joining)', Array.isArray((await (await browseShelf('gospel')).json()).results));
   for (const [w, h] of [[1366, 768], [390, 844]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto(BASE);
-    check(`homepage ${w}px: the list buttons show before joining, no 🙏 Gospel`, (await page.locator('#browseShelfBtns button').count()) >= 20
-      && (await page.locator('#browseShelfBtns button[data-shelf="gospel"]').count()) === 0);
+    check(`homepage ${w}px: the list buttons show before joining, 🙏 Gospel too`, (await page.locator('#browseShelfBtns button').count()) >= 20
+      && (await page.locator('#browseShelfBtns button[data-shelf="gospel"]').count()) === 1);
     await page.click('#browseShelfBtns button[data-shelf="hiphop"]');
     await page.waitForFunction(() => /checked song/.test(document.querySelector('#browseMsg').textContent), null, { timeout: 10_000 });
     const rows = await page.locator('#browseResults li').count();

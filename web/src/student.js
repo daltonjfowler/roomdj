@@ -1488,8 +1488,8 @@ async function browse() {
   renderBrowse();
 }
 
-// The homepage's list buttons: the default settings, so 🙏 Gospel stays off (shelfShown).
-$('#browseShelfBtns').innerHTML = SHELVES.filter((s) => shelfShown(s, null))
+// The homepage's list buttons: every list, 🙏 Gospel too (in a room it waits for the teacher's switch).
+$('#browseShelfBtns').innerHTML = SHELVES
   .map((s) => `<button type="button" data-shelf="${esc(s.id)}" aria-pressed="false">${esc(s.label)}</button>`).join('');
 
 function setBrowseShelf(id) {
