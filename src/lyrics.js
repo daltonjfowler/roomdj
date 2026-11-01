@@ -55,6 +55,16 @@ export function gateDecision(line, now, maxWaitMs, spacingMs = LYRICS_SPACING_MS
   return { ok: true, waitMs, line: { ...line, nextAt: start + spacingMs } };
 }
 
+/**
+ * LRCLIB's health after one lookup (the gate keeps it for the admin page): `since` is when it began
+ * failing (0 while it works). Our own "line is full" is not LRCLIB's fault and is not reported.
+ */
+export function nextHealth(was, ok, why, now) {
+  const h = { okAt: was?.okAt ?? 0, failAt: was?.failAt ?? 0, why: was?.why ?? '', since: was?.since ?? 0 };
+  if (ok) return { ...h, okAt: now, since: 0 };
+  return { ...h, failAt: now, why: String(why).slice(0, 80), since: h.since || now };
+}
+
 /** The shared line's object, or null (no binding: tests; each Worker copy then keeps its own backoff). */
 function gateOf(env) {
   try {
@@ -140,14 +150,23 @@ export async function fetchLyrics(song, env, { fetchImpl = fetch, now = Date.now
       resolve({ status: 'error', why: 'LRCLIB timed out' });
     }, timeoutMs);
   });
+  let result;
   try {
-    return await Promise.race([work, timeout]);
+    result = await Promise.race([work, timeout]);
   } catch (e) {
-    return { status: 'error', why: `LRCLIB unreachable: ${String(e?.message ?? e).slice(0, 80)}` };
+    result = { status: 'error', why: `LRCLIB unreachable: ${String(e?.message ?? e).slice(0, 80)}` };
   } finally {
     clearTimeout(timer);
     work.catch(() => {}); // a late failure after the timeout
   }
+  if (gate && result.why !== 'LRCLIB line is full') {
+    try {
+      await gate.report(result.status !== 'error', result.why ?? ''); // LRCLIB's health for the admin page
+    } catch {
+      // the health line is best effort
+    }
+  }
+  return result;
 }
 
 /**

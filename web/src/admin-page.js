@@ -61,6 +61,15 @@ function teacherRow(t, note, isOff) {
 const n = (x, one, many) => `${(x ?? 0).toLocaleString()} ${x === 1 ? one : many}`;
 const day = (at) => new Date(at).toLocaleDateString([], { month: 'short', day: 'numeric' });
 
+const clock = (at) => `${day(at)} ${new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+
+/** LRCLIB, the lyrics site the song check reads (src/lyrics-gate.js status). */
+function lyricsLine(h) {
+  if (!h) return 'Lyrics check (LRCLIB): no lookups yet since the last deploy';
+  if (h.since) return `⚠️ Lyrics check (LRCLIB) down since ${clock(h.since)} (${h.why || 'no answer'}). Songs wait as AI-ok and are checked again when it is back.${h.okAt ? ` Last good answer ${clock(h.okAt)}.` : ''}`;
+  return `✅ Lyrics check (LRCLIB) working, last answer ${clock(h.okAt)}`;
+}
+
 /** A teacher's tally line (src/teacher-activity.js; rooms closed since 2026-11-01), or ''. */
 function actText(a) {
   if (!a) return '';
@@ -130,6 +139,7 @@ function render(s) {
     `New-song AI checks (free teachers): ${t.ai} (each has ${t.caps.ai} a day)`,
     `Cover checks (free teachers): ${t.art} (each has ${t.caps.art} a day)`,
     s.prewarm ? `Chart pre-check: ${s.prewarm.used} AI checks, at song ${s.prewarm.cursor}` : 'Chart pre-check: not run yet today',
+    lyricsLine(s.lyrics),
   ].map((x) => el('li', x)));
 
   // 🎵 The song checker (src/checked-count.js) and the Allows on this page's teachers.
@@ -137,9 +147,9 @@ function render(s) {
   const allows = [...s.teachers, ...s.free.list].reduce((sum, t) => sum + (t.act?.allows ?? 0), 0);
   $('#checkerList').replaceChildren(...(c ? [
     `✓ Checked, OK to play: ${c.ready.toLocaleString()}`,
-    `AI said ok, waiting on the lyrics check: ${c.waiting.toLocaleString()}`,
+    `Waiting on the lyrics check (asked again when it works): ${c.waiting.toLocaleString()}`,
     `Blocked, not appropriate: ${c.blocked.toLocaleString()}`,
-    `Other (not sure, or no answer yet): ${Math.max(0, c.seen - c.ready - c.waiting - c.blocked).toLocaleString()}`,
+    `Not sure even with the lyrics, a teacher decides: ${(c.unsure ?? 0).toLocaleString()}`,
     `Looked at in all: ${c.seen.toLocaleString()}${c.counting ? ' so far (first count still running)' : `, counted ${day(c.at)} ${new Date(c.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`}`,
   ] : ['The first count runs over the next few hours.']).concat(`Teacher Allows: ${allows.toLocaleString()}`).map((x) => el('li', x)));
 

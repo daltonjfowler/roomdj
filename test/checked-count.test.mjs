@@ -23,6 +23,7 @@ function fakeKv(entries) {
 const p = `verdict:v${PROMPT_VERSION}:`;
 const ok = JSON.stringify({ verdict: 'ok', category: 'other', evidence: '', instrumental: false, lyrics: 'found', lv: 1, source: 'lyrics' });
 const aiOnly = JSON.stringify({ verdict: 'ok', category: 'other', evidence: '', instrumental: false });
+const unsure = JSON.stringify({ verdict: 'unknown', category: 'other', evidence: '', instrumental: false, lyrics: 'none', lv: 1, source: 'lyrics' });
 const bad = JSON.stringify({ verdict: 'inappropriate', category: 'drugs', evidence: 'about drugs', instrumental: false });
 
 test('the cron counts ✓ Checked songs a slice at a time, then keeps the full count', async () => {
@@ -33,15 +34,16 @@ test('the cron counts ✓ Checked songs a slice at a time, then keeps the full c
   const env = { CLASS_KV: kv };
   assert.equal(await readChecked(env), null);
   await countChecked(env, { reads: 3 });
-  assert.deepEqual(await readChecked(env), { ready: 2, waiting: 1, blocked: 0, seen: 3, counting: true });
+  assert.deepEqual(await readChecked(env), { ready: 2, waiting: 1, blocked: 0, unsure: 0, seen: 3, counting: true });
   await countChecked(env, { reads: 3, now: 5 });
-  assert.deepEqual(await readChecked(env), { ready: 2, waiting: 1, blocked: 1, seen: 4, at: 5 });
+  assert.deepEqual(await readChecked(env), { ready: 2, waiting: 1, blocked: 1, unsure: 0, seen: 4, at: 5 });
   // The next pass starts over and keeps showing the last full count meanwhile.
   kv.map.set(`${p}song:e|x`, ok);
+  kv.map.set(`${p}song:f|x`, unsure); // the lyrics were read and the checker still could not tell
   await countChecked(env, { reads: 3, now: 6 });
-  assert.deepEqual(await readChecked(env), { ready: 2, waiting: 1, blocked: 1, seen: 4, at: 5 });
+  assert.deepEqual(await readChecked(env), { ready: 2, waiting: 1, blocked: 1, unsure: 0, seen: 4, at: 5 });
   await countChecked(env, { reads: 3, now: 7 });
-  assert.deepEqual(await readChecked(env), { ready: 3, waiting: 1, blocked: 1, seen: 5, at: 7 });
+  assert.deepEqual(await readChecked(env), { ready: 3, waiting: 1, blocked: 1, unsure: 1, seen: 6, at: 7 });
 });
 
 test('a count from an older prompt version is not shown, and starts over', async () => {
@@ -49,7 +51,7 @@ test('a count from an older prompt version is not shown, and starts over', async
   const env = { CLASS_KV: kv };
   assert.equal(await readChecked(env), null);
   await countChecked(env, { now: 2 });
-  assert.deepEqual(await readChecked(env), { ready: 1, waiting: 0, blocked: 0, seen: 1, at: 2 });
+  assert.deepEqual(await readChecked(env), { ready: 1, waiting: 0, blocked: 0, unsure: 0, seen: 1, at: 2 });
 });
 
 test("a closed room adds to its teacher's tally: counts only", async () => {

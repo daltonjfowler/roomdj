@@ -93,7 +93,7 @@ async function changeFreeTeacher(env, id, body) {
 async function stats(env) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
-  const [list, links, own, sessions, use, verdicts, prewarm, requests, checked, acts] = await Promise.all([
+  const [list, links, own, sessions, use, verdicts, prewarm, requests, checked, acts, lyrics] = await Promise.all([
     ensureProfiles(env),
     listAll(env, 'link:v1:', 1),
     listAll(env, 'prof:v1:'),
@@ -104,6 +104,7 @@ async function stats(env) {
     requestLog(env)?.summary().catch(() => null) ?? null,
     readChecked(env), // ✓ Checked songs, counted by the cron (src/checked-count.js)
     listAll(env, ACTIVITY_PREFIX, 1), // each teacher's tally (src/teacher-activity.js)
+    lyricsHealth(env), // LRCLIB up or down (src/lyrics-gate.js)
   ]);
   const linked = new Set(await Promise.all(links.keys.map((k) => env.CLASS_KV.get(k.name))));
   const teachers = list.map((p) => ({
@@ -155,8 +156,18 @@ async function stats(env) {
     prewarm: prewarm ?? null,
     songs: verdicts.more ? `${songs}+` : songs,
     checked,
+    lyrics,
     requests: requests ?? null,
   };
+}
+
+/** LRCLIB's health from the lyrics gate, or null (no gate, no lookups yet, or it did not answer). */
+async function lyricsHealth(env) {
+  try {
+    return env.LYRICS_GATE ? await env.LYRICS_GATE.get(env.LYRICS_GATE.idFromName('lrclib')).status() : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Every request as CSV, a page at a time (the log can grow past what one answer should hold). */

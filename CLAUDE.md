@@ -718,7 +718,11 @@ Claude account).
    id>, value = metadata) grows when a room closes: rooms, songs played, requests, students, last
    room. Counts only, never a song, nickname or device. The admin page adds "room open now" and the
    teacher's Allows (two KV reads a teacher), and the request log's summary() its outcomes, fates,
-   last 7 days and top 5 played.
+   last 7 days and top 5 played. The checker card splits waiting (lyricsPending, asked again later)
+   from unsure (lyrics read, still unknown: a teacher decides). LRCLIB's health: fetchLyrics reports
+   every answer to the LyricsGate (report; not our own "line is full"), which keeps { okAt, failAt,
+   why, since } in its storage (saved on a flip, else at most every 10 minutes); the admin's Today
+   card says working or "down since".
    (b) Hand-checked songs (shared/filter.js HOUSE_OK, houseOk): Dalton's own per-song calls for every
    teacher, like a teacher's Allow (source 'house', no AI or lyrics call). Only the clean edit (the
    explicit flag still refuses), bans, blocked words, 🙉 and Instrumentals only still count. Add ONLY

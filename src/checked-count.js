@@ -2,17 +2,18 @@
 // approved songs do we have total"). The verdicts kept once per song (verdict:v<PROMPT_VERSION>:song:…)
 // are too many to read on every admin visit, so the 15-minute cron walks them a slice at a time and
 // keeps the last full count in KV CHECKED_KEY:
-//   { version, cursor, skip, run: { ready, waiting, blocked, seen }, last: { ...run, at } | null }
-// ready: OK to play by the same rule as search's ✓ Checked (readyToPlay); waiting: the AI said ok
-// but the lyrics check has not confirmed it yet; blocked: not appropriate; seen: every song checked.
+//   { version, cursor, skip, run: { ready, waiting, blocked, unsure, seen }, last: { ...run, at } | null }
+// ready: OK to play by the same rule as search's ✓ Checked (readyToPlay); waiting: the lyrics check
+// has not finished (lyricsPending: LRCLIB down; asked again later); blocked: not appropriate; unsure:
+// the checker could not tell even with the lyrics (a teacher decides); seen: every song checked.
 // KV only, never the AI. A new PROMPT_VERSION starts over.
 
-import { PROMPT_VERSION, readVerdict, readyToPlay } from '../shared/filter.js';
+import { PROMPT_VERSION, lyricsPending, readVerdict, readyToPlay } from '../shared/filter.js';
 
 export const CHECKED_KEY = 'stats:v1:checked';
 const READS_PER_RUN = 200; // the cron's other work shares the invocation's KV operations
 const PAGE = 1000;
-const EMPTY = () => ({ ready: 0, waiting: 0, blocked: 0, seen: 0 });
+const EMPTY = () => ({ ready: 0, waiting: 0, blocked: 0, unsure: 0, seen: 0 });
 const songKeyOf = (name, prefix) => (name.startsWith(`${prefix}song:`) ? name.slice(prefix.length + 'song:'.length) : null);
 
 /** One slice of the count. Returns the saved state. */
@@ -36,10 +37,12 @@ export async function countChecked(env, { now = Date.now(), reads = READS_PER_RU
     const v = readVerdict(values[i]);
     if (!v) return;
     const [title = '', artist = ''] = (songKeyOf(name, prefix) ?? '').split('|');
+    const song = { title, artist, album: '' };
     state.run.seen++;
-    if (readyToPlay({ title, artist, album: '' }, v)) state.run.ready++;
-    else if (v.verdict === 'ok') state.run.waiting++;
+    if (readyToPlay(song, v)) state.run.ready++;
     else if (v.verdict === 'inappropriate') state.run.blocked++;
+    else if (v.verdict === 'ok' || lyricsPending(song, v)) state.run.waiting++;
+    else state.run.unsure++;
   });
   if (state.skip + slice.length < names.length) state.skip += slice.length;
   else if (page.list_complete) {

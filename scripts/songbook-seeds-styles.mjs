@@ -172,6 +172,11 @@ export const STYLES = {
     ["Commas", "Ayra Starr"], ["Bloody Samaritan", "Ayra Starr"], ["Terminator", "Asake"], ["Lonely at the Top", "Asake"],
     ["Joha", "Asake"], ["Mnike", "Tyler ICU"], ["Soso", "Omah Lay"], ["Godly", "Omah Lay"],
     ["Pana", "Tekno"], ["Duro", "Tekno"], ["Soco", "Starboy"], ["Dorobucci", "Mavins"],
+    // Dalton, 2026-11-01: "fill the thin lists" (picked for class; the checker still checks each one).
+    ["Sungba", "Asake"], ["Amapiano", "Asake"], ["Dumebi", "Rema"], ["Baby (Is It a Crime)", "Rema"],
+    ["Johnny", "Yemi Alade"], ["Electricity", "Pheelz"], ["Feel", "Davido"], ["Assurance", "Davido"],
+    ["Jealous", "Fireboy DML"], ["Vibration", "Fireboy DML"], ["Monalisa", "Lojay"], ["Gbona", "Burna Boy"],
+    ["African Giant", "Burna Boy"], ["Ojapiano", "Kcee"], ["Away", "Ayra Starr"], ["Infinity", "Olamide"],
   ],
   soul: [
     ["My Girl", "The Temptations"], ["Ain't No Mountain High Enough", "Marvin Gaye & Tammi Terrell"], ["Signed, Sealed, Delivered (I'm Yours)", "Stevie Wonder"], ["Superstition", "Stevie Wonder"],
@@ -240,6 +245,13 @@ export const STYLES = {
     ["Wait for Me", "Hadestown"], ["Way Down Hadestown", "Hadestown"], ["Revolting Children", "Matilda the Musical"], ["Naughty", "Matilda the Musical"],
     ["Tomorrow", "Annie"], ["It's the Hard-Knock Life", "Annie"], ["America", "West Side Story"], ["If I Were a Rich Man", "Topol"],
     ["Seasons of Love", "RENT"], ["Into the Woods", "Into the Woods"], ["Memory", "Elaine Paige"], ["Don't Rain on My Parade", "Barbra Streisand"],
+    // Dalton, 2026-11-01: "fill the thin lists" (picked for class; the checker still checks each one).
+    ["For Good", "Kristin Chenoweth & Idina Menzel"], ["No Good Deed", "Idina Menzel"], ["Dancing Through Life", "Jonathan Bailey"], ["One Short Day", "Cynthia Erivo"],
+    ["Dear Theodosia", "Original Broadway Cast of Hamilton"], ["Burn", "Original Broadway Cast of Hamilton"], ["For Forever", "Ben Platt"], ["She Used to Be Mine", "Sara Bareilles"],
+    ["I Dreamed a Dream", "Anne Hathaway"], ["Bring Him Home", "Colm Wilkinson"], ["Castle on a Cloud", "Les Misérables Original London Cast"], ["Suddenly Seymour", "Ellen Greene"],
+    ["Mamma Mia", "Meryl Streep"], ["Santa Fe", "Jeremy Jordan"], ["Seize the Day", "Newsies"], ["King of New York", "Newsies"],
+    ["When I Grow Up", "Matilda the Musical"], ["Singin' in the Rain", "Gene Kelly"], ["Edelweiss", "Christopher Plummer"], ["Breaking Free", "Zac Efron & Vanessa Hudgens"],
+    ["We're All in This Together", "High School Musical Cast"], ["He Lives in You", "The Lion King Original Broadway Cast"], ["Electricity", "Billy Elliot"], ["Climb Ev'ry Mountain", "Peggy Wood"],
   ],
   games: [
     ["Super Mario Bros. Theme", "Koji Kondo"], ["Megalovania", "Toby Fox"], ["Hopes and Dreams", "Toby Fox"], ["Fallen Down", "Toby Fox"],
@@ -252,6 +264,15 @@ export const STYLES = {
     ["Guren no Yumiya", "Linked Horizon"], ["Specialz", "King Gnu"], ["Bling-Bang-Bang-Born", "Creepy Nuts"], ["Kick Back", "Kenshi Yonezu"],
     ["Peace Sign", "Kenshi Yonezu"], ["We Are!", "Hiroshi Kitadani"], ["Cha-La Head-Cha-La", "Hironobu Kageyama"], ["Tank!", "The Seatbelts"],
     ["Hikaru Nara", "Goose house"], ["Sparkle", "RADWIMPS"], ["Zenzenzense", "RADWIMPS"], ["Through the Fire and Flames", "DragonForce", "song"],
+    // Dalton, 2026-11-01: "fill the thin lists" (picked for class; the checker still checks each one).
+    ["Baba Yetu", "Christopher Tin"], ["Kingdom Dance", "Jim Guthrie"], ["Subwoofer Lullaby", "C418"], ["Haggstrom", "C418"],
+    ["Danny", "C418"], ["Mice on Venus", "C418"], ["Otherside", "Lena Raine"], ["Spider Dance", "Toby Fox"],
+    ["Snowdin Town", "Toby Fox"], ["Big Shot", "Toby Fox"], ["Rude Buster", "Toby Fox"], ["Field of Hopes and Dreams", "Toby Fox"],
+    ["Cara Mia Addio!", "Ellen McLain"], ["Legends Never Die", "Against the Current"], ["Warriors", "Imagine Dragons", "song"], ["Rise", "The Glitch Mob"],
+    ["Yuusha", "YOASOBI"], ["Shukufuku", "YOASOBI"], ["Otonoke", "Creepy Nuts"], ["Suzume", "RADWIMPS"],
+    ["Grand Escape", "RADWIMPS"], ["Ao no Sumika", "Tatsuya Kitani"], ["Zankyosanka", "Aimer"], ["Homura", "LiSA"],
+    ["Crossing Field", "LiSA"], ["Colors", "FLOW"], ["Sign", "FLOW"], ["Haruka Kanata", "ASIAN KUNG-FU GENERATION"],
+    ["Hero's Come Back!!", "nobodyknows+"], ["Shinzou wo Sasageyo!", "Linked Horizon"], ["Inferno", "Mrs. GREEN APPLE"], ["Hacking to the Gate", "Kanako Ito"],
   ],
   world: [
     ["Idol", "YOASOBI"], ["Yoru ni Kakeru", "YOASOBI"], ["Plastic Love", "Mariya Takeuchi"], ["Mayonaka no Door / Stay With Me", "Miki Matsubara"],
@@ -264,6 +285,13 @@ export const STYLES = {
     ["Pata Pata", "Miriam Makeba"], ["Homeless", "Ladysmith Black Mambazo"], ["Şımarık", "Tarkan"], ["99 Luftballons", "Nena"],
     ["Con te partirò", "Andrea Bocelli"], ["Volare", "Gipsy Kings"], ["Bamboléo", "Gipsy Kings"], ["The Moon Represents My Heart", "Teresa Teng"],
     ["Wolf Totem", "The HU"], ["Yi Jian Mei", "Fei Yu-ching"], ["Jerusalema", "Master KG", "song"], ["Gangnam Style", "PSY", "song"],
+    // Dalton, 2026-11-01: "fill the thin lists" (picked for class; the checker still checks each one).
+    ["Kun Faya Kun", "A.R. Rahman"], ["Kal Ho Naa Ho", "Sonu Nigam"], ["Apna Bana Le", "Arijit Singh"], ["Raataan Lambiyan", "Jubin Nautiyal"],
+    ["Sukiyaki", "Kyu Sakamoto"], ["Pretender", "Official HIGE DANdism"], ["Marigold", "Aimyon"], ["Kaiju no Hanauta", "Vaundy"],
+    ["Shinjidai", "Ado"], ["Je veux", "ZAZ"], ["Les Champs-Élysées", "Joe Dassin"], ["Tourner dans le vide", "Indila"],
+    ["Malaika", "Miriam Makeba"], ["Yeke Yeke", "Mory Kanté"], ["7 Seconds", "Youssou N'Dour & Neneh Cherry"], ["Ya Rayah", "Rachid Taha"],
+    ["You Raise Me Up", "Celtic Woman"], ["Volare (Nel blu dipinto di blu)", "Domenico Modugno"], ["Funiculì, Funiculà", "Luciano Pavarotti"], ["Zorba's Dance", "Mikis Theodorakis"],
+    ["Hava Nagila", "Harry Belafonte"], ["Day-O (The Banana Boat Song)", "Harry Belafonte"], ["Yuve Yuve Yu", "The HU"], ["Kuzu Kuzu", "Tarkan"],
   ],
   folk: [
     ["Freeborn Man", "Tony Rice"], ["Away From the Mire", "Billy Strings"], ["Meet Me at the Creek", "Billy Strings"], ["I Am a Man of Constant Sorrow", "The Soggy Bottom Boys"],
@@ -276,6 +304,12 @@ export const STYLES = {
     ["Holocene", "Bon Iver"], ["White Winter Hymnal", "Fleet Foxes"], ["Mykonos", "Fleet Foxes"], ["Rivers and Roads", "The Head and the Heart"],
     ["Home", "Edward Sharpe & The Magnetic Zeros"], ["Rocky Top", "The Osborne Brothers"], ["Foggy Mountain Breakdown", "Flatt & Scruggs"], ["Dueling Banjos", "Eric Weissberg & Steve Mandell"],
     ["Wildwood Flower", "The Carter Family"], ["The Lighthouse's Tale", "Nickel Creek"], ["Big Rock Candy Mountain", "Harry McClintock"], ["Stick Season", "Noah Kahan"],
+    // Dalton, 2026-11-01: "fill the thin lists" (picked for class; the checker still checks each one).
+    ["Cleopatra", "The Lumineers"], ["Sleep on the Floor", "The Lumineers"], ["Flowers in Your Hair", "The Lumineers"], ["Riptide", "Vance Joy"],
+    ["Skinny Love", "Bon Iver"], ["Harvest Moon", "Neil Young"], ["Old Man", "Neil Young"], ["The Sound of Silence", "Simon & Garfunkel"],
+    ["Scarborough Fair / Canticle", "Simon & Garfunkel"], ["Turn! Turn! Turn!", "The Byrds"], ["Shady Grove", "Doc Watson"], ["Windy and Warm", "Doc Watson"],
+    ["Blackberry Blossom", "Tony Rice"], ["Paradise", "John Prine"], ["Hello in There", "John Prine"], ["Sixteen Tons", "Tennessee Ernie Ford"],
+    ["Wayfaring Stranger", "Emmylou Harris"], ["Northern Attitude", "Noah Kahan"], ["Ain't No Grave", "Molly Tuttle"], ["Orange Blossom Special", "Johnny Cash"],
   ],
   gospel: [
     ["Oh Happy Day", "The Edwin Hawkins Singers"], ["How Great Is Our God", "Chris Tomlin"], ["Good Good Father", "Chris Tomlin"], ["Holy Forever", "Chris Tomlin"],
