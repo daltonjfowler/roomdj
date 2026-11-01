@@ -231,4 +231,4 @@ Object.assign(SEEDS, styles, {
 });
 
 /** Shelves in the order a student sees them. */
-export const SHELF_ORDER = ['pop', 'hiphop', 'country', 'rock', 'latin', 'kpop', 'dance', 'movies', 'throwbacks', 'classicrock', 'indie', 'punk', 'metal', 'soul', 'reggae', 'afrobeats', 'jazz', 'classical', 'focus'];
+export const SHELF_ORDER = ['pop', 'hiphop', 'country', 'rock', 'latin', 'kpop', 'dance', 'movies', 'musicals', 'games', 'throwbacks', 'classicrock', 'indie', 'punk', 'metal', 'soul', 'reggae', 'afrobeats', 'world', 'folk', 'jazz', 'gospel', 'classical', 'focus'];

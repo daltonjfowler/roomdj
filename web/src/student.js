@@ -15,7 +15,7 @@ import { noteServerTime } from './server-clock.js';
 import { showBell } from './bell-pill.js';
 import { generateNick, isGeneratedNick } from '../../shared/nickgen.js';
 import { AI_CATEGORIES, DEVICE_ID_PATTERN, FILTER_REASONS, NICK_MAX, QUERY_MAX, ROOM_ID_PATTERN, PUSH_TAG, byLabel, whyText } from '../../shared/protocol.js';
-import { SHELVES } from '../../shared/protocol.js';
+import { SHELVES, shelfShown } from '../../shared/protocol.js';
 import { cleanView, resultGenres, viewResults } from '../../shared/songbook.js';
 import { JUMP_COST, SUGGEST_COST } from '../../shared/protocol.js';
 import { couponFromHash } from '../../shared/coupon.js';
@@ -775,6 +775,7 @@ function setFavMode(on) {
   showTools();
 }
 function renderFind(s) {
+  renderShelves(s.settings);
   const on = s.settings?.showFavorites !== false;
   $('#findBy').hidden = !on;
   if (!on && favMode) setFavMode(false);
@@ -1205,7 +1206,15 @@ async function search() {
 }
 
 // ---- 📚 The songbook's lists and the search filters (protocol.js SONGBOOK, shared/songbook.js) ----
-$('#shelfBtns').innerHTML = SHELVES.map((s) => `<button type="button" data-shelf="${esc(s.id)}" aria-pressed="false">${esc(s.label)}</button>`).join('');
+/** The list buttons this room shows (protocol.js shelfShown: 🙏 Gospel only while the teacher turns it on). */
+function renderShelves(settings) {
+  const shown = SHELVES.filter((s) => shelfShown(s, settings));
+  const want = shown.map((s) => s.id).join('|');
+  if ($('#shelfBtns').dataset.list === want) return;
+  $('#shelfBtns').dataset.list = want;
+  $('#shelfBtns').innerHTML = shown.map((s) => `<button type="button" data-shelf="${esc(s.id)}" aria-pressed="${s.id === shelfOpen}">${esc(s.label)}</button>`).join('');
+}
+renderShelves(null);
 
 /** The list buttons while the search box is empty, the filters while there are songs to filter. */
 function showTools() {

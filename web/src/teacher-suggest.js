@@ -6,7 +6,7 @@
 // queue, Played already, 😴 Resting, ⏱ Too long, 🎨 Artist waiting, Not allowed + Why?.
 
 import { $, announce, artHtml, esc, keepFocus, spotifyMark, toast } from './dom.js';
-import { QUERY_MAX, SHELVES, whyText } from '../../shared/protocol.js';
+import { QUERY_MAX, SHELVES, shelfShown, whyText } from '../../shared/protocol.js';
 import { tooLong } from '../../shared/classtime.js';
 import { mainArtist, mainArtistName } from '../../shared/filter.js';
 import { restingEvidence, restingUntilLabel, songKey } from '../../shared/repeats.js';
@@ -185,6 +185,7 @@ export function initTeacherSuggest({ send, getState }) {
   }
 
   function open() {
+    renderShelves();
     if (!$('#suggestDlg').open) $('#suggestDlg').showModal();
     renderedKey = '';
     render();
@@ -192,7 +193,15 @@ export function initTeacherSuggest({ send, getState }) {
     $('#tq').select();
   }
 
-  $('#tShelfBtns').innerHTML = SHELVES.map((s) => `<button type="button" data-shelf="${esc(s.id)}" aria-pressed="false">${esc(s.label)}</button>`).join('');
+  /** The list buttons this room shows (protocol.js shelfShown: 🙏 Gospel only while it is on). */
+  function renderShelves() {
+    const shown = SHELVES.filter((s) => shelfShown(s, state()?.settings));
+    const want = shown.map((s) => s.id).join('|');
+    if ($('#tShelfBtns').dataset.list === want) return;
+    $('#tShelfBtns').dataset.list = want;
+    $('#tShelfBtns').innerHTML = shown.map((s) => `<button type="button" data-shelf="${esc(s.id)}" aria-pressed="false">${esc(s.label)}</button>`).join('');
+  }
+  renderShelves();
   $('#tShelfBtns').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-shelf]');
     if (btn) openShelf(btn.dataset.shelf);

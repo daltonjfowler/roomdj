@@ -53,6 +53,13 @@ const STYLE_SHELF = [
   ['soul', (g, y) => /^(soul|motown|funk|disco|doo wop|neo-soul|quiet storm)$/.test(g) || (g === 'r&b/soul' && y > 0 && y <= 1989)],
   ['classical', (g) => /^(classical|orchestral|opera|baroque era|classical era|romantic era|chamber music|choral|art song|modern era|medieval era|renaissance)$/.test(g)],
   ['jazz', (g) => /^(jazz|vocal jazz|big band|bop|hard bop|cool jazz|contemporary jazz|crossover jazz|mainstream jazz|smooth jazz|latin jazz|fusion|dixieland|ragtime|trad jazz|swing|vocal|blues|chicago blues|classic blues|contemporary blues|country blues|delta blues|electric blues|acoustic blues)$/.test(g)],
+  // The lists added after (Dalton, 2026-10-31: "Add all of those"); 🙏 Gospel shows only while the
+  // teacher's gospelShelf setting is on (protocol.js shelfShown).
+  ['musicals', (g) => /^(musicals|musical|broadway|cast recordings|show tunes)$/.test(g)],
+  ['games', (g) => /^(video game|video games|soundtrack:video game|anime)$/.test(g)],
+  ['world', (g) => /^(world|worldwide|j-pop|j-rock|bollywood|indian pop|indian|indian classical|arabic|arabic pop|khaleeji|raï|brazilian|mpb|bossa nova|samba|axé|c-pop|mandopop|cantopop|french pop|chanson|celtic|turkish|greek|african|middle eastern|hawaii|polynesian)$/.test(g)],
+  ['folk', (g) => /^(folk|bluegrass|americana|contemporary folk|traditional folk|indie folk|folk-rock|celtic folk|old time|newgrass|contemporary bluegrass)$/.test(g)],
+  ['gospel', (g) => /^(christian|christian & gospel|gospel|christian pop|christian rock|contemporary christian|praise & worship|inspirational|southern gospel|traditional gospel|contemporary gospel|christian hip-hop|christian rap|christian metal|ccm)$/.test(g)],
 ];
 const STYLE_IDS = new Set(STYLE_SHELF.map(([id]) => id));
 
@@ -134,12 +141,19 @@ export function bakedKeys(archive = ARCHIVE_SONGS) {
 }
 
 /**
- * The seeds (banKeys). A seed the cron finds ✓ Checked joins the grown list even when no shelf takes
- * its genre: then the room trusts it with no KV read, so a list fills as the cron checks its seeds
- * (Dalton, 2026-10-31: "fill the list ... so we have a full list"), no archive rebuild needed.
+ * The seeds, banKey → song. A seed the cron finds ✓ Checked joins the grown list even when no shelf
+ * takes its genre: then the room trusts it with no KV read, so a list fills as the cron checks its
+ * seeds (Dalton, 2026-10-31: "fill the list ... so we have a full list"), no archive rebuild needed.
+ * A seed already has its iTunes details, so it joins with no lookup (iTunes refuses most calls from
+ * the Worker: src/itunes.js).
  */
 export function seedKeys(songs = SONGBOOK_SONGS) {
-  return new Set(songs.map(banKey).filter(Boolean));
+  const map = new Map();
+  for (const s of songs) {
+    const k = banKey(s);
+    if (k && !map.has(k)) map.set(k, plain(s));
+  }
+  return map;
 }
 
 /** The archive is from the checker's current prompt: its songs are ✓ Checked with no KV read. */

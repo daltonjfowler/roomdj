@@ -113,6 +113,7 @@ try {
     await page.waitForSelector('#roomScreen:not([hidden])', { timeout: 15_000 });
     await page.waitForSelector('#shelves:not([hidden])', { timeout: 8000 });
     check(`${w}px: the list buttons show while the search box is empty`, (await page.locator('#shelfBtns button').count()) >= 20);
+    check(`${w}px: no 🙏 Gospel list while the teacher has not turned it on`, (await page.locator('#shelfBtns button[data-shelf="gospel"]').count()) === 0);
     // 20+ lists: phones scroll the strip sideways, never the page (student.css).
     check(`${w}px: the list buttons never widen the page`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.focus('#q');

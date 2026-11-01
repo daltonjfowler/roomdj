@@ -57,6 +57,7 @@ export const approvedKey = (idOrKey) => `approved:${kvId(idOrKey)}`;
 const HOUSE_OK = new Set([
   ['Hotline Bling', 'Drake'],
   ["God's Plan", 'Drake'],
+  ['Blitzkrieg Bop', 'Ramones'], // Dalton, 2026-10-31: "override keep it" (the checker read "shoot 'em in the back" as violence)
 ].map(([title, artist]) => banKey({ title, artist })));
 export const houseOk = (song) => HOUSE_OK.has(banKey(song));
 /**
@@ -545,6 +546,9 @@ function lyricsWanted(v, needInstrumental, song) {
   const needInst = needInstrumental && v.verdict !== 'inappropriate' && v.instrumental !== true && v.instrumental !== false;
   return needTheme || needInst ? { needTheme, needInstrumental: needInst } : null;
 }
+
+/** True for a verdict that still wants its lyrics (LRCLIB could not be read yet): the check is not finished. */
+export const lyricsPending = (song, v) => Boolean(v) && v.source !== 'house' && lyricsWanted(v, false, song) !== null;
 
 /**
  * Ask `lyrics` (src/lyrics.js judgeFromLyrics) and fold its answer into `base`. null when it had

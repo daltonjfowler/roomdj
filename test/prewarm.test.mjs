@@ -83,6 +83,25 @@ test('prewarm: the songbook after the day\'s charts, one pass per list, a new li
   assert.deepEqual([four.songbook, four.asked], [songbook.length, 0], 'all known: the whole list in one run, no AI');
 });
 
+test('prewarm: a songbook song stuck while LRCLIB is down is checked again after the pass', async () => {
+  const env = {
+    CLASS_KV: fakeKv(),
+    AI: { run: async () => ({ response: '{"instrumental":false,"verdict":"UNKNOWN","category":null,"evidence":""}' }) },
+  };
+  const now = Date.UTC(2026, 9, 29, 12);
+  const down = async () => new Response('Bad Gateway', { status: 502 });
+  const up = async () => new Response('[]', { headers: { 'content-type': 'application/json' } });
+  const songbook = Array.from({ length: 3 }, (_, i) => ({ id: `it:${6000 + i}`, title: `Wait ${i}`, artist: 'Shelf', album: '', durationMs: 1 }));
+  const run = (lyricsFetch) => prewarm(env, { now, fetchImpl: feed(0), lyricsFetch, songbook, songbookMade: '2026-10-29' });
+  const state = () => JSON.parse(env.CLASS_KV.map.get('prewarm:v1:songbook'));
+  assert.equal((await run(down)).songbook, songbook.length, 'the pass goes on');
+  assert.deepEqual(state().retry, [0, 1, 2], 'LRCLIB down: all three kept to check again');
+  await run(down);
+  assert.deepEqual(state().retry, [0, 1, 2], 'still down: the first one stuck ends the retries');
+  await run(up);
+  assert.deepEqual(state().retry, [], 'LRCLIB back: all three settled');
+});
+
 const gEntry = (i, genre = 'Pop') => ({
   id: { attributes: { 'im:id': String(7000 + i) } }, 'im:name': { label: `Genre Song ${i}` }, 'im:artist': { label: `Band ${i}` },
   category: { attributes: { label: genre } }, 'im:releaseDate': { label: '2025-03-01T00:00:00-07:00' },
@@ -161,4 +180,14 @@ test('growShelves: a ✓ Checked seed joins the grown list even when no shelf ta
   assert.equal(await growShelves(env, found, holiday, new Set(), new Set()), 0, 'not a seed, no shelf: left out');
   assert.equal(await growShelves(env, found, holiday, new Set(), new Set([banKey(found[0])])), 1);
   assert.deepEqual(readGrown(JSON.parse(env.CLASS_KV.map.get(GROWN_KEY))).map((s) => s.id), ['it:7001']);
+});
+
+test('growShelves: a seed joins with its own details while iTunes refuses the Worker', async () => {
+  const env = { CLASS_KV: fakeKv() };
+  const seed = { id: 'it:7002', title: 'Seed Song', artist: 'Band 2', album: 'LP', artwork: 'https://is1-ssl.mzstatic.com/a.jpg', durationMs: 200000, explicit: 'notExplicit', previewUrl: 'https://audio-ssl.itunes.apple.com/a.m4a', genre: 'Pop', year: 2024 };
+  let looked = 0;
+  const refused = async () => { looked++; return new Response('', { status: 403 }); };
+  assert.equal(await growShelves(env, [{ id: 'it:7002', title: 'Seed Song', artist: 'Band 2' }], refused, new Set(), new Map([[banKey(seed), seed]])), 1);
+  assert.equal(looked, 0, 'no iTunes call for a seed');
+  assert.deepEqual(readGrown(JSON.parse(env.CLASS_KV.map.get(GROWN_KEY)))[0].shelves, ['pop']);
 });

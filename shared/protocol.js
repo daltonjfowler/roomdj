@@ -257,6 +257,9 @@ export const QUERY_MAX = 80;
 // Consolidated (Dalton, 2026-10-31: "analyze the list and consolidate as needed to offer the MOST
 // important and descriptive genres"), most asked first: grunge joined Alternative & indie, pop punk and
 // emo joined Punk, ska joined Reggae (ska punk shows on both). A song may be on several lists.
+// More lists (Dalton, 2026-10-31: "Add all of those but make gospel / Christian a setting that's off
+// by default"): 🎭 Musicals split from Movies, 🎮 Games & anime, 🌏 World, 🪕 Folk & bluegrass, and
+// 🙏 Gospel & Christian, shown only while the teacher's gospelShelf setting is on (shelfShown).
 export const SHELVES = Object.freeze([
   { id: 'popular', label: '🔥 Popular on RoomDJ' },
   { id: 'pop', label: '🎤 Pop' },
@@ -266,7 +269,9 @@ export const SHELVES = Object.freeze([
   { id: 'latin', label: '💃 Latin' },
   { id: 'kpop', label: '💜 K-pop' },
   { id: 'dance', label: '🪩 Dance & EDM' },
-  { id: 'movies', label: '🎬 Movies & musicals' },
+  { id: 'movies', label: '🎬 Movies & TV' },
+  { id: 'musicals', label: '🎭 Musicals' },
+  { id: 'games', label: '🎮 Games & anime' },
   { id: 'throwbacks', label: '📻 Throwbacks' },
   { id: 'classicrock', label: '📼 Classic rock' },
   { id: 'indie', label: '🌿 Alternative & indie' },
@@ -275,10 +280,15 @@ export const SHELVES = Object.freeze([
   { id: 'soul', label: '🕺 Soul, funk & Motown' },
   { id: 'reggae', label: '🌴 Reggae & ska' },
   { id: 'afrobeats', label: '🌍 Afrobeats' },
+  { id: 'world', label: '🌏 World' },
+  { id: 'folk', label: '🪕 Folk & bluegrass' },
   { id: 'jazz', label: '🎷 Jazz & blues' },
+  { id: 'gospel', label: '🙏 Gospel & Christian', setting: 'gospelShelf' },
   { id: 'classical', label: '🎻 Classical' },
   { id: 'focus', label: '📚 Focus (no words)' },
 ]);
+/** A list this room shows: one with a `setting` only while that setting is on. */
+export const shelfShown = (shelf, settings) => Boolean(shelf) && (!shelf.setting || settings?.[shelf.setting] === true);
 /** Most songs one shelf sends (its top ranked ones). */
 export const SHELF_MAX = 150;
 export const POPULAR_MAX = 60;
@@ -366,6 +376,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   //                   shared/filter.js kidSafeArtist), 'allow' = always let in (still: explicit flag, word lists,
   //                   bans, Instrumentals only), 'block' = never (left out of search, refused with reason
   //                   'kidzbop'). Saved settings and rooms without it read as 'check'.
+  gospelShelf: false, // 🙏 the Gospel & Christian list (SONGBOOK above; Dalton, 2026-10-31: "a setting that's off
+  //                     by default"): off = students and the teacher never see it. Saved settings and rooms without it read as false.
   maxDownvotes: 3, // 👎 per student per class (DOWNVOTE LIMIT below): a whole number 1..20, null = unlimited.
   //                  Saved settings and rooms without it read as 3.
   upvotes: true, // 👍 votes on or off (UPVOTE LIMIT below). Saved settings and rooms without it read as true.

@@ -374,6 +374,23 @@ test('settings: the three switches are booleans; old saved settings and rooms re
   assert.deepEqual(snapshotFor(saved, A).top5, []);
 });
 
+test('settings: 🙏 the Gospel & Christian list is off by default; shelfShown hides it until it is on', async () => {
+  const { SHELVES, shelfShown } = await import('../shared/protocol.js');
+  assert.equal(DEFAULT_SETTINGS.gospelShelf, false);
+  assert.equal(validateSettings({ gospelShelf: 'yes' }).ok, false);
+  const { gospelShelf, ...old } = DEFAULT_SETTINGS;
+  assert.equal(validateSettings({ ...old, blocklist: [] }).settings.gospelShelf, false);
+  const saved = room();
+  delete saved.settings.gospelShelf;
+  migrateRoomState(saved);
+  assert.equal(saved.settings.gospelShelf, false);
+  const gospel = SHELVES.find((s) => s.id === 'gospel');
+  assert.equal(shelfShown(gospel, DEFAULT_SETTINGS), false);
+  assert.equal(shelfShown(gospel, { gospelShelf: true }), true);
+  assert.equal(shelfShown(SHELVES.find((s) => s.id === 'folk'), DEFAULT_SETTINGS), true);
+  assert.deepEqual(SHELVES.filter((s) => s.setting).map((s) => s.id), ['gospel'], 'only Gospel is behind a switch');
+});
+
 test('teacher KV keys: the plain name without a profile (today), p:<id>:<name> with one', async () => {
   const { teacherKvKey } = await import('../src/teacher-kv.js');
   assert.equal(teacherKvKey('favorites'), 'favorites');

@@ -696,6 +696,16 @@ Claude account).
    (growShelves seeds), so lists fill with no archive rebuild (GROWN_MAX 7000). PREWARM_BOOST: a
    weekend catch-up (Sat 2026-10-31 19:00 UTC to Mon 2026-11-02 10:00 UTC, no classes): 25 songs a
    run, 5000 a day; it ends by itself.
+   (h) More lists + the fill fixes (Dalton, 2026-10-31: "Add all of those but make gospel / Christian
+   a setting that's off by default", "Please fill all categories"): 🎭 Musicals (split from 🎬 Movies
+   & TV), 🎮 Games & anime, 🌏 World, 🪕 Folk & bluegrass, 🙏 Gospel & Christian. Gospel has
+   `setting: 'gospelShelf'` (DEFAULT_SETTINGS false): shelfShown hides its button on the student
+   page and the teacher's Suggest box, and Room.shelfResults sends nothing for it while off. Fills:
+   a seed found ✓ Checked joins the grown list with its own details (seedKeys is banKey → song), no
+   iTunes lookup (iTunes refuses the Worker, so growShelves had added nothing). A songbook song the
+   check could not finish (lyricsPending: LRCLIB down) goes on the pass's `retry` list (KV
+   prewarm:v1:songbook, at most SONGBOOK_RETRY_MAX) and is checked again after the pass; the first
+   one still stuck ends that run's retries.
    (b) Hand-checked songs (shared/filter.js HOUSE_OK, houseOk): Dalton's own per-song calls for every
    teacher, like a teacher's Allow (source 'house', no AI or lyrics call). Only the clean edit (the
    explicit flag still refuses), bans, blocked words, 🙉 and Instrumentals only still count. Add ONLY

@@ -118,6 +118,7 @@ export function migrateRoomState(state, { testAiOff = false } = {}) {
   state.tally ??= { songs: {}, votes: {}, log: [] };
   state.profile ??= null;
   state.settings.showFavorites ??= DEFAULT_SETTINGS.showFavorites;
+  state.settings.gospelShelf ??= false;
   state.settings.noBackToBackArtist ??= false;
   state.settings.oneSongPerArtist ??= false;
   // Rooms saved before repeats: song keys from the history, the cooldown as the default.

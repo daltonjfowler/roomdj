@@ -102,6 +102,12 @@ test('archiveShelves and shelfWorthy', () => {
   assert.deepEqual(archiveShelves({ genre: 'Pop', year: 2024 }), ['pop']);
   assert.deepEqual(archiveShelves({ genre: 'Hip-Hop/Rap', year: 2005 }), ['hiphop', 'throwbacks']);
   assert.deepEqual(archiveShelves({ genre: 'K-Pop', year: 2025 }), ['kpop']);
+  // The lists added after (🎭 🎮 🌏 🪕 🙏).
+  assert.deepEqual(archiveShelves({ genre: 'Musicals', year: 2015 }, {}, new Map()), ['movies', 'musicals']);
+  assert.deepEqual(archiveShelves({ genre: 'Video Game', year: 2015 }, {}, new Map()), ['games']);
+  assert.deepEqual(archiveShelves({ genre: 'J-Pop', year: 2023 }, {}, new Map()), ['world']);
+  assert.deepEqual(archiveShelves({ genre: 'Bluegrass', year: 2021 }, {}, new Map()), ['country', 'folk']);
+  assert.deepEqual(archiveShelves({ genre: 'Christian & Gospel', year: 2019 }, {}, new Map()), ['gospel']);
   assert.deepEqual(archiveShelves({ genre: 'Alternative', year: 2010 }), ['rock']);
   assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }), ['classical'], 'no words not known: not Focus');
   assert.deepEqual(archiveShelves({ genre: 'Classical', year: 2020 }, { instrumental: true }), ['focus', 'classical']);

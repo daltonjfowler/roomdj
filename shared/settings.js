@@ -201,6 +201,7 @@ export function validateSettings(input, { testAiOff = false } = {}) {
     coupons: bool(errors, 'Coupons', pick('coupons')),
     periodMinutes: intInRange(errors, 'Class period length (minutes)', pick('periodMinutes'), SETTINGS_LIMITS.periodMinutes),
     showFavorites: bool(errors, 'Class favorites', pick('showFavorites')),
+    gospelShelf: bool(errors, 'Gospel & Christian list', pick('gospelShelf')),
     noBackToBackArtist: bool(errors, 'No back-to-back artist', pick('noBackToBackArtist')),
     oneSongPerArtist: bool(errors, 'One song per artist', pick('oneSongPerArtist')),
     cooldownDays: cooldownDays(errors, pick('cooldownDays')),

@@ -225,12 +225,14 @@ export function initHighlights({ send, duck = () => {}, boards = () => 0, isBig 
   // ---- 🎨 Settings switches (shared/protocol.js DEFAULT_SETTINGS) ----
   function fillSettings(s) {
     $('#setShowFav').checked = s.showFavorites !== false;
+    $('#setGospel').checked = s.gospelShelf === true;
     $('#setBackToBack').checked = s.noBackToBackArtist === true;
     $('#setOnePerArtist').checked = s.oneSongPerArtist === true;
   }
   function readSettings() {
     return {
       showFavorites: $('#setShowFav').checked,
+      gospelShelf: $('#setGospel').checked,
       noBackToBackArtist: $('#setBackToBack').checked,
       oneSongPerArtist: $('#setOnePerArtist').checked,
     };

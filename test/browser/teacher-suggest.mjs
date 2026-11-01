@@ -227,6 +227,7 @@ try {
   // 📚 The songbook's lists with no search first (Dalton, 2026-10-31: "I shouldn't have to search first").
   await host.page.click('#suggestBtn');
   check('Suggest a song: the list buttons show while the box is empty', await visible(host, '#tShelves') && (await host.page.locator('#tShelfBtns button').count()) >= 20);
+  check('Suggest a song: no 🙏 Gospel list while it is off', (await host.page.locator('#tShelfBtns button[data-shelf="gospel"]').count()) === 0);
   const nShelf = host.msgs.length;
   await host.page.click('#tShelfBtns button[data-shelf="hiphop"]');
   const shelfMsg = await until(() => host.msgs.slice(nShelf).find((m) => m.t === 'searchResults' && m.shelf === 'hiphop'), { timeout: 15_000 });

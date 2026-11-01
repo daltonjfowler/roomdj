@@ -15,7 +15,7 @@
 // 2026-10-30: "expand the pre-checked songs we have by a lot"). Known songs cost no AI call and do not
 // count against PREWARM_PER_RUN, only against PREWARM_SCAN_PER_RUN (KV reads).
 
-import { aiThemeCheck, banKey, checkFromKv } from '../shared/filter.js';
+import { aiThemeCheck, banKey, checkFromKv, lyricsPending } from '../shared/filter.js';
 import { parseItunes, toSong } from '../shared/itunes.js';
 import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
 import { nightHours } from './night.js';
@@ -120,28 +120,32 @@ async function genreSongs(env, day, fetchImpl) {
 
 /**
  * Songs a run found ✓ Checked join the shelves (KV GROWN_KEY): the ones not there yet (nor in the
- * seeds or archive) are looked up on iTunes in one call for their cover, preview and real
- * explicitness, then kept when shelfWorthy and a shelf takes their genre. A failed lookup only waits:
+ * archive). A seed comes with its iTunes details; a chart song is looked up on iTunes (one call for
+ * all) for its cover, preview and real explicitness. Kept when shelfWorthy and a shelf takes their genre. A failed lookup only waits:
  * the chart songs come round again. → how many joined
  */
 export async function growShelves(env, found, fetchImpl, baked = bakedKeys(), seeds = seedKeys()) {
   if (!found.length) return 0;
   const grown = readGrown(await env.CLASS_KV.get(GROWN_KEY, 'json'));
   const have = new Set([...grown.map(banKey), ...baked]);
-  const todo = found.filter((s) => /^it:\d+$/.test(s.id) && !have.has(banKey(s))).slice(0, LOOKUP_MAX);
-  if (!todo.length) return 0;
-  let results;
-  try {
-    const r = await fetchImpl(`https://itunes.apple.com/lookup?id=${todo.map((s) => s.id.slice(3)).join(',')}&entity=song&country=US`, { signal: AbortSignal.timeout(8000) });
-    if (!r.ok) throw new Error(`iTunes ${r.status}`);
-    results = parseItunes(await r.text()) ?? [];
-  } catch (e) {
-    console.error(JSON.stringify({ message: 'prewarm shelf lookup failed', error: String(e) }));
-    return 0;
+  const todo = found.filter((s) => /^it:\d+$/.test(s.id) && !have.has(banKey(s)));
+  // A seed has its iTunes details already (seeds: banKey → song); only the chart songs are looked up.
+  const known = todo.map((s) => seeds.get?.(banKey(s))).filter(Boolean);
+  const lookup = todo.filter((s) => !seeds.get?.(banKey(s))).slice(0, LOOKUP_MAX);
+  if (!known.length && !lookup.length) return 0;
+  let results = [];
+  if (lookup.length) {
+    try {
+      const r = await fetchImpl(`https://itunes.apple.com/lookup?id=${lookup.map((s) => s.id.slice(3)).join(',')}&entity=song&country=US`, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) throw new Error(`iTunes ${r.status}`);
+      results = (parseItunes(await r.text()) ?? []).map(toSong);
+    } catch (e) {
+      console.error(JSON.stringify({ message: 'prewarm shelf lookup failed', error: String(e) }));
+      if (!known.length) return 0;
+    }
   }
   const add = [];
-  for (const raw of results) {
-    const song = toSong(raw);
+  for (const song of [...known, ...results]) {
     if (!song || !shelfWorthy(song) || have.has(banKey(song))) continue;
     const shelves = archiveShelves(song);
     if (shelves.length || seeds.has(banKey(song))) add.push({ ...song, shelves });
@@ -178,6 +182,9 @@ async function todaysSongs(env, day, fetchImpl) {
 }
 
 /** One cron run. → { checked, asked, used } (for the log and tests). */
+/** Songbook songs kept to check again (their check could not finish), at most. */
+export const SONGBOOK_RETRY_MAX = 3000;
+
 export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyricsFetch, songbook = songbookToCheck(), songbookMade = SONGBOOK_MADE, baked, seeds } = {}) {
   const boost = now >= PREWARM_BOOST.from && now < PREWARM_BOOST.until;
   const perDay = boost ? PREWARM_BOOST.perDay : PREWARM_AI_PER_DAY;
@@ -202,17 +209,22 @@ export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyrics
     fetchImpl: lyricsFetch, // tests only (undefined: the real fetch)
     allow: async () => (!env.LYRICS_RATE_ALL || (await env.LYRICS_RATE_ALL.limit({ key: 'everyone' })).success) && budget(),
   });
+  /** → false when the check could not finish (the AI failed, or its lyrics could not be read): not settled. */
   const check = async (song) => {
     const before = asked;
+    let done = true;
     try {
       // ask: true (the check is on); no teacher scope: approvals are a teacher's, not facts.
-      await aiThemeCheck(song, env, { ask: true, scope: (k) => `prewarm-none:${k}`, lyrics, budget });
+      const ai = await aiThemeCheck(song, env, { ask: true, scope: (k) => `prewarm-none:${k}`, lyrics, budget });
+      done = !ai.failed && !lyricsPending(song, ai);
       if (song.explicit !== 'explicit' && (await checkFromKv(song, env, { scope: (k) => `prewarm-none:${k}` })) === 'ready') ready.push(song);
     } catch (e) {
+      done = false;
       console.error(JSON.stringify({ message: 'prewarm check failed', song: song.id, error: String(e) }));
     }
     scanned++;
     if (asked > before) checked++; // a known song cost no AI call: only the scan counts
+    return done;
   };
   const night = nightHours(now);
   const perRun = boost ? PREWARM_BOOST.perRun : night ? PREWARM_NIGHT_PER_RUN : PREWARM_PER_RUN;
@@ -223,10 +235,22 @@ export async function prewarm(env, { now = Date.now(), fetchImpl = fetch, lyrics
   let book = null;
   if (state.cursor >= songs.length && more() && songbook.length) {
     const kept = (await env.CLASS_KV.get(SONGBOOK_STATE, 'json')) ?? {};
-    book = { made: songbookMade, at: kept.made === songbookMade ? Number(kept.at) || 0 : 0 };
-    const start = book.at;
-    while (book.at < songbook.length && more()) await check(songbook[book.at++]);
-    if (book.at !== start || kept.made !== songbookMade) await env.CLASS_KV.put(SONGBOOK_STATE, JSON.stringify(book));
+    const same = kept.made === songbookMade;
+    book = { made: songbookMade, at: same ? Number(kept.at) || 0 : 0, retry: same && Array.isArray(kept.retry) ? kept.retry : [] };
+    const before = JSON.stringify(book);
+    // A song its check could not finish (LRCLIB down: Dalton, 2026-10-31, the lists stayed empty while
+    // the pass ran on past AI OKs no lyrics had confirmed) is kept in `retry` and checked again after
+    // the pass; one still stuck ends that run's retries (LRCLIB is likely still down).
+    while (book.at < songbook.length && more()) {
+      if (!(await check(songbook[book.at])) && book.retry.length < SONGBOOK_RETRY_MAX) book.retry.push(book.at);
+      book.at++;
+    }
+    while (book.at >= songbook.length && book.retry.length && more()) {
+      const i = book.retry[0];
+      if (songbook[i] && !(await check(songbook[i]))) break;
+      book.retry.shift();
+    }
+    if (JSON.stringify(book) !== before) await env.CLASS_KV.put(SONGBOOK_STATE, JSON.stringify(book));
   }
   // Then the genre charts.
   let genres = null;

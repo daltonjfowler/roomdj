@@ -4,13 +4,14 @@
 // the top DEPTH ones that are NOT explicit (not even a clean edit: those are the ones the check passes),
 // each artist's #1 first, then each one's #2, up to MAX songs a list. The same rules as every seed: NOT
 // approvals; the song check decides each one before a list shows it.
-// No depth for 🎬 Movies (an actor's other songs are not movie songs), 📻 Throwbacks (by year: the
+// No depth for 🎬 Movies and 🎭 Musicals (an actor's other songs are not movie songs), 🎮 Games & anime, 📻 Throwbacks (by year: the
 // archive fills it), 🎻 Classical and 📚 Focus (one piece, a hundred recordings).
 
 /** Songs per artist, per list. */
 export const DEPTH = {
   pop: 4, hiphop: 6, country: 6, rock: 4, latin: 6, kpop: 6, dance: 6,
   classicrock: 5, indie: 5, punk: 5, metal: 6, soul: 5, reggae: 6, afrobeats: 6, jazz: 5,
+  world: 5, folk: 5, gospel: 5,
 };
 /** Songs a list may have in all (hand seeds first): more where the check passes fewer. */
 export const MAX = { hiphop: 700, latin: 450, country: 420, indie: 420 };
@@ -151,5 +152,22 @@ export const ARTISTS = {
     'Preservation Hall Jazz Band', 'Postmodern Jukebox', 'B.B. King', 'Muddy Waters', 'John Lee Hooker', "Howlin' Wolf", 'Stevie Ray Vaughan', 'Buddy Guy', 'Gary Clark Jr.', 'Joe Bonamassa',
     'Keb\' Mo\'', 'Bonnie Raitt', 'Taj Mahal', 'Louis Prima', 'Cab Calloway', 'Fats Waller', 'Scott Joplin', 'Christone "Kingfish" Ingram', 'Big Mama Thornton', 'Robert Cray',
     'BADBADNOTGOOD',
+  ],
+  world: [
+    'YOASOBI', 'Kenshi Yonezu', 'Official HIGE DANdism', 'Fujii Kaze', 'Ado', 'Mrs. GREEN APPLE', 'Arijit Singh', 'A.R. Rahman', 'Shreya Ghoshal', 'Diljit Dosanjh',
+    'Stromae', 'Angèle', 'Indila', 'Zaz', 'Édith Piaf', 'Amr Diab', 'Khaled', 'Tarkan', 'Andrea Bocelli', 'Laura Pausini',
+    'Enya', 'Celtic Woman', 'The HU', 'Miriam Makeba', 'Ladysmith Black Mambazo', 'Seu Jorge', 'Sergio Mendes', 'Gilberto Gil', 'Bebel Gilberto', 'Teresa Teng',
+    'Jay Chou', 'G.E.M.', 'Gipsy Kings', "Israel Kamakawiwo'ole", 'Nathan Evans', 'Mariya Takeuchi', 'Tinariwen', 'Fairuz', 'Nancy Ajram', 'Shankar Mahadevan',
+  ],
+  folk: [
+    'Billy Strings', 'Tony Rice', 'Alison Krauss', 'Old Crow Medicine Show', 'The Lumineers', 'Mumford & Sons', 'The Avett Brothers', 'Fleet Foxes', 'Bon Iver', 'Simon & Garfunkel',
+    'Bob Dylan', 'Joni Mitchell', 'John Denver', 'James Taylor', 'Peter, Paul and Mary', 'Woody Guthrie', 'Sierra Ferrell', 'Molly Tuttle', 'The Head and the Heart', 'Nickel Creek',
+    'Punch Brothers', 'Sarah Jarosz', 'Gillian Welch', 'The Infamous Stringdusters', 'Ricky Skaggs', 'Bill Monroe', 'Doc Watson', 'Del McCoury Band', 'Rhiannon Giddens', 'Gregory Alan Isakov',
+    'Iron & Wine', 'Mt. Joy', 'Watchhouse', 'Darlingside', 'The Steel Wheels', 'Trampled by Turtles', 'Cat Stevens', 'Tracy Chapman', 'Judy Collins', 'Pete Seeger',
+  ],
+  gospel: [
+    'Chris Tomlin', 'Hillsong UNITED', 'Hillsong Worship', 'Elevation Worship', 'Maverick City Music', 'Bethel Music', 'Phil Wickham', 'Lauren Daigle', 'MercyMe', 'TobyMac',
+    'Casting Crowns', 'for KING & COUNTRY', 'Zach Williams', 'Brandon Lake', 'Kari Jobe', 'Cory Asbury', 'Matt Redman', 'Matt Maher', 'Tauren Wells', 'Kirk Franklin',
+    'Tasha Cobbs Leonard', 'CeCe Winans', 'Marvin Sapp', 'Fred Hammond', 'Mandisa', 'Newsboys', 'Jeremy Camp', 'Crowder', 'Jordan Feliz', 'Anne Wilson',
   ],
 };

@@ -61,7 +61,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { couponsOn, redeemCoupon } from './coupons.js';
 import { COUPON_MESSAGES } from '../shared/coupon.js';
-import { ADMITTED_MAX, DEVICE_ID_PATTERN, FILTER_REASONS, NICK_MAX, QUERY_MAX, SHELF_MAX } from '../shared/protocol.js';
+import { ADMITTED_MAX, DEVICE_ID_PATTERN, FILTER_REASONS, NICK_MAX, QUERY_MAX, SHELF_MAX, SHELVES, shelfShown } from '../shared/protocol.js';
 import { TEACHER_DEVICE, TEACHER_SEARCH_RATE, TEACHER_SUGGEST_RATE } from '../shared/protocol.js';
 import {
   addSuggestion, addToReview, allowBlocked, lockNext, allowReview, applyBlocklist, kickDevice, migrateRoomState, newRoomState,
@@ -1232,6 +1232,7 @@ export class Room extends DurableObject {
   /** A shelf's songs this room's rules let show, ✓ Checked only, in shelf order (kept like search's). */
   async shelfResults(shelf) {
     const s = this.room.settings;
+    if (!shelfShown(SHELVES.find((x) => x.id === shelf), s)) return []; // 🙏 Gospel while it is off
     const ctx = { blocklist: s.blocklist ?? [], banned: await this.banned(), notMusic: s.blockNotMusic !== false, kidzBop: s.kidzBop };
     const grown = shelf === 'popular' ? [] : await this.grownSongs();
     const shown = (shelf === 'popular' ? await this.popularSongs() : shelfSongs(shelf, undefined, undefined, grown)).filter((song) => !quickCheck(song, ctx));
