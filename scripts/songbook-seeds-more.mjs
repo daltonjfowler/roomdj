@@ -98,6 +98,10 @@ export const MORE = {
   ],
   rock: [
     ['Mr. Brightside', 'The Killers'], ['Somebody Told Me', 'The Killers'], ['Seven Nation Army', 'The White Stripes'], ['Take Me Out', 'Franz Ferdinand'],
+    // Dalton, 2026-10-31: John Mayer and more.
+    ['Gravity', 'John Mayer'], ['Slow Dancing in a Burning Room', 'John Mayer'], ['Waiting on the World to Change', 'John Mayer'], ['Daughters', 'John Mayer'],
+    ['Why Georgia', 'John Mayer'], ['New Light', 'John Mayer'], ['No One Knows', 'Queens of the Stone Age'], ['Go with the Flow', 'Queens of the Stone Age'],
+    ['Joker and the Thief', 'Wolfmother'], ['Lazaretto', 'Jack White'],
     ['Sweet Child O\' Mine', 'Guns N\' Roses'], ['Thunderstruck', 'AC/DC'], ['Back In Black', 'AC/DC'], ['You Shook Me All Night Long', 'AC/DC'],
     ['Eye of the Tiger', 'Survivor'], ['Jump', 'Van Halen'], ['Pour Some Sugar On Me', 'Def Leppard'], ['I Love Rock \'N Roll', 'Joan Jett & the Blackhearts'],
     ['Smells Like Teen Spirit', 'Nirvana'], ['Come As You Are', 'Nirvana'], ['Everlong', 'Foo Fighters'], ['Learn to Fly', 'Foo Fighters'],
@@ -128,6 +132,9 @@ export const MORE = {
     ['Welcome to Earth (Pollywog)', 'Sturgill Simpson'], ['All Around You', 'Sturgill Simpson'], ['In Bloom', 'Sturgill Simpson'], ['Oh Sarah', 'Sturgill Simpson'],
     ['Who I Am', 'Johnny Blue Skies'], ['If the Sun Never Rises Again', 'Johnny Blue Skies'], ['Swamp of Sadness', 'Johnny Blue Skies'], ['Right Kind of Dream', 'Johnny Blue Skies'],
     ['Freeborn Man', 'Tony Rice'],
+    // More roots music (Dalton, 2026-10-31: "diverse artists").
+    ["All Your'n", 'Tyler Childers'], ['Lady May', 'Tyler Childers'], ['In Your Love', 'Tyler Childers'], ['I and Love and You', 'The Avett Brothers'],
+    ["Ain't No Man", 'The Avett Brothers'], ['In Dreams', 'Sierra Ferrell'], ['American Dreaming', 'Sierra Ferrell'], ['Crooked Tree', 'Molly Tuttle'],
     ['Need You Now', 'Lady A'], ['Cruise', 'Florida Georgia Line'], ['H.O.L.Y.', 'Florida Georgia Line'], ['Meant to Be', 'Bebe Rexha'],
     ['Body Like A Back Road', 'Sam Hunt'], ['Die A Happy Man', 'Thomas Rhett'], ['Life Changes', 'Thomas Rhett'], ['Remember You Young', 'Thomas Rhett'],
     ['Before He Cheats', 'Carrie Underwood'], ['Jesus, Take the Wheel', 'Carrie Underwood'], ['Cowboy Casanova', 'Carrie Underwood'], ['Wagon Wheel', 'Darius Rucker'],
@@ -140,6 +147,7 @@ export const MORE = {
   ],
   latin: [
     ['Despacito', 'Luis Fonsi'], ['Mi Gente', 'J Balvin'], ['Hips Don\'t Lie', 'Shakira'], ['Waka Waka (This Time for Africa)', 'Shakira'],
+    ['Soy Yo', 'Bomba Estéreo'], ['Chan Chan', 'Buena Vista Social Club'], ['Dos Gardenias', 'Buena Vista Social Club'],
     ['Whenever, Wherever', 'Shakira'], ['La Bicicleta', 'Carlos Vives'], ['Bailando', 'Enrique Iglesias'], ['Danza Kuduro', 'Don Omar'],
     ['Gasolina', 'Daddy Yankee'], ['Con Calma', 'Daddy Yankee'], ['La Gozadera', 'Gente de Zona'], ['Vivir Mi Vida', 'Marc Anthony'],
     ['Livin\' la Vida Loca', 'Ricky Martin'], ['La Copa de la Vida', 'Ricky Martin'], ['Suavemente', 'Elvis Crespo'], ['La Bamba', 'Ritchie Valens'],

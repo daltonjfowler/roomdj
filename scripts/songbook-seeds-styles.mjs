@@ -115,6 +115,12 @@ export const STYLES = {
   ],
   indie: [
     ["Sweater Weather", "The Neighbourhood"], ["The Night We Met", "Lord Huron"], ["Riptide", "Vance Joy"], ["Ho Hey", "The Lumineers"],
+    // Dalton, 2026-10-31: "keep adding songs from diverse artists".
+    ["Favourite", "Fontaines D.C."], ["Starburster", "Fontaines D.C."], ["Jackie Down the Line", "Fontaines D.C."], ["Big", "Fontaines D.C."],
+    ["Fell on Black Days", "Soundgarden"], ["Outshined", "Soundgarden"], ["Burden in My Hand", "Soundgarden"], ["Rusty Cage", "Soundgarden"],
+    ["Last Nite", "The Strokes"], ["Reptilia", "The Strokes"], ["Someday", "The Strokes"], ["Time (You and I)", "Khruangbin"],
+    ["People Everywhere (Still Alive)", "Khruangbin"], ["Maria También", "Khruangbin"], ["Archie, Marry Me", "Alvvays"], ["Dreams Tonite", "Alvvays"],
+    ["Be Sweet", "Japanese Breakfast"], ["Kokomo, IN", "Japanese Breakfast"], ["Kingston", "Faye Webster"], ["Right Side of My Neck", "Faye Webster"],
     // Dalton, 2026-10-31: Pearl Jam, Phoenix, Tame Impala, Nirvana.
     ["About a Girl", "Nirvana"], ["Something in the Way", "Nirvana"],
     ["Black", "Pearl Jam"], ["Yellow Ledbetter", "Pearl Jam"], ["Jeremy", "Pearl Jam"], ["Just Breathe", "Pearl Jam"],
@@ -169,6 +175,9 @@ export const STYLES = {
   ],
   soul: [
     ["My Girl", "The Temptations"], ["Ain't No Mountain High Enough", "Marvin Gaye & Tammi Terrell"], ["Signed, Sealed, Delivered (I'm Yours)", "Stevie Wonder"], ["Superstition", "Stevie Wonder"],
+    // Dalton, 2026-10-31: Thundercat and more.
+    ["Them Changes", "Thundercat"], ["Funny Thing", "Thundercat"], ["Tokyo", "Thundercat"], ["Show You the Way", "Thundercat"],
+    ["Colors", "Black Pumas"], ["Fire", "Black Pumas"], ["Cold Little Heart", "Michael Kiwanuka"], ["Love & Hate", "Michael Kiwanuka"],
     // Anderson .Paak and Silk Sonic (Dalton, 2026-10-31).
     ["Leave the Door Open", "Silk Sonic"], ["Smokin Out the Window", "Silk Sonic"], ["Skate", "Silk Sonic"], ["Come Down", "Anderson .Paak"],
     ["Sir Duke", "Stevie Wonder"], ["Isn't She Lovely", "Stevie Wonder"], ["Higher Ground", "Stevie Wonder"], ["I Want You Back", "The Jackson 5"],
@@ -187,6 +196,7 @@ export const STYLES = {
   ],
   jazz: [
     ["What a Wonderful World", "Louis Armstrong"], ["La Vie en rose", "Louis Armstrong"], ["Hello, Dolly!", "Louis Armstrong"], ["When the Saints Go Marching In", "Louis Armstrong"],
+    ["Time Moves Slow", "BADBADNOTGOOD"], ["Smile", "DOMi & JD BECK"], ["Afro Blue", "Robert Glasper Experiment"],
     ["Dream a Little Dream of Me", "Ella Fitzgerald"], ["Summertime", "Ella Fitzgerald"], ["Cheek to Cheek", "Ella Fitzgerald"], ["Take the \"A\" Train", "Duke Ellington"],
     ["It Don't Mean a Thing (If It Ain't Got That Swing)", "Duke Ellington"], ["In the Mood", "Glenn Miller"], ["Moonlight Serenade", "Glenn Miller"], ["Chattanooga Choo Choo", "Glenn Miller"],
     ["Take Five", "Dave Brubeck"], ["Blue in Green", "Miles Davis"], ["Fly Me to the Moon", "Frank Sinatra"], ["The Way You Look Tonight", "Frank Sinatra"],

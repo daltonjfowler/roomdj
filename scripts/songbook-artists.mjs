@@ -13,7 +13,7 @@ export const DEPTH = {
   classicrock: 5, indie: 5, punk: 5, metal: 6, soul: 5, reggae: 6, afrobeats: 6, jazz: 5,
 };
 /** Songs a list may have in all (hand seeds first): more where the check passes fewer. */
-export const MAX = { hiphop: 700, latin: 450, country: 420 };
+export const MAX = { hiphop: 700, latin: 450, country: 420, indie: 420 };
 export const MAX_DEFAULT = 340;
 /**
  * Songs an artist's top songs never bring in (title - artist), Dalton's own calls: the check could
@@ -23,6 +23,8 @@ export const SKIP = [
   'Nausea - Jeff Rosenstock', // "nausea is about alcohol" (Dalton, 2026-10-31)
   'Turtles All the Way Down - Sturgill Simpson', // drugs
   'You Can Have the Crown - Sturgill Simpson', // weed, swearing
+  'Whitehouse Road - Tyler Childers', // drugs
+  'Time to Pretend - MGMT', // drugs
 ];
 
 export const ARTISTS = {
@@ -52,6 +54,7 @@ export const ARTISTS = {
     'Reba McEntire', 'Shania Twain', 'Dolly Parton', 'Johnny Cash', 'Willie Nelson', 'Dierks Bentley', 'Florida Georgia Line', 'Rascal Flatts',
     'Lady A', 'Little Big Town', 'Zac Brown Band', 'HARDY', 'Parker McCollum', 'Megan Moroney', 'Ella Langley', 'Shaboozey',
     'Tucker Wetmore', 'Dasha', 'Warren Zeiders', 'Russell Dickerson', 'Scotty McCreery', 'Hunter Hayes', 'Brooks & Dunn', 'Josh Turner',
+    'Tyler Childers', 'The Avett Brothers', 'Sierra Ferrell', 'Molly Tuttle', 'Alison Krauss',
   ],
   rock: [
     'Imagine Dragons', 'Coldplay', 'The Killers', 'Foo Fighters', 'Green Day', 'Linkin Park', 'Red Hot Chili Peppers', 'AC/DC',
@@ -60,6 +63,7 @@ export const ARTISTS = {
     '3 Doors Down', 'Matchbox Twenty', 'Goo Goo Dolls', 'X Ambassadors', 'AJR', 'Bastille', 'Royal Blood', 'Greta Van Fleet',
     'Måneskin', 'The White Stripes', 'Weezer', 'Switchfoot', 'Lifehouse', 'The Fray', 'Train', 'Hoobastank',
     'Collective Soul', 'Creed', 'Vertical Horizon', 'Evanescence', 'Skillet', 'Papa Roach', 'Halestorm', 'The Pretty Reckless',
+    'John Mayer', 'Queens of the Stone Age', 'Wolfmother', 'Jack White',
   ],
   latin: [
     'Bad Bunny', 'KAROL G', 'Shakira', 'J Balvin', 'Daddy Yankee', 'Maluma', 'Ozuna', 'Rauw Alejandro', 'Peso Pluma', 'Grupo Frontera',
@@ -68,6 +72,7 @@ export const ARTISTS = {
     'Feid', 'Myke Towers', 'Luis Fonsi', 'Nicky Jam', 'Wisin & Yandel', 'Don Omar', 'CNCO', 'Camilo', 'Morat', 'Reik',
     'Jesse & Joy', 'Julieta Venegas', 'Natalia Lafourcade', 'Vicente Fernández', 'Alejandro Fernández', 'Luis Miguel', 'Juan Gabriel', 'Los Ángeles Azules', 'Banda MS', 'Calibre 50',
     'Christian Nodal', 'Ángela Aguilar', 'Kali Uchis', 'Danny Ocean', 'Elvis Crespo', 'Gente de Zona', 'Santana', 'Los Lobos', 'Mon Laferte', 'Xavi',
+    'Bomba Estéreo', 'Buena Vista Social Club',
   ],
   kpop: [
     'BTS', 'BLACKPINK', 'TWICE', 'Stray Kids', 'SEVENTEEN', 'NewJeans', 'LE SSERAFIM', 'IVE', 'aespa', 'i-dle',
@@ -100,6 +105,7 @@ export const ARTISTS = {
     'WALK THE MOON', 'Bleachers', 'fun.', 'Portugal. The Man', 'Death Cab for Cutie', 'The Shins', 'Fleet Foxes', 'The National', 'Arcade Fire', 'Franz Ferdinand',
     'The Wombats', 'Catfish and the Bottlemen', 'Phoebe Bridgers', 'boygenius', 'Lana Del Rey', 'Lorde', 'Alanis Morissette', 'Stone Temple Pilots', 'Alice In Chains', 'Bush',
     'Men I Trust', 'Kate Bollinger', 'natalie jinju', 'Suki Waterhouse', 'Mac DeMarco', 'Phoenix',
+    'Fontaines D.C.', 'The Strokes', 'Khruangbin', 'Alvvays', 'Japanese Breakfast', 'Faye Webster', 'Big Thief', 'Bon Iver',
   ],
   punk: [
     'Green Day', 'blink-182', 'The Offspring', 'Sum 41', 'Fall Out Boy', 'Paramore', 'My Chemical Romance', 'All Time Low', 'Simple Plan', 'Good Charlotte',
@@ -122,7 +128,7 @@ export const ARTISTS = {
     'Donna Summer', 'Gloria Gaynor', 'Commodores', 'Lionel Richie', 'Parliament', 'James Brown', 'Sly & The Family Stone', 'Prince', 'Chaka Khan', 'Luther Vandross',
     'Amy Winehouse', 'Leon Bridges', 'Vulfpeck', 'Cory Wong', 'Jungle', 'Durand Jones & The Indications', 'Charles Bradley', 'Sharon Jones & The Dap-Kings', 'Curtis Mayfield', 'The Isley Brothers',
     "The O'Jays", 'The Spinners', 'Daryl Hall & John Oates', 'Wilson Pickett', 'Sam & Dave', 'Martha Reeves & The Vandellas', 'The Drifters', 'The Platters', 'Frankie Valli & The Four Seasons', 'Jackie Wilson',
-    'Anderson .Paak', 'Silk Sonic',
+    'Anderson .Paak', 'Silk Sonic', 'Thundercat', 'Black Pumas', 'Michael Kiwanuka',
   ],
   reggae: [
     'Bob Marley & The Wailers', 'Peter Tosh', 'Jimmy Cliff', 'Toots & The Maytals', 'UB40', 'Inner Circle', 'Ziggy Marley', 'Stephen Marley', 'Burning Spear', 'Desmond Dekker',
@@ -144,5 +150,6 @@ export const ARTISTS = {
     'Diana Krall', 'Norah Jones', 'Jamie Cullum', 'Gregory Porter', 'Laufey', 'Samara Joy', 'Esperanza Spalding', 'Kamasi Washington', 'Snarky Puppy', 'Trombone Shorty',
     'Preservation Hall Jazz Band', 'Postmodern Jukebox', 'B.B. King', 'Muddy Waters', 'John Lee Hooker', "Howlin' Wolf", 'Stevie Ray Vaughan', 'Buddy Guy', 'Gary Clark Jr.', 'Joe Bonamassa',
     'Keb\' Mo\'', 'Bonnie Raitt', 'Taj Mahal', 'Louis Prima', 'Cab Calloway', 'Fats Waller', 'Scott Joplin', 'Christone "Kingfish" Ingram', 'Big Mama Thornton', 'Robert Cray',
+    'BADBADNOTGOOD',
   ],
 };
