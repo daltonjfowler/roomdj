@@ -544,6 +544,10 @@ Claude account).
    cron (src/prewarm.js, every 15 min) checks Apple's most-played charts (us/gb/ca/au) before classes
    suggest them, at most PREWARM_AI_PER_DAY AI calls a day. PAUSED: PREWARM_ON false since 2026-11-03
    (Dalton: stop the nonstop crawl, be kind to LRCLIB, the library is big enough); the cron skips it.
+   The songs it left waiting on their lyrics are finished by src/lyrics-finish.js (Dalton: "finish the
+   978 lyric checks left in queue, just don't pull new songs"): one pass over the iTunes-id verdicts,
+   FINISH_PER_RUN a run, iTunes lookup for real titles, same aiThemeCheck + patient lyrics; never a song
+   without a verdict. KV lyricsfinish:v1 { cursor, skip, tries, asked, done }; admin shows its progress.
 29. Admin (Dalton, 2026-10-14; src/admin.js, web/admin/, web/src/admin-page.js): /admin/ for a SPOTIFY
    sign-in whose profile id is on `ADMIN_PROFILES` (wrangler vars) only, never the teacher key; anyone
    else gets 404. Stats from KV lists + METADATA (prof:v1 and use:v1 are written with metadata; keep it

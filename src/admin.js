@@ -14,6 +14,8 @@ import { OWN_PROFILE_PREFIX, PROFILE_ID_PATTERN } from '../shared/protocol.js';
 import { PROMPT_VERSION } from '../shared/filter.js';
 import { FREE_CAPS } from './free.js';
 import { readChecked } from './checked-count.js';
+import { FINISH_KEY } from './lyrics-finish.js';
+import { PREWARM_ON } from './prewarm.js';
 import { ACTIVITY_PREFIX } from './teacher-activity.js';
 import { readOpenRooms } from './open-rooms.js';
 import { teacherKvKey } from './teacher-kv.js';
@@ -93,7 +95,7 @@ async function changeFreeTeacher(env, id, body) {
 async function stats(env) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
-  const [list, links, own, sessions, use, verdicts, prewarm, requests, checked, acts, lyrics] = await Promise.all([
+  const [list, links, own, sessions, use, verdicts, prewarm, requests, checked, acts, lyrics, finish] = await Promise.all([
     ensureProfiles(env),
     listAll(env, 'link:v1:', 1),
     listAll(env, 'prof:v1:'),
@@ -105,6 +107,7 @@ async function stats(env) {
     readChecked(env), // ✓ Checked songs, counted by the cron (src/checked-count.js)
     listAll(env, ACTIVITY_PREFIX, 1), // each teacher's tally (src/teacher-activity.js)
     lyricsHealth(env), // LRCLIB up or down (src/lyrics-gate.js)
+    env.CLASS_KV.get(FINISH_KEY, 'json'), // the waiting lyrics checks (src/lyrics-finish.js)
   ]);
   const linked = new Set(await Promise.all(links.keys.map((k) => env.CLASS_KV.get(k.name))));
   const teachers = list.map((p) => ({
@@ -154,6 +157,8 @@ async function stats(env) {
     sessions: sessions.more ? `${sessions.keys.length}+` : sessions.keys.length,
     today: { teachers: todayUse.length, rooms: sum('rooms'), ai: sum('ai'), art: sum('art'), caps: FREE_CAPS },
     prewarm: prewarm ?? null,
+    prewarmOn: PREWARM_ON,
+    finish: finish ? { asked: finish.asked ?? 0, done: finish.done === true } : null,
     songs: verdicts.more ? `${songs}+` : songs,
     checked,
     lyrics,
