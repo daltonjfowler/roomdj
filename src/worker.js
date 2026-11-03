@@ -41,7 +41,7 @@ import { teacherKvKey } from './teacher-kv.js';
 import { handleProfiles, readProfileList, requestProfile, signedIn } from './profiles.js';
 import { handleAuth, teacherSession } from './auth.js';
 import { FREE_CAPS, freeUsage, spendFree } from './free.js';
-import { prewarm } from './prewarm.js';
+import { PREWARM_ON, prewarm } from './prewarm.js';
 import { nightHours, nightShift } from './night.js';
 import { readPopular, refreshPopular } from './popular.js';
 import { handleAdmin } from './admin.js';
@@ -693,11 +693,11 @@ export default {
     return page;
   },
   // The cron (wrangler.jsonc triggers): at night, the songs classes could not settle (src/night.js);
-  // then chart songs before classes suggest them (src/prewarm.js); once a day 🔥 Popular (src/popular.js).
+  // then chart songs before classes suggest them (src/prewarm.js, only while PREWARM_ON); once a day 🔥 Popular (src/popular.js).
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
       if (nightHours(Date.now())) await nightShift(env).catch((e) => console.error(JSON.stringify({ message: 'night shift failed', error: String(e) })));
-      await prewarm(env).catch((e) => console.error(JSON.stringify({ message: 'prewarm failed', error: String(e) })));
+      if (PREWARM_ON) await prewarm(env).catch((e) => console.error(JSON.stringify({ message: 'prewarm failed', error: String(e) })));
       await refreshPopular(env).catch((e) => console.error(JSON.stringify({ message: 'popular failed', error: String(e) })));
       await countChecked(env).catch((e) => console.error(JSON.stringify({ message: 'checked count failed', error: String(e) })));
     })());

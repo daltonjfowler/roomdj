@@ -25,6 +25,12 @@ import { GROWN_KEY, SONGBOOK_MADE, addGrown, archiveShelves, bakedKeys, readGrow
 // a call (llama 3.3), so the cap is about 40k neurons a day at most (~$0.30 a day over the free 10k);
 // it tapers off by itself as the lists become known songs (no AI).
 export const PREWARM_AI_PER_DAY = 1200;
+/**
+ * The cron runs prewarm only while this is on (src/worker.js scheduled). Off since 2026-11-03 (Dalton:
+ * "I feel bad pinging LRCLIB, we can stop our nonstop crawl now, we got enough songs"). Songs classes
+ * suggest are still checked as they come (and the night shift still settles the stuck ones).
+ */
+export const PREWARM_ON = false;
 /** Songs a run may send to the AI: few in the day (classes share the LRCLIB line), more at night. */
 export const PREWARM_PER_RUN = 6;
 export const PREWARM_NIGHT_PER_RUN = 30;
