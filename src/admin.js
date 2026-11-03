@@ -158,7 +158,7 @@ async function stats(env) {
     today: { teachers: todayUse.length, rooms: sum('rooms'), ai: sum('ai'), art: sum('art'), caps: FREE_CAPS },
     prewarm: prewarm ?? null,
     prewarmOn: PREWARM_ON,
-    finish: finish ? { asked: finish.asked ?? 0, done: finish.done === true } : null,
+    finish: finish ? { asked: finish.asked ?? 0, at: finish.at ?? 0, done: finish.done === true } : null,
     songs: verdicts.more ? `${songs}+` : songs,
     checked,
     lyrics,

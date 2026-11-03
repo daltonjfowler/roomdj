@@ -140,7 +140,7 @@ function render(s) {
     `Cover checks (free teachers): ${t.art} (each has ${t.caps.art} a day)`,
     s.prewarmOn === false ? 'Chart pre-check: paused (no new songs are pulled)'
       : s.prewarm ? `Chart pre-check: ${s.prewarm.used} AI checks, at song ${s.prewarm.cursor}` : 'Chart pre-check: not run yet today',
-    s.finish ? `Finishing the waiting lyrics checks: ${s.finish.asked.toLocaleString()} asked${s.finish.done ? ', all done' : ' so far'}` : 'Finishing the waiting lyrics checks: starts at the next cron',
+    s.finish ? `Finishing the waiting lyrics checks: ${s.finish.asked.toLocaleString()} asked${s.finish.done ? ', all done' : `, at songbook song ${s.finish.at.toLocaleString()}`}` : 'Finishing the waiting lyrics checks: starts at the next cron',
     lyricsLine(s.lyrics),
   ].map((x) => el('li', x)));
 
