@@ -209,6 +209,21 @@ try {
   check('the page labels it 🎲 RoomDJ', Boolean(await until(async () => (await text(host, '#hostScreen')).includes('🎲 RoomDJ'))));
   await shot(host, 'playing');
 
+  // The room goes quiet inside the gap (a skip, or a song that cannot play). Nobody joins, so no new
+  // state comes: the page must ask again by itself (Dalton, 2026-11-06: it "only triggers after students join").
+  const firstPick = lastState(host).nowPlaying.id;
+  await host.page.click('#skipBtn');
+  check('skipped: the room is quiet', Boolean(await stateOf(host, (s) => !s.nowPlaying && s.queue.length === 0, 5000)));
+  check('quiet with no one joining: autoplay picks again by itself', Boolean(await stateOf(host, (s) => s.nowPlaying?.autoplay === true && s.nowPlaying.id !== firstPick, 30_000)), JSON.stringify(lastState(host)?.nowPlaying?.song?.title ?? null));
+
+  // Paused: an empty room adds nothing until Play.
+  hostWs.send({ t: 'skip', from: lastState(host).nowPlaying.id });
+  await stateOf(host, (s) => !s.nowPlaying && s.queue.length === 0, 5000);
+  await host.page.click('#playBtn');
+  check('paused: autoplay waits', !(await stateOf(host, (s) => s.nowPlaying || s.queue.length, 20_000)));
+  await host.page.click('#playBtn');
+  check('Play again: autoplay picks', Boolean(await stateOf(host, (s) => s.nowPlaying?.autoplay === true, 25_000)));
+
   // Off: an empty room stays quiet.
   hostWs.send({ t: 'settings', settings: { blockUnknownSongs: false, cooldownDays: null, maxSongMinutes: null, autoplay: false } });
   await stateOf(host, (s) => s.settings.autoplay === false);

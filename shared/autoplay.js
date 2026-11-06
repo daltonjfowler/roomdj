@@ -14,6 +14,9 @@ import { SHELVES, shelfShown } from './protocol.js';
 import { hasPlayed, isWaiting } from './queue.js';
 
 export const AUTOPLAY_GAP_MS = 15_000; // at most one pick this often (a refused pick waits too)
+export const AUTOPLAY_RETRY_MS = AUTOPLAY_GAP_MS + 1000; // the host page asks again after this, past the room's gap
+export const AUTOPLAY_NONE_WAIT_MS = 60_000; // the lists had no song: the next ask waits this long
+export const AUTOPLAY_TICK_MS = 3000; // how often the host page checks a quiet room (no state arrives then)
 export const AUTOPLAY_TRIES = 6; // songs tried per ask before giving up
 export const POPULAR_BOOST = 4; // 🔥 Popular on RoomDJ counts this many times more
 const PLACE_FALLOFF = 10; // the 11th song in a list is half as likely as the 1st, the 31st a quarter

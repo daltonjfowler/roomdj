@@ -44,7 +44,7 @@ import { NEXT_LOCK_S, PUSH_TAG, SHELVES, byLabel } from '../../shared/protocol.j
 import { BACK_TO_WORK_MINUTES, DEFAULT_SETTINGS, DOWNVOTE_CHOICES, UPVOTE_CHOICES } from '../../shared/protocol.js';
 import { clockLeft } from '../../shared/backtowork.js';
 import { FOCUS_MINUTES } from '../../shared/focus.js';
-import { AUTOPLAY_GAP_MS } from '../../shared/autoplay.js';
+import { AUTOPLAY_NONE_WAIT_MS, AUTOPLAY_RETRY_MS, AUTOPLAY_TICK_MS } from '../../shared/autoplay.js';
 import { afterShow, holdForShow } from '../../shared/recap-music.js';
 import { initRecapAudio } from './recap-audio.js';
 import { closeMenu, menuButtonOf, openMenu, openMenuIn } from './menu.js';
@@ -913,13 +913,19 @@ function onMessage(msg) {
       filler.setBlocked(msg.state.cleanup === true);
       if (!msg.state.nowPlaying && msg.state.queue.length === 0) {
         filler.event('idle');
-        askAutoplay(msg.state);
+        askAutoplay();
       }
       break;
     case 'autoplayed':
       // 🎲 Autoplay's pick (shared/autoplay.js): it plays like any queue song.
-      if (msg.ok) toast(`🎲 Autoplay: "${msg.title}" by ${msg.artist}.`, 'ok');
-      else toast(msg.message || 'Autoplay found no song to play right now.', 'warn', 9000);
+      if (msg.ok) {
+        autoplayWarned = false;
+        toast(`🎲 Autoplay: "${msg.title}" by ${msg.artist}.`, 'ok');
+      } else {
+        autoplayNext = Date.now() + AUTOPLAY_NONE_WAIT_MS;
+        if (!autoplayWarned) toast(msg.message || 'Autoplay found no song to play right now.', 'warn', 9000);
+        autoplayWarned = true;
+      }
       break;
     case 'blocked':
       blocked = Array.isArray(msg.list) ? msg.list : [];
@@ -1382,16 +1388,19 @@ function send(msg) {
 // ---- Toolbar ----
 $('#lockBtn').addEventListener('click', () => state && send({ t: 'lock', on: !state.locked }));
 
-// 🎲 Autoplay (shared/autoplay.js): the music is started, nothing plays, the queue is empty and no
-// background music link is set: the room adds a random ✓ Checked song from the teacher's lists.
-// The room keeps its own AUTOPLAY_GAP_MS too; this only stops one ask per state message.
-let autoplayAsked = 0;
-function askAutoplay(s) {
-  if (!started || s.cleanup || s.settings?.autoplay !== true || filler.hasLink) return;
-  if (Date.now() - autoplayAsked < AUTOPLAY_GAP_MS) return;
-  autoplayAsked = Date.now();
-  send({ t: 'autoplay' });
+// 🎲 Autoplay (shared/autoplay.js): the music is started and not paused, nothing plays, the queue is
+// empty and no background music link is set: the room adds a random ✓ Checked song from the teacher's
+// lists. A quiet room sends no new state, so the page also checks on a timer: an ask that came too soon
+// or found no song tries again by itself (Dalton, 2026-11-06: it "only triggers after students join").
+let autoplayNext = 0; // no ask before this time
+let autoplayWarned = false; // "found no song" shows once, until a song is found or the choices change
+function askAutoplay() {
+  const s = state;
+  if (!s || !started || paused || s.cleanup || s.settings?.autoplay !== true || filler.hasLink) return;
+  if (s.nowPlaying || s.queue.length || Date.now() < autoplayNext) return;
+  if (conn?.send({ t: 'autoplay' })) autoplayNext = Date.now() + AUTOPLAY_RETRY_MS;
 }
+setInterval(askAutoplay, AUTOPLAY_TICK_MS);
 
 // 🎲 Autoplay's choices sit by Background music (Dalton, 2026-11-01). Each change goes to this room
 // and to the teacher's saved settings at once (only these two fields), so the next room starts the same.
@@ -1431,7 +1440,8 @@ $('#autoplayForm').addEventListener('change', () => {
   };
   showAutoplay(state);
   if (!send({ t: 'settings', settings })) return;
-  if (settings.autoplay && state.nowPlaying == null && state.queue.length === 0) autoplayAsked = 0; // try now
+  autoplayNext = 0; // new choices: try now (the state on its way asks)
+  autoplayWarned = false;
   fetch('/api/teacher/settings', { method: 'PUT', headers: teacherHeaders(state.profile ?? currentProfile()?.id), body: JSON.stringify(settings) })
     .then((r) => r.ok || toast('Autoplay changed for this room, but it could not be saved for your next rooms.', 'warn'))
     .catch(() => {});
@@ -2231,13 +2241,15 @@ $('#startBtn').addEventListener('click', () => {
   updateButtons();
   if (loadedId) playNow();
   else syncPlayback();
-  if (state && !state.nowPlaying && state.queue.length === 0) askAutoplay(state); // 🎲 an empty room at the start
+  autoplayNext = 0;
+  askAutoplay(); // 🎲 an empty room at the start
 });
 $('#playBtn').addEventListener('click', () => {
   if (paused) {
     paused = false;
     if (loadedId) playNow();
     else syncPlayback();
+    askAutoplay(); // 🎲 it waited while paused
   } else {
     paused = true;
     player.pause();

@@ -776,8 +776,10 @@ Claude account).
    controls sit by Background music (#autoplayEdit "🎲 Autoplay: On/Off" opens #autoplayForm; Dalton:
    "same area as background playlist options"), NOT in the Settings dialog: each change sends only these
    two fields to the room AND PUTs them to /api/teacher/settings, so the next room starts the same. The
-   Settings dialog never sends them (the room keeps its own). The host asks { t: 'autoplay' } only when the music is started, nothing
-   plays, the queue is empty, it is not cleanup and NO background music link is set. The room checks
+   Settings dialog never sends them (the room keeps its own). The host asks { t: 'autoplay' } only when the music is started and not paused, nothing
+   plays, the queue is empty, it is not cleanup and NO background music link is set. It asks on each state AND on a
+   timer (AUTOPLAY_TICK_MS), because a quiet room sends no state: an ask refused by the gap or with no song retries by
+   itself (AUTOPLAY_RETRY_MS, AUTOPLAY_NONE_WAIT_MS; Dalton, 2026-11-06: it "only triggers after students join"). The room checks
    for itself (autoplayDue, AUTOPLAY_GAP_MS), takes the ticked lists the room may show (Gospel only while
    gospelShelf is on), its ✓ Checked songs (shelfResults: this room's rules), skips songs waiting or
    played, draws by weight (autoplayPicks: top of each list first, 🔥 Popular x POPULAR_BOOST; Dalton:
