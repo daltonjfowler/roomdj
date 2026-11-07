@@ -27,6 +27,7 @@ import { CREDITS_MAX, CREDIT_GRANT_MAX, DISCLAIMER_SECONDS } from '../../shared/
 import { SPOTIFY, catalogOf } from '../../shared/catalog.js';
 import { displayCode, generateCode, normalizeCode, validateCode } from '../../shared/code.js';
 import { fillSongSettings, initClassTime, readSongSettings } from './classtime.js';
+import { countdownText } from '../../shared/classtime.js';
 import { initHighlights } from './highlights.js';
 import { chooseProfile, currentProfile, forgetProfile, prefKey } from './profile.js';
 import { PROFILES_MAX } from '../../shared/protocol.js';
@@ -104,6 +105,7 @@ const hostStore = {
 let conn = null;
 let room = null;
 let state = null;
+let roomTitle = document.title; // the tab's title while no ⏳ idle warning shows
 let joined = false;
 
 // The board on a second computer (board-host.js; protocol.js BOARD + REMOTE). Its token is kept
@@ -560,6 +562,8 @@ function leaveRoom() {
   conn = null;
   joined = false;
   state = null;
+  idleUntil = 0;
+  showIdle();
   classTime.reset();
   if (room) hostStore.del(room.token);
   room = null;
@@ -837,7 +841,8 @@ function showCode(classCode) {
   $('#bigCode').innerHTML = shown.split(' ').map((w) => `<span>${esc(w)}</span>`).join('');
   $('#bigCode').setAttribute('aria-label', shown);
   $('#copyLink').dataset.url = url;
-  document.title = `RoomDJ: ${shown}`;
+  roomTitle = `RoomDJ: ${shown}`;
+  showIdle();
   boardHost.sendInfo(); // the board shows the code too (the server keeps only its hash)
 }
 
@@ -883,7 +888,7 @@ async function onStatus(status, fails) {
   const exists = await roomExists(room.room);
   if (conn !== mine) return;
   if (exists === false) {
-    showClosed('This room has ended', 'It reached its closing time, was closed, or sat unused for 12 hours. Open a new room to start again.');
+    showClosed('This room has ended', 'It reached its closing time, was closed, or sat unused for 1 hour. Open a new room to start again.');
   } else if (exists === true && !joined && fails >= 3) {
     leaveRoom();
     showStart('Could not connect to that room. Open a new room.');
@@ -972,7 +977,7 @@ function onMessage(msg) {
       break;
     case 'closed':
       showClosed(msg.why === 'until' ? 'The room closed for today' : 'The room is closed',
-        'All of the room\'s songs, votes and nicknames are deleted.');
+        `${msg.why === 'idle' ? 'Nobody used it for 1 hour. ' : ''}All of the room's songs, votes and nicknames are deleted.`);
       break;
   }
 }
@@ -1062,6 +1067,8 @@ function render(s) {
   $('#lockedNote').hidden = !s.locked;
   focusUntil = s.focusLeft > 0 ? Date.now() + s.focusLeft : 0;
   showFocus();
+  idleUntil = s.idleLeft > 0 ? Date.now() + s.idleLeft : 0;
+  showIdle();
 
   const students = s.students ?? [];
   const online = students.filter((x) => x.online).length;
@@ -1392,6 +1399,9 @@ $('#lockBtn').addEventListener('click', () => state && send({ t: 'lock', on: !st
 // empty and no background music link is set: the room adds a random ✓ Checked song from the teacher's
 // lists. A quiet room sends no new state, so the page also checks on a timer: an ask that came too soon
 // or found no song tries again by itself (Dalton, 2026-11-06: it "only triggers after students join").
+let idleUntil = 0; // ⏳ when the idle close comes, while its warning shows (showIdle, below)
+let idleTick = 0;
+let idleSaid = false;
 let autoplayNext = 0; // no ask before this time
 let autoplayWarned = false; // "found no song" shows once, until a song is found or the choices change
 function askAutoplay() {
@@ -1446,6 +1456,23 @@ $('#autoplayForm').addEventListener('change', () => {
     .then((r) => r.ok || toast('Autoplay changed for this room, but it could not be saved for your next rooms.', 'warn'))
     .catch(() => {});
 });
+
+// ⏳ Idle close (shared/classtime.js): nobody did anything for a while, so the room closes soon. The
+// countdown comes from the snapshot's idleLeft, and shows in the tab's title too (this tab may be hidden).
+function showIdle() {
+  clearTimeout(idleTick);
+  const left = idleUntil - Date.now();
+  const on = left > 0;
+  $('#idleNote').hidden = !on;
+  document.title = on ? `⏳ Closing in ${countdownText(left)}: ${roomTitle}` : roomTitle;
+  if (on) {
+    $('#idleText').textContent = `⏳ No activity for a while. This room closes in ${countdownText(left)}, and its songs, votes and nicknames are deleted.`;
+    if (!idleSaid) announce('This room closes soon because nobody is using it. Choose Keep open to keep it.');
+    idleTick = setTimeout(showIdle, (left % 1000 || 1000) + 5);
+  }
+  idleSaid = on;
+}
+$('#idleKeep').addEventListener('click', () => send({ t: 'keepOpen' }));
 
 // 🎯 Focus time (shared/focus.js): every student's picks and votes pause for FOCUS_MINUTES, timed
 // from the snapshot's focusLeft. The button starts it, or ends it early while it runs.
@@ -2238,6 +2265,7 @@ function onRemote(action) {
 $('#startBtn').addEventListener('click', () => {
   started = true;
   paused = false;
+  conn?.send({ t: 'keepOpen' }); // ⏳ the teacher is here (nothing else about Start reaches the room)
   updateButtons();
   if (loadedId) playNow();
   else syncPlayback();
@@ -2245,6 +2273,7 @@ $('#startBtn').addEventListener('click', () => {
   askAutoplay(); // 🎲 an empty room at the start
 });
 $('#playBtn').addEventListener('click', () => {
+  conn?.send({ t: 'keepOpen' }); // ⏳ the teacher is here
   if (paused) {
     paused = false;
     if (loadedId) playNow();

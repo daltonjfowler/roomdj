@@ -56,11 +56,40 @@ export function cleanupDue(room, now = Date.now()) {
  * When the room's one alarm should next ring: the earliest of cleanup start (not yet started), class
  * end, idle and `ghostAt` (the next ghost 👍 moment, protocol.js GHOST VOTE: queue.js nextGhostAt; null = none).
  */
-export function nextAlarmAt(room, idleMs, ghostAt = null) {
+export function nextAlarmAt(room, idleMs, ghostAt = null, warnAt = null) {
   const times = [room.until ?? Infinity, room.lastActivity + idleMs];
   if (!room.cleanup && Number.isSafeInteger(room.cleanupAt)) times.push(room.cleanupAt);
   if (Number.isSafeInteger(ghostAt)) times.push(ghostAt);
+  if (Number.isSafeInteger(warnAt)) times.push(warnAt);
   return Math.min(...times);
+}
+
+// ---- Idle close (Dalton, 2026-11-06: "Close after 1 hour of inactivity and give a warning") ----
+// lastActivity is the last thing a PERSON did: music and autoplay carrying on alone do not count, so a
+// forgotten room cannot run on. The host page shows a warning with Keep open for the last IDLE_WARN_MS.
+
+export const IDLE_CLOSE_MS = 60 * 60 * 1000;
+export const IDLE_WARN_MS = 5 * 60 * 1000;
+
+/** The idle times. `testMs` (env IDLE_TEST_MS, local browser test only) can only shorten them. */
+export function idleTimes(testMs) {
+  const t = Number(testMs);
+  const idleMs = Number.isInteger(t) && t > 0 && t < IDLE_CLOSE_MS ? t : IDLE_CLOSE_MS;
+  return { idleMs, warnMs: Math.min(IDLE_WARN_MS, Math.floor(idleMs / 2)) };
+}
+
+/** When the warning starts, for the room's alarm; null once that has passed. */
+export function idleWarnAt(room, now, { idleMs, warnMs }) {
+  const at = room.lastActivity + idleMs - warnMs;
+  return now < at ? at : null;
+}
+
+/** Ms until the idle close while the warning shows, else 0. None when class ends first: that close was chosen. */
+export function idleLeft(room, now, { idleMs, warnMs }) {
+  const closeAt = room.lastActivity + idleMs;
+  if (closeAt >= (room.until ?? Infinity)) return 0;
+  const left = closeAt - now;
+  return left > 0 && left <= warnMs ? left : 0;
 }
 
 /** Absolute ms → "HH:MM" in this computer's time zone (a time box's value). */

@@ -5,7 +5,7 @@
 //   A teacher opens a room for the day with the teacher key, a class code for the board (suggested
 //   by shared/code.js, or the teacher's own) and an `until` time (the host page sends the end of
 //   today in the teacher's own time zone, or one class period). The room closes itself at `until`
-//   (Durable Object alarm), or after 12 idle hours, or when the teacher closes it.
+//   (Durable Object alarm), or after 1 hour with no person doing anything, or when the teacher closes it.
 //   Each room is one Durable Object (src/room.js) named by a random room id (ROOM_ID_PATTERN).
 //   The code is only the way in: KV `room:<codeHash>` → { id, until } (TTL: until) maps a code to
 //   its room, and the room keeps the same hash and checks it again (constant time), so a stale KV
@@ -945,6 +945,7 @@ export const ART_RATE = 20;
 //                                                      nickname in this room again
 //           { t: 'lock', on: boolean }                 stop / allow new suggestions
 //           { t: 'focus', on: boolean }                🎯 focus time: start (FOCUS_MINUTES) / end now (shared/focus.js)
+//           { t: 'keepOpen' }                          ⏳ a person is here: the idle close starts over (shared/classtime.js)
 //           { t: 'autoplay' }                          🎲 nothing plays and the queue is empty: add a random
 //                                                      ✓ Checked song from autoplayShelves → { t: 'autoplayed', ok, title, artist, message }
 //           { t: 'credits', device, amount }           give one student 1 to CREDIT_GRANT_MAX credits
@@ -1074,7 +1075,7 @@ export const ART_RATE = 20;
 //  { t: 'code', ok: true, code }                       to the host: the class code is now `code`
 //  { t: 'code', ok: false, error, message }            to the host: error invalid_code | code_taken
 //  { t: 'kicked' } / { t: 'closed', why }              then the server closes the socket; why (closed):
-//                                                      'teacher' | 'until' (its end time) | 'idle 12 hours'
+//                                                      'teacher' | 'until' (its end time) | 'idle' (shared/classtime.js)
 //  { t: 'pong' }
 //  { t: 'recapCue', cue }                              to the host: a board's recap show cue (RECAP MUSIC)
 //  { t: 'lookup', id, url }                            to the host: fetch this iTunes address

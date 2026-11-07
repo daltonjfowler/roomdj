@@ -803,7 +803,7 @@ function itemView(item, device, rules = { floor: false, downs: true, hide: false
  * @param {string|null} device
  * @param {{ online?: Set<string>, boards?: number }} [extra] boards: boards connected (host only)
  */
-export function snapshotFor(state, device, { online = new Set(), boards = 0, now = Date.now() } = {}) {
+export function snapshotFor(state, device, { online = new Set(), boards = 0, now = Date.now(), idleLeft = 0 } = {}) {
   const isHost = device === null;
   const rules = voteRules(state, isHost, now); // protocol.js SCORE FLOOR + DOWNVOTE MODE + GHOST VOTE
   const queue = playOrder(state.queue, rules);
@@ -850,6 +850,7 @@ export function snapshotFor(state, device, { online = new Set(), boards = 0, now
     snap.review = reviewList(state).map((item) => ({ ...itemView(item, null, rules), ...(item.checked ? { checked: item.checked } : {}) }));
     snap.boards = boards; // boards connected (protocol.js BOARD + REMOTE)
     snap.teacherName = teacherName(state); // the name on the teacher's own picks (TEACHER PICKS)
+    snap.idleLeft = idleLeft; // ⏳ ms until the idle close while its warning shows, else 0 (shared/classtime.js)
   }
   return snap;
 }

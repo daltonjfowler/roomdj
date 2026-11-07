@@ -354,6 +354,7 @@ joinNote();
 const CLOSED_TEXT = {
   until: 'The room closed for today. Thanks for listening!',
   teacher: 'Your teacher closed the room. Thanks for listening!',
+  idle: 'The room closed because nobody used it for 1 hour. Thanks for listening!',
 };
 
 $('#joinForm').addEventListener('submit', async (e) => {

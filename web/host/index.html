@@ -221,7 +221,10 @@
     <!-- The room, for the projector -->
     <section id="hostScreen" class="stage" hidden>
       <h1 class="sr-only">Today's room</h1>
-      <p id="aiWarn" class="banner bad ai-warn" role="alert" hidden></p>
+      <div class="warn-stack">
+        <p id="aiWarn" class="banner bad ai-warn" role="alert" hidden></p>
+        <p id="idleNote" class="banner warn focus-note idle-note" hidden><span id="idleText"></span> <button id="idleKeep" type="button">Keep open</button></p>
+      </div>
 
       <section class="card join-panel" aria-label="How to join" data-panel="join" data-col="join">
         <p class="label">Join at</p>

@@ -259,8 +259,9 @@ next to Skip bans the song playing. On a narrow window the bar wraps onto a seco
     Larger), show who suggested each song, show album art, start in Big screen, and a link to the
     keyboard shortcuts.
   - **Save as my default** saves every setting, including the ones on other parts of the page.
-- **Close room** ends it now. Otherwise it closes by itself at its end time, or after 12 hours
-  with nothing happening.
+- **Close room** ends it now. Otherwise it closes by itself at its end time, or after 1 hour with
+  nobody using it. Music playing by itself does not count as using it. A warning shows on your page
+  for the last 5 minutes, with a **Keep open** button.
 
 ## Two computers: speakers + projector
 

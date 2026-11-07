@@ -113,7 +113,7 @@ Claude account).
   host token and sends old host pages away with `host_moved` + 4002), `POST /api/join` (class
   code) and `GET /api/search` (browsing before joining), rate-limit fuses.
 - `src/room.js`: `Room` Durable Object, one per open room, named by a random room id (WebSocket
-  hibernation API). Closes itself at `until` (alarm); 12 idle hours is the backstop.
+  hibernation API). Closes itself at `until` (alarm), or after 1 idle hour (invariant 45).
 - `src/teacher-kv.js`: `teacherKvKey(name, profile)` / `teacherScope(profile)`: EVERY teacher-level
   KV record goes through it (settings, banned, approved:*, favorites,
   recent). null (a room from before
@@ -233,7 +233,7 @@ Claude account).
    from the host page's relay as raw results, accepted only from a host socket and mapped and
    checked by the room), and every suggestion passes the full filter on the server.
 3. No student accounts. A room holds only nicknames, device ids, votes and songs, and all of it is
-   deleted when the room closes (the teacher closes it, its `until` passes, or 12 hours idle).
+   deleted when the room closes (the teacher closes it, its `until` passes, or 1 hour idle).
 4. Nicknames pass the nickname check (`shared/nick.js`) on every student socket: the built-in word
    lists (spellings undone first: leet, accents, look-alike letters, invisible characters,
    stretched and spaced letters; SHORT words whole-word only, STRONG words with SAFE exceptions,
@@ -308,8 +308,8 @@ Claude account).
    charges nothing (the credit came back already) and approves like Needs a look's Allow.
 13. Class time (Dalton, 2026-10-06; protocol.js CLEANUP, shared/classtime.js): `until` is when
    class ends; `cleanupAt` (null = none) is after now and before until, checked on open and on
-   'times'. One DO alarm rings at the earliest of cleanupAt (until cleanup starts), until and 12
-   idle hours. Cleanup mode (`cleanup: true`) refuses suggestions with reason 'cleanup' and is
+   'times'. One DO alarm rings at the earliest of cleanupAt (until cleanup starts), until, and the
+   idle warning and close (invariant 45). Cleanup mode (`cleanup: true`) refuses suggestions with reason 'cleanup' and is
    independent of the teacher's lock ("Keep the music going" clears cleanup and cleanupAt, never
    `locked`); the host page fades out and asks for no next song while it is on, and background
    music stays off. Max song length (`maxSongMinutes`, null = off) is checked BEFORE any credit
@@ -787,6 +787,15 @@ Claude account).
    a.autoplay: same filter, repeats and artist rules,
    no teacher pick rate. The item is by "RoomDJ" with autoplay: true (byLabel "🎲 RoomDJ"). The host
    hears { t: 'autoplayed' }. test: test/autoplay.test.mjs, npm run test:autoplay.
+45. ⏳ Idle close (Dalton, 2026-11-06: "Close after 1 hour of inactivity and give a warning"; shared/classtime.js
+   IDLE_CLOSE_MS, IDLE_WARN_MS 5 minutes). lastActivity is the last thing a PERSON did: Room.touch() runs for
+   every socket message except AUTOMATIC_MESSAGES (room.js: next, autoplay, lockNext, service, boardInfo,
+   recapCue), and for a student's join, search and song list. commit() no longer counts as activity, so
+   songs and 🎲 Autoplay carrying on alone cannot keep a forgotten room open. A new message a page sends by
+   itself MUST go in AUTOMATIC_MESSAGES. The alarm rings at the warning, the host's State carries idleLeft
+   (ms; 0 = none; none when `until` comes first), and #idleNote counts down with Keep open ({ t: 'keepOpen' },
+   also sent by Start music and Play/Pause) and shows in the tab title and on the big screen. Closes with
+   why 'idle'. IDLE_TEST_MS (local only) can only shorten it. test: npm run test:idle.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

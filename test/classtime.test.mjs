@@ -5,7 +5,7 @@ import test from 'node:test';
 import { CLEANUP_PAST_SLACK_MS, DEFAULT_SETTINGS, OPEN_MAX_MS, REASONS, SETTINGS_LIMITS, whyText } from '../shared/protocol.js';
 import { validateSettings } from '../shared/settings.js';
 import {
-  AFTER_MIDNIGHT_MS, bellChoices, cleanupDue, defaultTimes, formatDuration, nextAlarmAt, nextBell, timeAhead, timeToday, timeValue, tooLong, validateTimes,
+  AFTER_MIDNIGHT_MS, IDLE_CLOSE_MS, IDLE_WARN_MS, bellChoices, cleanupDue, defaultTimes, formatDuration, idleLeft, idleTimes, idleWarnAt, nextAlarmAt, nextBell, timeAhead, timeToday, timeValue, tooLong, validateTimes,
 } from '../shared/classtime.js';
 import {
   aiThemeCheck, filterSong, instrumentalHint, instrumentalOf, parseThemeVerdict, readInstrumental, readVerdict, verdictKey,
@@ -195,6 +195,31 @@ test('class times: until within a day, cleanup before class ends and not in the 
   assert.match(validateTimes({ until: now - 1 }, now).message, /passed/);
   assert.equal(validateTimes({ until: now + OPEN_MAX_MS + 1 }, now).error, 'until');
   assert.equal(validateTimes({ until: 'soon' }, now).error, 'until');
+});
+
+test('⏳ idle close: 1 hour, a warning for the last 5 minutes, none when class ends first, a test can only shorten it', () => {
+  const idle = idleTimes();
+  assert.deepEqual(idle, { idleMs: IDLE_CLOSE_MS, warnMs: IDLE_WARN_MS });
+  assert.equal(IDLE_CLOSE_MS, 3_600_000);
+  assert.equal(IDLE_WARN_MS, 300_000);
+  assert.deepEqual(idleTimes('20000'), { idleMs: 20_000, warnMs: 10_000 });
+  assert.equal(idleTimes(IDLE_CLOSE_MS * 2).idleMs, IDLE_CLOSE_MS);
+  assert.equal(idleTimes('soon').idleMs, IDLE_CLOSE_MS);
+  assert.equal(idleTimes(-5).idleMs, IDLE_CLOSE_MS);
+
+  const room = { lastActivity: 0, until: IDLE_CLOSE_MS * 3 };
+  const warnStart = IDLE_CLOSE_MS - IDLE_WARN_MS;
+  assert.equal(idleWarnAt(room, 0, idle), warnStart);
+  assert.equal(idleWarnAt(room, warnStart, idle), null);
+  assert.equal(idleLeft(room, warnStart - 1, idle), 0);
+  assert.equal(idleLeft(room, warnStart, idle), IDLE_WARN_MS);
+  assert.equal(idleLeft(room, IDLE_CLOSE_MS - 1, idle), 1);
+  assert.equal(idleLeft(room, IDLE_CLOSE_MS, idle), 0);
+  assert.equal(idleLeft({ ...room, until: IDLE_CLOSE_MS }, warnStart, idle), 0, 'class ends first: no idle warning');
+
+  // The alarm rings for the warning first, then for the close.
+  assert.equal(nextAlarmAt(room, idle.idleMs, null, idleWarnAt(room, 0, idle)), warnStart);
+  assert.equal(nextAlarmAt(room, idle.idleMs, null, idleWarnAt(room, warnStart, idle)), IDLE_CLOSE_MS);
 });
 
 test('the alarm rings at the earliest of cleanup (not started), class end and idle; cleanup is due once', () => {

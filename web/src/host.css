@@ -32,7 +32,8 @@
   grid-template-rows: auto 1fr;
 }
 .stage > .card { padding: 16px 18px; min-width: 0; }
-.ai-warn { grid-area: warn; font-size: 1.1rem; }
+.warn-stack { grid-area: warn; display: grid; gap: 8px; min-width: 0; }
+.ai-warn, .idle-note { font-size: 1.1rem; }
 
 /* Join panel */
 .join-panel { grid-area: join; display: grid; gap: 6px; align-content: start; text-align: center; }

@@ -43,6 +43,7 @@
     "test:teacher-push": "node test/browser/teacher-push.mjs",
     "test:focus": "node test/browser/focus.mjs",
     "test:autoplay": "node test/browser/autoplay.mjs",
+    "test:idle": "node test/browser/idle.mjs",
     "test:bell": "node test/browser/bell.mjs",
     "test:layout": "node test/browser/layout.mjs",
     "test:art": "node test/browser/art.mjs",

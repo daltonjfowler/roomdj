@@ -2,11 +2,12 @@
 // queue, votes, nicknames and sockets. Sockets use the WebSocket Hibernation API: the object can
 // sleep between messages, so everything that matters lives in DO storage (one "state" key) and
 // each socket's attachment ({ role, device, nick }). The room closes itself at `until` (the
-// teacher's choice, an alarm), when the teacher closes it, or after 12 idle hours (the backstop);
+// teacher's choice, an alarm), when the teacher closes it, or after 1 hour with no person doing
+// anything (shared/classtime.js IDLE_CLOSE_MS, with a warning first);
 // closing deletes it all, and the class code's KV route (src/codes.js).
 // Class time (protocol.js CLEANUP): at cleanupAt the same alarm puts the room in cleanup mode
 // (suggestions closed; the host page fades the music out); the alarm rings at the earliest of
-// cleanupAt, until and 12 idle hours (shared/classtime.js nextAlarmAt), and the next waiting song's
+// cleanupAt, until, the idle warning and close (shared/classtime.js nextAlarmAt), and the next waiting song's
 // 👻 ghost 👍 moment (protocol.js GHOST VOTE, queue.js nextGhostAt: the order changes with no message,
 // so that alarm re-sorts and broadcasts).
 // Top 5 + recap (shared/highlights.js): the room's `history` of songs that played, deleted with it.
@@ -87,7 +88,7 @@ import { askNickAi, cachedNickVerdict, nickAllowed, nickKey } from '../shared/ni
 import { isGeneratedNick } from '../shared/nickgen.js';
 import { validateSettings } from '../shared/settings.js';
 import { validateCode } from '../shared/code.js';
-import { bellOffsetMs, cleanupDue, nextAlarmAt, shiftTimes, tooLong, validateTimes } from '../shared/classtime.js';
+import { bellOffsetMs, cleanupDue, idleLeft, idleTimes, idleWarnAt, nextAlarmAt, shiftTimes, tooLong, validateTimes } from '../shared/classtime.js';
 import { CatalogError, cleanQuery } from './catalog-base.js';
 import { HostRelay } from './host-relay.js';
 import { LYRICS_PATIENT_MS, judgeFromLyrics } from './lyrics.js';
@@ -131,7 +132,9 @@ const RESTING = 'That song played not long ago, so it is resting. Pick a differe
 /** Until the page words it in its own time zone (repeats.js restingEvidence). */
 const RESTING_EVIDENCE = 'This song played not long ago. It can come back later.';
 
-export const IDLE_MS = 12 * 60 * 60 * 1000;
+const ACTIVITY_SAVE_MS = 60_000; // lastActivity from a message that saves nothing else: at most this often
+// Messages a page sends by itself: they say nothing about a person being there (idle close).
+const AUTOMATIC_MESSAGES = new Set(['next', 'autoplay', 'lockNext', 'service', 'boardInfo', 'recapCue']);
 const MAX_MESSAGE_BYTES = 16 * 1024;
 const MAX_HOST_MESSAGE_BYTES = 64 * 1024; // lookup results
 const BANNED_MAX = 2000;
@@ -327,11 +330,17 @@ export class Room extends DurableObject {
   }
 
   /**
-   * When the alarm should next look: cleanup start, the room's `until`, 12 idle hours, or the next
-   * ghost 👍 moment (protocol.js GHOST VOTE), whichever comes first.
+   * When the alarm should next look: cleanup start, the room's `until`, the idle warning or close, or
+   * the next ghost 👍 moment (protocol.js GHOST VOTE), whichever comes first.
    */
   dueAt(now = Date.now()) {
-    return nextAlarmAt(this.room, IDLE_MS, nextGhostAt(this.room, now));
+    const idle = this.idle();
+    return nextAlarmAt(this.room, idle.idleMs, nextGhostAt(this.room, now), idleWarnAt(this.room, now, idle));
+  }
+
+  /** The idle close's times (IDLE_TEST_MS: the local browser test only). */
+  idle() {
+    return idleTimes(this.env.IDLE_TEST_MS);
   }
 
   /** Set the alarm to dueAt() now (after the class times changed: it may have to ring later). */
@@ -350,15 +359,26 @@ export class Room extends DurableObject {
     this.broadcast();
   }
 
-  /** Note activity and push the idle alarm out (only when it moved more than 10 minutes). */
-  async touch() {
-    if (!this.room) return;
-    this.room.lastActivity = Date.now();
+  /** Move the alarm when it must ring sooner, or more than 10 minutes later (an early ring just looks again). */
+  async syncAlarm() {
     const due = this.dueAt();
     if (!this.alarmAt || due < this.alarmAt || due - this.alarmAt > 10 * 60 * 1000) {
       await this.ctx.storage.setAlarm(due);
       this.alarmAt = due;
     }
+  }
+
+  /** A person did something: the idle close starts over, and a warning showing goes away. */
+  async touch(now = Date.now()) {
+    if (!this.room) return;
+    const warned = idleLeft(this.room, now, this.idle()) > 0;
+    this.room.lastActivity = now;
+    await this.syncAlarm();
+    if (warned || now - (this.activitySavedAt ?? 0) >= ACTIVITY_SAVE_MS) {
+      this.activitySavedAt = now;
+      await this.save();
+    }
+    if (warned) this.broadcast();
   }
 
   /** True while the room is open. Past `until` it closes now (the alarm may not have run yet). */
@@ -373,7 +393,7 @@ export class Room extends DurableObject {
   }
 
   async commit() {
-    await this.touch();
+    await this.syncAlarm();
     await this.save();
     this.broadcast();
   }
@@ -403,6 +423,7 @@ export class Room extends DurableObject {
     if (!this.room) return;
     const online = this.onlineDevices(except);
     const boards = this.socketsOf('board', except).length;
+    const idleMsLeft = idleLeft(this.room, Date.now(), this.idle());
     let boardState = null;
     for (const ws of this.sockets(except)) {
       const a = ws.deserializeAttachment();
@@ -412,7 +433,7 @@ export class Room extends DurableObject {
       }
       const device = a?.role === 'host' ? null : a?.device;
       if (device === undefined) continue;
-      this.send(ws, { t: 'state', state: snapshotFor(this.room, device, { online, boards }) });
+      this.send(ws, { t: 'state', state: snapshotFor(this.room, device, { online, boards, idleLeft: idleMsLeft }) });
     }
   }
 
@@ -1121,6 +1142,7 @@ export class Room extends DurableObject {
     if (!DEVICE_ID_PATTERN.test(device ?? '')) return json(400, { error: 'device', message: 'Reload the page and join again.' });
     if (this.room.kicked.includes(device)) return json(403, { error: 'kicked', message: 'Your teacher removed you from this room, so you cannot join it again.' });
     this.room.admitted ??= [];
+    await this.touch(); // a student typed the right code
     if (!this.admitted(device)) {
       // Full: the oldest device that joined but never opened the room (no nickname, no socket) makes
       // way, so a script with the code cannot fill the room with device ids that never show up.
@@ -1186,6 +1208,7 @@ export class Room extends DurableObject {
     if (!this.admitted(device)) return json(403, NOT_JOINED);
     const q = cleanQuery(url.searchParams.get('q'));
     if (!q) return json(200, { results: [] });
+    await this.touch();
     if (!this.allow('search', device) || !this.allow('roomSearch', 'room')) {
       return json(429, { error: 'rate', message: 'That is a lot of searching. Wait a minute and try again.' });
     }
@@ -1218,6 +1241,7 @@ export class Room extends DurableObject {
     if (!this.admitted(device)) return json(403, NOT_JOINED);
     const shelf = url.searchParams.get('shelf') ?? '';
     if (!isShelf(shelf)) return json(400, { error: 'shelf', message: 'Pick one of the lists.' });
+    await this.touch();
     if (!this.allow('search', device) || !this.allow('roomSearch', 'room')) {
       return json(429, { error: 'rate', message: 'That is a lot of searching. Wait a minute and try again.' });
     }
@@ -1572,6 +1596,7 @@ export class Room extends DurableObject {
       return this.send(ws, { t: 'error', error: 'rate', message: 'Slow down a little.' });
     }
     try {
+      if (!AUTOMATIC_MESSAGES.has(msg.t)) await this.touch();
       if (a?.role === 'host') await this.hostMessage(ws, msg);
       else if (a?.role === 'board') await this.boardRemote(ws, msg);
       else if (a?.role === 'student') await this.studentMessage(ws, a, msg);
@@ -2048,6 +2073,8 @@ export class Room extends DurableObject {
         return this.commit();
       case 'autoplay':
         return this.autoplay(ws);
+      case 'keepOpen': // ⏳ Keep open, or the music started or paused (webSocketMessage noted it)
+        return this.commit();
       case 'service': {
         // What the host page plays through (a Spotify room would search Spotify's catalog, which
         // stays off), and whether this page answers the room's iTunes lookups.
@@ -2056,7 +2083,6 @@ export class Room extends DurableObject {
         if (msg.lookups === true && !a?.lookups) ws.serializeAttachment({ ...a, lookups: true });
         if (room.service === msg.service) return;
         room.service = msg.service;
-        await this.touch();
         return this.save();
       }
       case 'settings': {
@@ -2414,17 +2440,19 @@ export class Room extends DurableObject {
     const now = Date.now();
     if (now >= this.room.until) {
       await this.closeRoom('until');
-    } else if (now >= this.room.lastActivity + IDLE_MS) {
-      await this.closeRoom('idle 12 hours');
+    } else if (now >= this.room.lastActivity + this.idle().idleMs) {
+      await this.closeRoom('idle');
     } else if (cleanupDue(this.room, now)) {
       await this.startCleanup();
     } else {
       // GHOST VOTE: a song may have just got its ghost 👍; the order and the 👍 shown change.
-      if (this.room.settings?.ghostVote === true && this.room.queue?.length) {
+      const ghost = this.room.settings?.ghostVote === true && this.room.queue?.length;
+      if (ghost) {
         sortQueue(this.room, now);
         await this.save();
-        this.broadcast();
       }
+      // ⏳ The idle warning starts: the host page hears it in the state.
+      if (ghost || idleLeft(this.room, now, this.idle()) > 0) this.broadcast();
       const due = this.dueAt();
       await this.ctx.storage.setAlarm(due);
       this.alarmAt = due;

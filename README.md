@@ -16,7 +16,7 @@ previews, Spotify and YouTube play on the host page; Apple Music is being added 
 [docs/APPLE-SETUP.md](docs/APPLE-SETUP.md)).
 
 No student accounts. A room holds only nicknames, device ids, votes and songs, and all of it is
-deleted when the room closes (the teacher closes it, its closing time passes, or 12 idle hours).
+deleted when the room closes (the teacher closes it, its closing time passes, or 1 idle hour).
 
 ## What is in it
 
