@@ -37,6 +37,13 @@
     .cta a { display: inline-block; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line); text-decoration: none; font-weight: 650; color: var(--ink); background: var(--soft); }
     .cta a.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
     :root[data-theme="dark"] .cta a.primary { color: #2b0716; }
+    .reel { display: flex; align-items: center; gap: 14px; margin: 16px 0 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); color: var(--ink); text-decoration: none; }
+    .reel:hover { border-color: var(--accent); }
+    .reel-play { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 1.15rem; }
+    :root[data-theme="dark"] .reel-play { color: #2b0716; }
+    .reel-text { display: grid; min-width: 0; }
+    .reel-text b { font-size: 1.05rem; }
+    .reel-text span { color: var(--muted); font-size: .92rem; }
     .shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 12px 0; }
     .shot { margin: 0; display: grid; gap: 6px; }
     .shot.wide { grid-column: 1 / -1; }
@@ -59,6 +66,11 @@
     <a class="primary" href="/host/">🍎 Start a room (teachers)</a>
     <a href="/">🎒 Join a class (students)</a>
   </div>
+  <!-- A plain link, not Instagram's embed: nothing from Instagram loads here (legal.html: no cookies, no ads, no tracking). -->
+  <a class="reel" href="https://www.instagram.com/reel/DfajBQLB4sm/" target="_blank" rel="noopener noreferrer">
+    <span class="reel-play" aria-hidden="true">▶</span>
+    <span class="reel-text"><b>See RoomDJ in 31 seconds</b><span>Watch the video on Instagram</span></span>
+  </a>
 
   <h2>Why I made it</h2>
   <p>I'm Dalton, a high school engineering and CS teacher in New Jersey. Music in the room makes work time better. Taking requests out loud does not: half the class shouts, the other half asks for songs I cannot play at school, and I end up DJing instead of teaching. So I built a thing. Kids pick, kids vote, the filter says no so I don't have to.</p>
