@@ -56,7 +56,23 @@ export function toast(text, kind = '', ms = 5000) {
   t.className = `toast ${kind}`;
   t.textContent = text;
   box.append(t);
+  raiseToasts(box);
   setTimeout(() => t.remove(), ms);
+}
+
+/**
+ * Toasts go on top of an open <dialog>, not behind it (Dalton, 2026-11-12: the Why? of a blocked song
+ * showed behind the teacher's Suggest a song window). A modal dialog sits in the browser's top layer,
+ * which no z-index beats, so the toast box is a manual popover (top layer too) and is shown again
+ * for every toast: the newest thing in the top layer is the one on top. Old browsers: nothing changes.
+ */
+function raiseToasts(box) {
+  if (typeof box.showPopover !== 'function') return;
+  if (!box.hasAttribute('popover')) box.setAttribute('popover', 'manual');
+  try {
+    if (box.matches(':popover-open')) box.hidePopover();
+    box.showPopover();
+  } catch { /* stays where it was, under the dialog */ }
 }
 
 /** Say something to screen readers (the #announce live region) without showing it. */

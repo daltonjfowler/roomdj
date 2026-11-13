@@ -301,6 +301,18 @@ try {
   check('blocked word: the toast says why with the word', Boolean(await toastHas(host, 'Blocked word: "birds"')), await text(host, '#toasts'));
   check('blocked word: the result says Not allowed with Why?', Boolean(await until(async () => (await text(host, `#tResults li[data-id="${birds.id}"]`)).includes('Not allowed')))
     && (await host.page.locator(`#tResults li[data-id="${birds.id}"] button[data-act="twhy"]`).count()) === 1);
+  // Dalton, 2026-11-12: the reason showed BEHIND the Suggest a song window. A modal dialog is in the
+  // top layer, so the toast box must be a popover shown again (top layer, newest on top) for each toast.
+  // A hit test cannot prove it: everything outside a modal dialog is inert, so it is skipped.
+  await host.page.evaluate(() => {
+    window.__toastRaised = 0;
+    document.querySelector("#toasts").addEventListener("toggle", (e) => { if (e.newState === "open") window.__toastRaised++; });
+  });
+  await host.page.click(`#tResults li[data-id="${birds.id}"] button[data-act="twhy"]`);
+  const raised = await until(() => host.page.evaluate(() => window.__toastRaised > 0 && document.querySelector("#suggestDlg").open
+    && document.querySelector("#toasts").matches(":popover-open") && /Blocked word/.test(document.querySelector("#toasts").lastElementChild?.textContent ?? "")));
+  check("Why? in Suggest a song: the reason is raised above the open window (top-layer popover)", Boolean(raised));
+  await host.page.screenshot({ path: `${OUT}teacher-suggest-why.png` });
   const bl = await until(() => lastBlocked(host)?.find((b) => b.song.id === birds.id));
   check('Blocked today: the teacher pick is tagged teacher, by Teacher 1, can be allowed', bl?.teacher === true && bl.by === 'Teacher 1' && bl.canAllow === true, JSON.stringify(bl));
   check('students never get the teacher\'s refusal or the word', !JSON.stringify(ava.msgs).includes('"birds"'));
