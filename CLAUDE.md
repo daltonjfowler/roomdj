@@ -823,6 +823,10 @@ Claude account).
    ⏸ Time out 5/10/15/class: the student's suggest, jump and vote are refused first (before focus, back to work,
    anything charged); the student page's rest card shows "Paused by your teacher". All host-only.
    test: npm run test:classroom (local dev; TEST_AI_OFF + TYPED_NICKNAMES; real iTunes, so a slow search can flake).
+   🚪 Close joining after (settings.autoCloseJoinMinutes: null | AUTO_CLOSE_JOIN_MINUTES, minutes after createdAt):
+   joinClosedNow is true once it is due (host snapshot joinClosed / joinClosesAt; the page flips at that moment
+   by its own timer); Room.admit makes it real (applyAutoClose, once). Any use of the teacher's switch
+   (setJoinClosed) marks joinAutoDone, so the teacher's choice wins from then on. No alarm needed.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

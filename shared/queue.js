@@ -52,7 +52,7 @@ import { legacySong, songId } from './catalog.js';
 import { songKey } from './repeats.js';
 import { restView } from './backtowork.js';
 import { focusLeft } from './focus.js';
-import { deviceTag, passesOf, timeoutLeft, usePass } from './classroom.js';
+import { deviceTag, joinClosedNow, joinClosesAt, passesOf, timeoutLeft, usePass } from './classroom.js';
 import { checksOf } from './checks.js';
 
 const PLAYED_MAX = 1000;
@@ -851,7 +851,8 @@ export function snapshotFor(state, device, { online = new Set(), boards = 0, now
     snap.students = Object.entries(state.students)
       .map(([d, s]) => ({ device: d, nick: s.nick, online: online.has(d), credits: creditsOf(state, d), downvotes: downvotesUsed(state, d), upvotes: upvotesUsed(state, d), ...restOfStudent(state, d, now), passes: passesOf(state, d), timeoutLeft: timeoutLeft(state, d, now) }))
       .sort((a, b) => a.nick.localeCompare(b.nick));
-    snap.joinClosed = state.joinClosed === true; // 🚪 (shared/classroom.js)
+    snap.joinClosed = joinClosedNow(state, now); // 🚪 the switch, or the automatic close being due (shared/classroom.js)
+    snap.joinClosesAt = snap.joinClosed ? null : joinClosesAt(state); // ms when the automatic close comes, else null
     snap.knocks = (state.knocks ?? []).map((k) => ({ device: k.device, tag: deviceTag(k.device), at: k.at }));
     snap.aiStatus = state.aiStatus ?? 'ok';
     snap.profile = state.profile?.id ?? null;

@@ -36,6 +36,33 @@ test('⏸ a timeout blocks until it ends; class = until class ends; 0 ends it; n
   assert.equal(timeoutRefusal(s, TEACHER_DEVICE), null);
 });
 
+test('🚪 close joining after X minutes: due from the room opening, made real once, the teacher\'s switch wins', async () => {
+  const { applyAutoClose, joinClosedNow, joinClosesAt, setJoinClosed } = await import('../shared/classroom.js');
+  const s = { ...room(), createdAt: 1_000, settings: { autoCloseJoinMinutes: 10 } };
+  assert.equal(joinClosesAt(s), 1_000 + 10 * 60_000);
+  assert.equal(joinClosedNow(s, 1_000 + 9 * 60_000), false);
+  assert.equal(joinClosedNow(s, 1_000 + 10 * 60_000), true, 'due: closed, even before anyone knocks');
+  assert.equal(applyAutoClose(s, 1_000 + 5 * 60_000), false, 'not yet');
+  assert.equal(applyAutoClose(s, 1_000 + 11 * 60_000), true);
+  assert.equal(s.joinClosed, true);
+  setJoinClosed(s, false); // the teacher opens it again
+  assert.equal(joinClosesAt(s), null, 'done: it never closes by itself again');
+  assert.equal(joinClosedNow(s, 1_000 + 60 * 60_000), false);
+  const off = { ...room(), createdAt: 1_000, settings: { autoCloseJoinMinutes: null } };
+  assert.equal(joinClosesAt(off), null);
+  const manual = { ...room(), createdAt: 1_000, settings: { autoCloseJoinMinutes: 5 } };
+  setJoinClosed(manual, true);
+  setJoinClosed(manual, false);
+  assert.equal(joinClosedNow(manual, 1_000 + 30 * 60_000), false, 'a teacher who opened it by hand is not overruled');
+});
+
+test('settings: close joining after is off or one of the choices', async () => {
+  const { validateSettings } = await import('../shared/settings.js');
+  assert.equal(validateSettings({}).settings.autoCloseJoinMinutes, null);
+  assert.equal(validateSettings({ autoCloseJoinMinutes: 15 }).settings.autoCloseJoinMinutes, 15);
+  assert.equal(validateSettings({ autoCloseJoinMinutes: 7 }).ok, false);
+});
+
 test('🚪 knocks: let in = admitted, turned away = kicked, each once', () => {
   const s = room();
   addKnock(s, 'new1', 1);

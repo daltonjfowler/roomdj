@@ -91,6 +91,38 @@ export function timeoutMessage(left) {
 
 // ---- 🚪 join door ----
 
+/**
+ * 🚪 Close joining automatically (settings.autoCloseJoinMinutes, minutes after the room opened; Dalton 2026-11-16):
+ * when it is due, or null (off, already done, or the teacher used the switch: their choice wins from then on).
+ */
+export function joinClosesAt(state) {
+  const m = state?.settings?.autoCloseJoinMinutes;
+  if (!Number.isInteger(m) || m <= 0 || state.joinAutoDone === true || state.joinClosed === true || !Number.isSafeInteger(state.createdAt)) return null;
+  return state.createdAt + m * 60_000;
+}
+
+/** Is joining closed now (the switch, or the automatic close being due)? */
+export function joinClosedNow(state, now = Date.now()) {
+  if (state?.joinClosed === true) return true;
+  const at = joinClosesAt(state);
+  return at !== null && now >= at;
+}
+
+/** Make a due automatic close real (once). Returns true when it closed joining now. */
+export function applyAutoClose(state, now = Date.now()) {
+  const at = joinClosesAt(state);
+  if (at === null || now < at) return false;
+  state.joinClosed = true;
+  state.joinAutoDone = true;
+  return true;
+}
+
+/** The teacher's switch: open or closed, and the automatic close is done (their choice wins). */
+export function setJoinClosed(state, on) {
+  state.joinClosed = on === true;
+  state.joinAutoDone = true;
+}
+
 /** A short tag the teacher can tell knocks apart by (the device id's last 4 letters). */
 export const deviceTag = (device) => String(device ?? '').slice(-4).toUpperCase();
 

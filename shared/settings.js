@@ -1,7 +1,7 @@
 // Room / teacher settings checks. The Worker and the Room refuse anything that does not pass.
 // A missing field takes its default, so a page may send only the fields it changes.
 
-import { BACK_TO_WORK_MINUTES, COOLDOWN_DAYS, DEFAULT_SETTINGS, DOWNVOTE_MODES, SETTINGS_LIMITS, SHELVES } from './protocol.js';
+import { AUTO_CLOSE_JOIN_MINUTES, BACK_TO_WORK_MINUTES, COOLDOWN_DAYS, DEFAULT_SETTINGS, DOWNVOTE_MODES, SETTINGS_LIMITS, SHELVES } from './protocol.js';
 import { screenNote } from './reasons.js';
 
 const BELL_TIME = /^([01]?\d|2[0-3]):([0-5]\d)$/;
@@ -118,6 +118,13 @@ function backToWorkMinutes(errors, value) {
   return null;
 }
 
+/** 🚪 Close joining after: null (off) or one of AUTO_CLOSE_JOIN_MINUTES. */
+function autoCloseJoinMinutes(errors, value) {
+  if (value === null || AUTO_CLOSE_JOIN_MINUTES.includes(value)) return value;
+  errors.push(`Close joining after must be off or ${AUTO_CLOSE_JOIN_MINUTES.join(', ')} minutes.`);
+  return null;
+}
+
 /** 👎 per student per class (protocol.js DOWNVOTE LIMIT): null = unlimited; otherwise a whole number (a real number). */
 function maxDownvotes(errors, value) {
   if (value === null) return null;
@@ -220,6 +227,7 @@ export function validateSettings(input, { testAiOff = false } = {}) {
     recapVolume: intInRange(errors, 'Recap music volume (percent)', pick('recapVolume'), SETTINGS_LIMITS.recapVolume),
     backToWork: bool(errors, 'Back-to-work screen', pick('backToWork')),
     backToWorkMinutes: backToWorkMinutes(errors, pick('backToWorkMinutes')),
+    autoCloseJoinMinutes: autoCloseJoinMinutes(errors, pick('autoCloseJoinMinutes')),
     bellOffsetSeconds: bellOffsetSeconds(errors, pick('bellOffsetSeconds')),
     artCheck: bool(errors, 'Album art check', pick('artCheck')),
     hideAllArt: bool(errors, 'Hide all album art', pick('hideAllArt')),

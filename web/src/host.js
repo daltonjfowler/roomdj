@@ -46,6 +46,7 @@ import { BACK_TO_WORK_MINUTES, DEFAULT_SETTINGS, DOWNVOTE_CHOICES, UPVOTE_CHOICE
 import { clockLeft } from '../../shared/backtowork.js';
 import { FOCUS_MINUTES } from '../../shared/focus.js';
 import { PASS_MAX, TIMEOUT_CLASS, TIMEOUT_MINUTES } from '../../shared/classroom.js';
+import { AUTO_CLOSE_JOIN_MINUTES } from '../../shared/protocol.js';
 import { AUTOPLAY_NONE_WAIT_MS, AUTOPLAY_RETRY_MS, AUTOPLAY_TICK_MS } from '../../shared/autoplay.js';
 import { afterShow, holdForShow } from '../../shared/recap-music.js';
 import { initRecapAudio } from './recap-audio.js';
@@ -1662,17 +1663,25 @@ function controlsHtml(s) {
 }
 
 /** The door switch and the knocks (in the Students dialog), and the Room menu item. */
+/** Joining closed now: the server said so, or the automatic close time has come (shared/classroom.js joinClosedNow). */
+const doorClosed = () => state?.joinClosed === true || (Number.isFinite(state?.joinClosesAt) && Date.now() >= state.joinClosesAt);
+let doorTimer = 0;
 function renderDoor() {
-  const closed = state?.joinClosed === true;
+  const closed = doorClosed();
+  clearTimeout(doorTimer);
+  if (!closed && Number.isFinite(state?.joinClosesAt)) doorTimer = setTimeout(renderDoor, Math.max(500, state.joinClosesAt - Date.now() + 200));
   for (const id of ['#doorBtn', '#joinDoorBtn']) {
     const b = $(id);
     b.classList.toggle('on', closed);
     b.setAttribute(id === '#doorBtn' ? 'aria-pressed' : 'aria-checked', String(closed));
   }
+  const closesAt = !closed && Number.isFinite(state?.joinClosesAt) && state.joinClosesAt > Date.now() ? new Date(state.joinClosesAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null;
   $('#doorBtn').textContent = closed ? '🚪 Open joining' : '🚪 Close joining';
-  $('#joinDoorBtn').textContent = closed ? `🚪 Joining closed${state?.knocks?.length ? ` (${state.knocks.length} knocking)` : ''}` : '🚪 Joining open';
+  $('#joinDoorBtn').textContent = closed ? `🚪 Joining closed${state?.knocks?.length ? ` (${state.knocks.length} knocking)` : ''}`
+    : closesAt ? `🚪 Joining open (closes ${closesAt})` : '🚪 Joining open';
   $('#doorNote').textContent = closed
     ? 'Joining is closed: a new device knocks and waits for you. Students already in can leave and come back.'
+    : closesAt ? `Joining is open until ${closesAt} (Settings, Close joining after). Close it now if your class is in.`
     : 'Joining is open: anyone with the class code gets in. Close it once your class is in.';
   const knocks = state?.knocks ?? [];
   if ($('#studentsDlg').open) {
@@ -1693,7 +1702,7 @@ function noteKnocks(s) {
   knocksSeen = n;
   renderDoor();
 }
-const toggleDoor = () => state && send({ t: 'joinClosed', on: state.joinClosed !== true });
+const toggleDoor = () => state && send({ t: 'joinClosed', on: !doorClosed() });
 $('#doorBtn').addEventListener('click', toggleDoor);
 $('#joinDoorBtn').addEventListener('click', toggleDoor);
 $('#knocks').addEventListener('click', (e) => {
@@ -1889,6 +1898,10 @@ function fillSettings(s) {
   $('#setCredits').value = on ? s.startingCredits : '';
   $('#setJump').checked = s.allowJump === true;
   $('#setCoupons').checked = s.coupons !== false;
+  // 🚪 Close joining after (shared/classroom.js): Off or one of AUTO_CLOSE_JOIN_MINUTES
+  $('#setAutoCloseJoin').innerHTML = ['<option value="off">Off (use the 🚪 switch)</option>',
+    ...AUTO_CLOSE_JOIN_MINUTES.map((m) => `<option value="${m}">${m} minutes after the room opens</option>`)].join('');
+  $('#setAutoCloseJoin').value = Number.isInteger(s.autoCloseJoinMinutes) ? String(s.autoCloseJoinMinutes) : 'off';
   // 📚 Back to work and 🎵 recap music (protocol.js BACK TO WORK, RECAP MUSIC)
   $('#setBackToWork').innerHTML = ['<option value="off">Off</option>',
     ...BACK_TO_WORK_MINUTES.map((m) => `<option value="${m}">${m} ${m === 1 ? 'minute' : 'minutes'}</option>`)].join('');
@@ -2098,6 +2111,7 @@ function readSettings() {
     instrumentalsOnly: songs.instrumentalsOnly,
     ...highlights.readSettings(), // Class favorites, the artist switches
     ...repeats.readSettings(), // Repeat cooldown
+    autoCloseJoinMinutes: $('#setAutoCloseJoin').value === 'off' ? null : Number($('#setAutoCloseJoin').value), // 🚪
     startingCredits: credits,
     // Kept as set even while credits are off (the switch is greyed out, not cleared); it only
     // counts while credits are on.

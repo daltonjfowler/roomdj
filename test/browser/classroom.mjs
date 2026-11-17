@@ -94,8 +94,11 @@ try {
   await host.page.waitForSelector('#settingsDlg[open]');
   const ai = await reveal(host.page, '#setAi').catch(() => null);
   if (ai) await host.page.setChecked(ai, false);
+  await host.page.selectOption(await reveal(host.page, '#setAutoCloseJoin'), '5'); // 🚪 close joining after 5 minutes
   await host.page.click('#applySettings');
-  await stateOf(host, (s) => !s.settings.aiCheck);
+  const sAuto = await stateOf(host, (s) => !s.settings.aiCheck && s.settings.autoCloseJoinMinutes === 5);
+  check('🚪 close after 5 min: the room knows when joining closes', Number.isFinite(sAuto?.joinClosesAt) && sAuto.joinClosesAt > Date.now() && sAuto.joinClosed === false, JSON.stringify({ at: sAuto?.joinClosesAt, closed: sAuto?.joinClosed }));
+  check('🚪 the Room menu says when it closes', (await host.page.locator('#joinDoorBtn').textContent()).includes('closes'), await host.page.locator('#joinDoorBtn').textContent());
 
   const ava = await openPage('ava', '');
   const ben = await openPage('ben', '');

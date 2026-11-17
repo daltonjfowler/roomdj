@@ -76,7 +76,7 @@ import { ART_RATE, JUMP_COST, SUGGEST_COST } from '../shared/protocol.js';
 import { ART_WAIT_MS, artFields, artJson, artKey, validArtKey } from '../shared/art.js';
 import { cachedArtVerdict, checkCover, putTeacherArtOk, teacherArtOk } from './art.js';
 import { focusMessage, focusRefusal, setFocus } from '../shared/focus.js';
-import { PASS_MAX, TIMEOUT_CLASS, addKnock, answerKnock, givePass, knockStatus, setTimeoutFor, timeoutMessage, timeoutRefusal } from '../shared/classroom.js';
+import { PASS_MAX, TIMEOUT_CLASS, addKnock, answerKnock, applyAutoClose, givePass, knockStatus, setJoinClosed, setTimeoutFor, timeoutMessage, timeoutRefusal } from '../shared/classroom.js';
 import { AUTOPLAY_TRIES, autoplayDue, autoplayPicks, autoplayShelves } from '../shared/autoplay.js';
 
 import { backToWorkMessage, backToWorkOn, clearRests, letBackIn, restRefusal, startRest } from '../shared/backtowork.js';
@@ -1237,6 +1237,8 @@ export class Room extends DurableObject {
     this.room.admitted ??= [];
     await this.touch(); // a student typed the right code
     // 🚪 Joining closed (shared/classroom.js): a new device only knocks; the teacher lets it in or not.
+    // A due automatic close (settings.autoCloseJoinMinutes) becomes real here.
+    applyAutoClose(this.room);
     if (!this.admitted(device) && this.room.joinClosed) {
       addKnock(this.room, device);
       await this.commit();
@@ -2217,7 +2219,7 @@ export class Room extends DurableObject {
         return this.commit();
       }
       case 'joinClosed':
-        room.joinClosed = msg.on === true;
+        setJoinClosed(room, msg.on === true); // the automatic close is done: the teacher's choice wins
         return this.commit();
       case 'knock': {
         const device = String(msg.device ?? '');

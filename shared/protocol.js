@@ -384,6 +384,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   backToWork: true, // 📚 back-to-work screen (BACK TO WORK below): after a suggestion or a vote, a student rests
   //                   backToWorkMinutes before the next one. Saved settings without it read as true.
   backToWorkMinutes: 5, // one of BACK_TO_WORK_MINUTES (Dalton, 2026-10-16: 5, was 3)
+  autoCloseJoinMinutes: null, // 🚪 close joining this many minutes after the room opens (AUTO_CLOSE_JOIN_MINUTES); null = off
+  //                             (JOIN DOOR, shared/classroom.js; Dalton 2026-11-16). The teacher's own switch wins after.
   bellOffsetSeconds: 3, // 🔔 bell offset (default +3: Dalton's school bell rings 3 s late, 2026-10-07) (BELL OFFSET above): the school's real bell rings this many seconds
   //                       after (+) or before (-) the typed time. SETTINGS_LIMITS.bellOffsetSeconds.
   //                       Saved settings without it read as 0.
@@ -589,6 +591,8 @@ export const NEXT_LOCK_S = 15;
 //   right under the title bar. Pages time it with the RELATIVE `restLeft` (ms at the snapshot), so a
 //   Chromebook's wrong clock does not matter (`restGraceLeft` is always 0 now).
 export const BACK_TO_WORK_MINUTES = Object.freeze([1, 2, 3, 5, 10]);
+/** 🚪 Close joining automatically, minutes after the room opens (settings.autoCloseJoinMinutes; null = off). */
+export const AUTO_CLOSE_JOIN_MINUTES = Object.freeze([5, 10, 15, 20, 30]);
 
 // RECAP MUSIC (Dalton, 2026-10-07; shared/recap-music.js, web/src/recap-audio.js): settings.recapMusic
 //   (default on) and recapVolume (percent of the room's volume). Only the HOST page makes sound (it
