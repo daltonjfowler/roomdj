@@ -190,6 +190,14 @@ export const SEED_PROFILES = Object.freeze([
 //          email link was used by another Spotify account) | 503 full (FREE TEACHERS) | 429 busy
 //   GET  /api/auth/me       header authorization: Bearer <session> → 200 { account } | 401 session
 //   POST /api/auth/logout   header authorization: Bearer <session> → 200 { ok: true }
+//   POST /api/teacher/signout-others  header authorization: Bearer <session> (Dalton 2026-11-16: a
+//        signed-in teacher screen left open let someone else allow songs) → 200 { session, account,
+//        rooms: n } | 401 session | 400 session_only (the old teacher key cannot use it). Every OTHER sign-in of this teacher stops working (KV sessOut:v1:<profile id>
+//        = the moment, read with a short cache, so within about a minute): sessions carry `at` and one
+//        from before the mark, or with no `at`, is refused like an expired one. This computer gets a NEW
+//        session (never re-stamped: an old one may be cached at the edge). Each open room of the
+//        teacher gets a host token nobody holds (Room /teacherResume), so every teacher page running it
+//        gets host_moved; the room keeps running and "Your open rooms" → Open here takes it back.
 //   Account = { profile: { id, name, legacy? }, app: 'shared'|'own', clientId }
 //   Teacher routes take `authorization: Bearer <session>` (the profile is the session's; a body or
 //   header profile is ignored) or, only while a TEACHER_KEY secret is set, the old key + profile
@@ -198,6 +206,19 @@ export const SPOTIFY_CLIENT_ID_PATTERN = /^[0-9a-f]{32}$/i;
 export const SESSION_TTL_S = 30 * 24 * 3600;
 export const OWN_PROFILE_PREFIX = 'u-';
 export const SESSION_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+/** KV key: sign-ins of this profile from before this moment (ms) are signed out (POST /api/auth/signout-others). */
+export const sessOutKey = (profileId) => `sessOut:v1:${profileId}`;
+
+// ---- ALLOWED SONGS (Dalton, 2026-11-16: "allowed songs list with remove") ----
+// An Allow (Needs a look, Allow anyway) lasts for good and skips the AI check (shared/filter.js
+// approveSong: KV teacherKvKey approved:<kvId> and approved:<banKey>). The start screen's "Allowed
+// songs" lists them so a teacher can take one back.
+//   GET  /api/teacher/approved → 200 { songs: [{ id, title, artist, at }] } newest first, at most
+//        APPROVED_LIST_MAX (this teacher's only).
+//   POST /api/teacher/approved/remove { id } → 200 { ok: true } | 404 no_song. Deletes the song's
+//        approvals (its id and its banKey, so other versions too). Rooms read approvals from KV, so the
+//        song goes back to the AI check within about a minute. Nothing else changes (not a ban).
+export const APPROVED_LIST_MAX = 1000;
 
 // ---- FREE TEACHERS (Dalton, 2026-10-14: "limit per Spotify account") ----
 // A private ('own' app, OWN_PROFILE_PREFIX) teacher costs RoomDJ money only through Workers AI (new

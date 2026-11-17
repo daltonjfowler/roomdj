@@ -232,3 +232,32 @@ test('signed in: no Add teacher (teachers are added on the Spotify app)', async 
   signedIn.set(req, await teacherSession(req, e));
   assert.equal((await handleProfiles(req, e, new URL(req.url))).status, 403);
 });
+
+test('Sign out my other devices: older sign-ins of this teacher stop, this computer gets a new one, others untouched', async () => {
+  const { signOutOthers } = await import('../src/auth.js');
+  const { sessOutKey } = await import('../shared/protocol.js');
+  const e = env();
+  who = { id: 'stranger', display_name: 'Ms Rivera' };
+  const a = await signIn(e, OWN); // this computer
+  const b = await signIn(e, OWN); // a computer left signed in
+  who = { id: 'someone-else', display_name: 'Mr Lee' };
+  const other = await signIn(e, OWN); // another teacher
+  const me = (s) => call(e, '/api/auth/me', { method: 'GET', session: s });
+  assert.equal((await me(b.data.session)).status, 200);
+  // a session written before sessions had `at` (live data from before 2026-11-16)
+  const oldHash = createHash('sha256').update('o'.repeat(43)).digest('hex');
+  e.CLASS_KV.map.set(`sess:v1:${oldHash}`, JSON.stringify({ acct: 'x', profileId: a.data.account.profile.id, clientId: OWN, app: 'own' }));
+  assert.equal((await me('o'.repeat(43))).status, 200);
+
+  const t = await teacherSession(new Request(`${ORIGIN}/x`, { headers: { authorization: `Bearer ${a.data.session}` } }), e);
+  const fresh = await signOutOthers(e, t);
+  assert.ok(SESSION_PATTERN.test(fresh.session));
+  assert.notEqual(fresh.session, a.data.session, 'a NEW session: an edge-cached old one must not count');
+  assert.equal(fresh.account.profile.id, a.data.account.profile.id);
+  assert.ok(Number(e.CLASS_KV.map.get(sessOutKey(a.data.account.profile.id))) > 0);
+  assert.equal((await me(fresh.session)).status, 200, 'this computer stays signed in');
+  assert.equal((await me(b.data.session)).status, 401, 'the computer left signed in is out');
+  assert.equal((await me(a.data.session)).status, 401, 'the old session of this computer is gone');
+  assert.equal((await me('o'.repeat(43))).status, 401, 'a session with no time is out too');
+  assert.equal((await me(other.data.session)).status, 200, 'another teacher is not touched');
+});

@@ -170,6 +170,9 @@
             <button id="renameMe" class="linkbtn" type="button" aria-haspopup="dialog" hidden>Rename</button>
             <button id="signOutBtn" class="linkbtn" type="button" hidden>Sign out</button>
             <a id="adminLink" class="linkbtn" href="/admin/" hidden>Admin</a></p>
+          <p class="teaching-as account-tools">
+            <button id="allowedBtn" class="linkbtn" type="button" aria-haspopup="dialog">✅ Allowed songs</button>
+            <button id="signOutOthersBtn" class="linkbtn" type="button" hidden>🔒 Sign out my other devices</button></p>
           <!-- Free teachers: what is left today and when it resets (GET /api/teacher/usage) -->
           <p id="usageNote" class="note usage-note" hidden></p>
           <label class="field">Class code <small>Goes on the board. Keep the suggestion or type your own: a word, a phrase, anything. Capitals and spaces do not matter.</small>
@@ -641,6 +644,18 @@
         <button id="creditSet" type="button">Set to this</button>
         <button id="creditGive" class="primary" type="submit">Give</button>
       </div>
+    </form>
+  </dialog>
+
+  <!-- ✅ Allowed songs (protocol.js ALLOWED SONGS): every song this teacher allowed, to take one back -->
+  <dialog id="allowedDlg" class="dialog wide-dialog" aria-labelledby="allowedTitle">
+    <form method="dialog">
+      <h2 id="allowedTitle">✅ Allowed songs</h2>
+      <p class="note">Songs you allowed (Needs a look, Allow anyway). An allowed song skips the AI check in all your rooms from then on. Remove one and it is checked again like any new song. To stop a song for good, ban it while it plays or waits.</p>
+      <p><input id="allowedFilter" class="text" type="search" placeholder="Find a song or artist" aria-label="Find a song or artist" autocomplete="off"></p>
+      <p id="allowedMsg" class="note" role="status"></p>
+      <ul id="allowedList" class="blocked-list"></ul>
+      <div class="dialog-actions"><button class="primary" value="done">Done</button></div>
     </form>
   </dialog>
 

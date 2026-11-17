@@ -37,7 +37,7 @@ import { noteServerTime } from './server-clock.js';
 import { initRepeats } from './repeats-host.js';
 import { initBoardHost } from './board-host.js';
 import { forgetTeacherKey, KEY_ALLOWED, rememberedKey, saveTeacherKey, teacherKey } from './teacher-key.js';
-import { acceptDisclaimer, checkSignin, finish, forgetSignin, login, sessionHeaders, signOut, signedInAs, signinReturn, staysSignedIn, updateAccount } from './account.js';
+import { acceptDisclaimer, checkSignin, finish, forgetSignin, login, replaceSession, sessionHeaders, signOut, signedInAs, signinReturn, staysSignedIn, updateAccount } from './account.js';
 import { cleanClientId } from '../../shared/accounts.js';
 import { isFreeTeacher } from '../../shared/protocol.js';
 import { initTeacherSuggest } from './teacher-suggest.js';
@@ -187,6 +187,7 @@ function showStart(message = '') {
   $('#switchTeacher').hidden = Boolean(signed);
   $('#renameMe').hidden = !signed;
   $('#signOutBtn').hidden = !signed;
+  $('#signOutOthersBtn').hidden = !signed;
   $('#adminLink').hidden = !signed?.account.admin; // the server checks again on /admin/
   $('#otherKey').hidden = Boolean(signed);
   showUsage();
@@ -416,6 +417,91 @@ $('#signOutBtn').addEventListener('click', async () => {
   forgetProfile();
   toast('Signed out on this computer.', 'ok');
   showStart();
+});
+
+// "Sign out my other devices" (protocol.js POST /api/teacher/signout-others; Dalton 2026-11-16): every
+// other computer signed in as this teacher is signed out, and any teacher page running an open room stops.
+$('#signOutOthersBtn').addEventListener('click', async () => {
+  const ok = await ask('Sign out your other devices?', 'Sign them out',
+    'Every other computer, phone or board signed in as you is signed out within about a minute. If a room is open, the teacher screen running it stops (the music pauses); open it again here under "Your open rooms". This computer stays signed in.');
+  if (!ok) return;
+  const btn = $('#signOutOthersBtn');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/teacher/signout-others', { method: 'POST', headers: teacherHeaders() });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || typeof data.session !== 'string') {
+      toast(data.message || 'That did not work. Try again.', 'bad');
+      return;
+    }
+    replaceSession(data.session, { ...data.account, admin: signedInAs()?.account?.admin === true });
+    toast(data.rooms ? 'Other devices signed out. Your room is still open: press Open here to run it from this computer.' : 'Other devices signed out. This computer stays signed in.', 'ok');
+    loadOpenRooms();
+  } catch {
+    toast('Could not reach RoomDJ. Check the internet and try again.', 'bad');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ---- ✅ Allowed songs (protocol.js ALLOWED SONGS): take back an Allow ----
+let allowed = [];
+function renderAllowed() {
+  const q = $('#allowedFilter').value.trim().toLowerCase();
+  const shown = q ? allowed.filter((s) => `${s.title} ${s.artist}`.toLowerCase().includes(q)) : allowed;
+  const day = (at) => (at ? new Date(at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '');
+  keepFocus(() => {
+    $('#allowedList').innerHTML = shown.length ? shown.map((s) => `<li data-id="${esc(s.id)}">
+      <div class="blocked-text">
+        <p class="song-title">${esc(s.title)} <span class="song-artist">· ${esc(s.artist)}</span></p>
+        <p class="note">Allowed ${esc(day(s.at))}${s.at ? ` at <time>${esc(timeOf(s.at))}</time>` : ''}</p>
+      </div>
+      <span class="item-tools"><button type="button" class="danger" data-act="unallow" aria-label="${esc(`Remove ${s.title} from allowed songs`)}">Remove</button></span>
+    </li>`).join('') : `<li class="note">${allowed.length ? 'No allowed song matches that.' : 'You have not allowed any songs.'}</li>`;
+  });
+  $('#allowedMsg').textContent = allowed.length ? `${allowed.length} allowed ${allowed.length === 1 ? 'song' : 'songs'}${q ? `, ${shown.length} shown` : ''}.` : '';
+}
+$('#allowedBtn').addEventListener('click', async () => {
+  allowed = [];
+  $('#allowedFilter').value = '';
+  $('#allowedList').innerHTML = '<li class="note">Loading…</li>';
+  $('#allowedMsg').textContent = '';
+  $('#allowedDlg').showModal();
+  try {
+    const r = await fetch('/api/teacher/approved', { headers: teacherHeaders() });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      $('#allowedList').innerHTML = `<li class="note">${esc(data.message || 'Could not load your allowed songs.')}</li>`;
+      return;
+    }
+    allowed = Array.isArray(data.songs) ? data.songs : [];
+    renderAllowed();
+  } catch {
+    $('#allowedList').innerHTML = '<li class="note">Could not reach RoomDJ. Check the internet and try again.</li>';
+  }
+});
+$('#allowedFilter').addEventListener('input', renderAllowed);
+$('#allowedList').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-act="unallow"]');
+  if (!btn) return;
+  const id = btn.closest('[data-id]').dataset.id;
+  const song = allowed.find((s) => s.id === id);
+  if (!song) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/teacher/approved/remove', { method: 'POST', headers: { ...teacherHeaders(), 'content-type': 'application/json' }, body: JSON.stringify({ id }) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok && r.status !== 404) {
+      btn.disabled = false;
+      return toast(data.message || 'That did not work. Try again.', 'bad');
+    }
+    allowed = allowed.filter((s) => s.id !== id);
+    renderAllowed();
+    announce(`${song.title} removed. It is checked again like a new song.`);
+  } catch {
+    btn.disabled = false;
+    toast('Could not reach RoomDJ. Check the internet and try again.', 'bad');
+  }
 });
 
 async function showWho(message = '') {

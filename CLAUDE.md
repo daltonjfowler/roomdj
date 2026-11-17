@@ -796,6 +796,14 @@ Claude account).
    (ms; 0 = none; none when `until` comes first), and #idleNote counts down with Keep open ({ t: 'keepOpen' },
    also sent by Start music and Play/Pause) and shows in the tab title and on the big screen. Closes with
    why 'idle'. IDLE_TEST_MS (local only) can only shorten it. test: npm run test:idle.
+46. ✅ Allowed songs + 🔒 Sign out my other devices (Dalton, 2026-11-16, after songs with bad words were
+   allowed from a teacher screen left signed in; protocol.js ALLOWED SONGS + POST
+   /api/teacher/signout-others). Start-screen links. Allowed songs lists the teacher's own approvals
+   (id keys only) and Remove deletes the id AND banKey approval (the song is AI-checked again; not a
+   ban). Sign out my other devices is session-only: KV sessOut:v1:<profile> = now (read with cacheTtl
+   60), sessions carry `at` and one older than the mark or with no `at` is refused; this computer gets
+   a NEW session (never re-stamp: edge caches); each open room gets a host token nobody holds
+   (Room /teacherResume), so other host pages get host_moved and the room runs on until Open here.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

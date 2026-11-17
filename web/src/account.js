@@ -49,6 +49,11 @@ export function updateAccount(account) {
   keep({ ...v, account }, staysSignedIn());
 }
 
+/** A new session for this computer (Sign out my other devices): kept where the old one was. */
+export function replaceSession(session, account) {
+  keep({ session, account }, staysSignedIn());
+}
+
 /** Forget the sign-in in this tab and on this computer, and the Spotify login with it. */
 export function forgetSignin() {
   if (ss()) del(ss(), SESSION);

@@ -11,7 +11,7 @@
 // Local tests only: SPOTIFY_AUTH_TEST_BASE=http://127.0.0.1:<port> (a `wrangler dev --var`) sends
 // the token swap and /v1/me to a fake Spotify. Only a loopback http address is taken.
 
-import { DISCLAIMER_VERSION, FREE_SIGNUPS_PER_DAY, FREE_USE_TTL_S, OWN_PROFILE_PREFIX, PROFILE_ID_PATTERN, SESSION_PATTERN, SESSION_TTL_S } from '../shared/protocol.js';
+import { DISCLAIMER_VERSION, FREE_SIGNUPS_PER_DAY, FREE_USE_TTL_S, OWN_PROFILE_PREFIX, PROFILE_ID_PATTERN, SESSION_PATTERN, SESSION_TTL_S, sessOutKey } from '../shared/protocol.js';
 import { SPOTIFY_TOKEN_URL, randomToken, tokenRequestBody, tokensFromReply } from '../shared/spotify.js';
 import { accountView, appOf, cleanClientId, newOwnProfileId, startName } from '../shared/accounts.js';
 import { addProfile, findProfile } from '../shared/profiles.js';
@@ -72,16 +72,17 @@ async function profileById(env, id, list = null) {
   return findProfile(list ?? (await ensureProfiles(env)), id, { active: true });
 }
 
-async function newSession(env, { acct, profile, clientId, app }) {
+async function newSession(env, { acct, profile, clientId, app }, at = Date.now()) {
   const session = randomToken(32);
-  await env.CLASS_KV.put(`sess:v1:${await sha256Hex(session)}`, JSON.stringify({ acct, profileId: profile.id, clientId, app }), { expirationTtl: SESSION_TTL_S });
+  // `at`: when it began, for "Sign out my other devices" (sessOutKey)
+  await env.CLASS_KV.put(`sess:v1:${await sha256Hex(session)}`, JSON.stringify({ acct, profileId: profile.id, clientId, app, at }), { expirationTtl: SESSION_TTL_S });
   return { session, account: accountView(profile, app, clientId) };
 }
 
 /**
  * The signed-in teacher of a request (header authorization: Bearer <session>):
- * null (no session header), a 401 Response (unknown, expired, or the teacher was hidden), or
- * { profile, app, clientId, key } (key: the session's KV key).
+ * null (no session header), a 401 Response (unknown, expired, signed out by "Sign out my other
+ * devices", or the teacher was hidden), or { profile, app, clientId, key, acct } (key: the session's KV key).
  */
 export async function teacherSession(request, env) {
   const m = (request.headers.get('authorization') ?? '').match(/^Bearer (\S+)$/);
@@ -91,7 +92,23 @@ export async function teacherSession(request, env) {
   const s = await env.CLASS_KV.get(key, 'json');
   const profile = s ? await profileById(env, s.profileId) : null;
   if (!profile) return json(401, s ? HIDDEN : SESSION_GONE);
-  return { profile, app: s.app, clientId: s.clientId, key };
+  // a short edge cache: a sign-out reaches every computer within about a minute
+  const out = Number(await env.CLASS_KV.get(sessOutKey(profile.id), { cacheTtl: 60 }));
+  if (out > 0 && !(typeof s.at === 'number' && s.at >= out)) return json(401, SESSION_GONE);
+  return { profile, app: s.app, clientId: s.clientId, key, acct: s.acct };
+}
+
+/**
+ * "Sign out my other devices" (protocol.js POST /api/teacher/signout-others): every sign-in of this
+ * teacher from before now stops working, and this computer gets a new one. → { session, account }
+ */
+export async function signOutOthers(env, t) {
+  const now = Date.now();
+  await env.CLASS_KV.put(sessOutKey(t.profile.id), String(now), { expirationTtl: SESSION_TTL_S });
+  const fresh = await newSession(env, { acct: t.acct, profile: t.profile, clientId: t.clientId, app: t.app }, now);
+  await env.CLASS_KV.delete(t.key);
+  console.log(JSON.stringify({ message: 'teacher signed out other devices', profile: t.profile.id }));
+  return fresh;
 }
 
 // POST /api/auth/spotify: swap the code, learn who it is, sign in (or ask which teacher they are).

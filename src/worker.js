@@ -39,7 +39,9 @@ import { appleConfigured } from '../shared/apple.js';
 import { appleDeveloperToken } from './apple.js';
 import { teacherKvKey } from './teacher-kv.js';
 import { handleProfiles, readProfileList, requestProfile, signedIn } from './profiles.js';
-import { handleAuth, teacherSession } from './auth.js';
+import { handleAuth, signOutOthers, teacherSession } from './auth.js';
+import { APPROVED_LIST_MAX } from '../shared/protocol.js';
+import { kvId } from '../shared/catalog.js';
 import { FREE_CAPS, freeUsage, spendFree } from './free.js';
 import { PREWARM_ON, prewarm } from './prewarm.js';
 import { finishLyrics } from './lyrics-finish.js';
@@ -332,6 +334,75 @@ async function closeAllRooms(request, env) {
   return json(200, { closed });
 }
 
+// "Sign out my other devices" (protocol.js POST /api/teacher/signout-others; Dalton 2026-11-16): every
+// other sign-in of this teacher ends, and each open room gets a host token nobody holds, so every
+// teacher page running it stops (host_moved). The room keeps going; Open here takes it back.
+async function signOutOtherDevices(request, env) {
+  const t = signedIn.get(request);
+  if (!t) return json(400, { error: 'session_only', message: 'Sign in with Spotify to use this.' });
+  const fresh = await signOutOthers(env, t);
+  let rooms = 0;
+  for (const { room } of await readOpenRooms(env, t.profile)) {
+    if (!ROOM_ID_PATTERN.test(room)) continue;
+    const res = await roomStub(env, room).fetch('https://room/teacherResume', {
+      method: 'POST', body: JSON.stringify({ profile: ownerOf(t.profile), hostHash: await sha256Hex(makeHostToken()) }),
+    });
+    if (res.ok) rooms++;
+  }
+  return json(200, { ...fresh, rooms });
+}
+
+// ---- Allowed songs (protocol.js ALLOWED SONGS) ----
+/** This teacher's approvals, one per song, newest first. Only the song-id keys are read (approveSong
+ *  writes the banKey one alongside with the same value). */
+async function listApproved(request, env) {
+  if (!env.CLASS_KV) return json(503, { error: 'storage', message: 'Storage is not set up on this server.' });
+  const profile = await requestProfile(request, env);
+  if (profile instanceof Response) return profile;
+  const prefix = teacherKvKey('approved:', profile);
+  const names = [];
+  let cursor;
+  do {
+    const r = await env.CLASS_KV.list({ prefix, cursor });
+    for (const k of r.keys) if (!k.name.slice(prefix.length).startsWith('song:')) names.push(k.name);
+    cursor = r.list_complete ? undefined : r.cursor;
+  } while (cursor && names.length < APPROVED_LIST_MAX);
+  const songs = [];
+  const seen = new Set();
+  for (let i = 0; i < names.length && i < APPROVED_LIST_MAX; i += 50) {
+    const got = await Promise.all(names.slice(i, i + 50).map((n) => env.CLASS_KV.get(n, 'json').catch(() => null)));
+    for (const v of got) {
+      const id = songId(v?.id);
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      songs.push({ id, title: String(v.title ?? '').slice(0, 200), artist: String(v.artist ?? '').slice(0, 200), at: Number(v.at) || 0 });
+    }
+  }
+  songs.sort((a, b) => b.at - a.at);
+  return json(200, { songs });
+}
+
+async function removeApproved(request, env) {
+  if (!env.CLASS_KV) return json(503, { error: 'storage', message: 'Storage is not set up on this server.' });
+  const profile = await requestProfile(request, env);
+  if (profile instanceof Response) return profile;
+  const read = await readJson(request, MAX_JOIN_BYTES);
+  if (read instanceof Response) return read;
+  const id = songId(read.body?.id);
+  const gone = { error: 'no_song', message: 'That song is not on your allowed list any more.' };
+  if (!id) return json(404, gone);
+  const key = teacherKvKey(`approved:${kvId(id)}`, profile);
+  const v = await env.CLASS_KV.get(key, 'json');
+  if (!v) return json(404, gone);
+  await env.CLASS_KV.delete(key);
+  // the any-version approval goes too, or the song would still pass through it; another version
+  // allowed on its own keeps its own id approval
+  const other = banKey(v);
+  if (other) await env.CLASS_KV.delete(teacherKvKey(`approved:${other}`, profile));
+  console.log(JSON.stringify({ message: 'teacher removed an allowed song', profile: profile.id }));
+  return json(200, { ok: true });
+}
+
 // A student types the class code. Order matters (like uploadmymodel's /api/slice): the address
 // fuse first, then the device's lockout (a locked device is refused WITHOUT comparing), then the
 // compare. A wrong code and "no room has that code" are the same answer.
@@ -545,6 +616,18 @@ async function handleTeacher(request, env, url) {
     return closeAllRooms(request, env);
   }
   if (url.pathname === '/api/teacher/profiles' || url.pathname.startsWith('/api/teacher/profiles/')) return handleProfiles(request, env, url);
+  if (url.pathname === '/api/teacher/signout-others') {
+    if (request.method !== 'POST') return json(405, { error: 'method', message: 'Use POST.' });
+    return signOutOtherDevices(request, env);
+  }
+  if (url.pathname === '/api/teacher/approved') {
+    if (request.method !== 'GET') return json(405, { error: 'method', message: 'Use GET.' });
+    return listApproved(request, env);
+  }
+  if (url.pathname === '/api/teacher/approved/remove') {
+    if (request.method !== 'POST') return json(405, { error: 'method', message: 'Use POST.' });
+    return removeApproved(request, env);
+  }
   if (url.pathname === '/api/teacher/usage') {
     // A free teacher's caps today, per Spotify account (protocol.js FREE TEACHERS).
     if (request.method !== 'GET') return json(405, { error: 'method', message: 'Use GET.' });
