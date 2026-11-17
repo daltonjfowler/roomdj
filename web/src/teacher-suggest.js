@@ -5,7 +5,7 @@
 // teacher; this page only shows what it says. Results are marked like the student page's: In the
 // queue, Played already, 😴 Resting, ⏱ Too long, 🎨 Artist waiting, Not allowed + Why?.
 
-import { $, announce, artHtml, esc, keepFocus, spotifyMark, toast } from './dom.js';
+import { $, announce, artHtml, ask, esc, keepFocus, spotifyMark, toast } from './dom.js';
 import { QUERY_MAX, SHELVES, shelfShown, whyText } from '../../shared/protocol.js';
 import { tooLong } from '../../shared/classtime.js';
 import { mainArtist, mainArtistName } from '../../shared/filter.js';
@@ -131,7 +131,7 @@ export function initTeacherSuggest({ send, getState }) {
           <span class="song-artist">${spotifyMark(song)}${esc(song.artist)}</span>
           ${song.explicit === 'cleaned' ? '<small class="note">Clean version</small>' : ''}
           ${CHECK_NOTES[song.check] ?? ''}</span>
-        <span class="item-tools">${buttonHtml(song)}</span>
+        <span class="item-tools">${buttonHtml(song)}<button type="button" class="danger" data-act="tban" aria-label="${esc(`Ban ${song.title} by ${song.artist}`)}" title="Never allow this song (any version) in your rooms">⛔ Ban</button></span>
       </li>`).join('');
     });
   }
@@ -229,7 +229,16 @@ export function initTeacherSuggest({ send, getState }) {
     if (!song) return;
     if (btn.dataset.act === 'tsuggest') suggest(song);
     if (btn.dataset.act === 'twhy') whyToast(song);
+    if (btn.dataset.act === 'tban') banSong(song);
   });
+
+  /** ⛔ Ban from search (protocol.js 'banSearch'): asked once, then the room answers 'bannedSong'. */
+  async function banSong(song) {
+    const ok = await ask(`Ban "${song.title}"?`, 'Ban it',
+      `${song.artist}. Students can never pick it in your rooms again, in any version, and it leaves your favorites. If it is waiting in the queue, it goes.`);
+    if (!ok) return;
+    if (!send({ t: 'banSearch', song: song.id })) toast('Reconnecting to the room. Try again in a moment.', 'bad');
+  }
 
   function whyToast(song) {
     const why = stateOf(song)[2];
@@ -267,6 +276,17 @@ export function initTeacherSuggest({ send, getState }) {
       }
       renderedKey = '';
       render();
+      return true;
+    }
+    if (msg.t === 'bannedSong') {
+      // the ban covers every version, so every version leaves the list
+      const gone = songs.get(msg.song) ?? results.find((s) => s.id === msg.song);
+      const key = gone ? songKey(gone) : null;
+      results = results.filter((s) => s.id !== msg.song && !(key && songKey(s) === key));
+      renderedKey = '';
+      render();
+      toast(`"${msg.title ?? 'That song'}" is banned in your rooms.`, 'ok');
+      announce(`${msg.title ?? 'That song'} is banned.`);
       return true;
     }
     if (msg.t === 'suggested') {

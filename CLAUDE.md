@@ -804,6 +804,14 @@ Claude account).
    60), sessions carry `at` and one older than the mark or with no `at` is refused; this computer gets
    a NEW session (never re-stamp: edge caches); each open room gets a host token nobody holds
    (Room /teacherResume), so other host pages get host_moved and the room runs on until Open here.
+47. 🔁 Play again + ⛔ Ban from search (Dalton, 2026-11-16; protocol.js 'replay', 'banSearch'). A song never plays
+   twice in a class; the Resting songs area lists "🔁 Played in this class" (restingAll.played, from history)
+   with ▶ Play again for a glitch or accidental skip: Room.replay unplays it, lifts its rest (KV recent +
+   restPending), sends it through the NORMAL teacher suggest path (full filter, invariant 18) and pushes it
+   next; refused → it counts as played again. "Suggest a song" results have ⛔ Ban (confirm): Room.banFromSearch
+   bans like the Ban button (addBan + rejectedByTeacher), removes waiting copies (queue + Needs a look), leaves
+   the song playing alone; the page drops every version of it from the results. Both host-only.
+   test: npm run test:replay (local dev; needs TEST_AI_OFF in .dev.vars).
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

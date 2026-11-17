@@ -13,6 +13,8 @@ const DAYS_TEXT = { 1: '1 day', 3: '3 days', 7: '1 week', 14: '2 weeks' };
 export function initRepeats({ send }) {
   let list = [];
   let days = null;
+  let played = []; // 🔁 this class's played songs (protocol.js 'replay')
+  const ENDED = { finished: 'played', skipped: 'skipped', failed: 'would not play' };
 
   const select = $('#setCooldown');
   select.innerHTML = ['<option value="off">Off</option>', ...COOLDOWN_DAYS.map((d) => `<option value="${d}">${DAYS_TEXT[d] ?? `${d} days`}</option>`)].join('');
@@ -36,7 +38,15 @@ export function initRepeats({ send }) {
           <small class="note">${esc(`Played ${playedWhen(e.at)} · resting ${restingUntilLabel(e.until)}`)}</small></span>
         <span class="item-tools"><button type="button" data-act="wake" aria-label="${esc(`Wake ${e.title} now`)}">⏰ Wake now</button></span>
       </li>`).join('');
+      const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      $('#replayList').innerHTML = played.map((e) => `<li class="fav-item" data-id="${esc(e.id)}">
+        <span class="song-text"><span class="song-title">${esc(e.title)}</span>
+          <span class="song-artist">${esc(e.artist)}</span>
+          <small class="note">${esc(`${ENDED[e.status] ?? 'played'} at ${clock(e.at)}${e.waiting ? ' · back in the queue' : ''}`)}</small></span>
+        <span class="item-tools">${e.waiting ? '' : `<button type="button" data-act="replay" aria-label="${esc(`Play ${e.title} again`)}">▶ Play again</button>`}</span>
+      </li>`).join('');
     });
+    $('#replayEmpty').hidden = played.length > 0;
   }
 
   $('#favBtn').addEventListener('click', () => send({ t: 'resting' }));
@@ -48,11 +58,23 @@ export function initRepeats({ send }) {
     if (send({ t: 'wake', key }) && song) announce(`${song.title} can be picked again.`);
   });
 
+  $('#replayList').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act="replay"]');
+    if (!btn) return;
+    const id = btn.closest('[data-id]').dataset.id;
+    const song = played.find((x) => x.id === id);
+    if (send({ t: 'replay', id }) && song) {
+      btn.disabled = true;
+      announce(`${song.title} goes back in the queue, next up.`);
+    }
+  });
+
   /** Messages from the room: true when this module took it. */
   function onMessage(msg) {
     if (msg.t !== 'restingAll' || !Array.isArray(msg.list)) return false;
     list = msg.list;
     days = msg.cooldownDays ?? null;
+    played = Array.isArray(msg.played) ? msg.played : [];
     if ($('#favDlg').open) render();
     return true;
   }

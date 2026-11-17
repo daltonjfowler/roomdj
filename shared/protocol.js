@@ -1000,9 +1000,24 @@ export const ART_RATE = 20;
 //           { t: 'favoriteRemove', id }                take a song (its song id) off the favorites
 //           { t: 'favoritePin', id, on: boolean }      pin it to the top (or unpin). Both answered
 //                                                      'favoritesAll'; students get the new 'favorites'
-//           { t: 'resting' }                           answered { t: 'restingAll', list, cooldownDays }
+//           { t: 'resting' }                           answered { t: 'restingAll', list, cooldownDays, played }
 //                                                      (REPEATS): the songs resting now,
-//                                                      [{ key, title, artist, at, until }]
+//                                                      [{ key, title, artist, at, until }], and played:
+//                                                      this class's played songs, newest first, one per
+//                                                      song [{ id, title, artist, at, status, waiting }]
+//           { t: 'replay', id }                        REPLAY (Dalton 2026-11-16: a glitch or an accidental
+//                                                      skip): a song that played in THIS class plays once
+//                                                      more. It stops counting as played here, its rest is
+//                                                      lifted, it goes through the teacher's suggest path
+//                                                      (full filter, invariant 18; answered 'suggested')
+//                                                      and is pushed to play next. Refused: it stays played.
+//                                                      Then 'repeats' and 'restingAll' again.
+//           { t: 'banSearch', song }                   BAN FROM SEARCH (Dalton 2026-11-16): a song id from the
+//                                                      teacher's own search ('search'/'shelf' results) is
+//                                                      banned like the Ban button (KV banned, any version,
+//                                                      favorites); a copy waiting in the queue or Needs a
+//                                                      look leaves too; the song playing is left alone.
+//                                                      Answered { t: 'bannedSong', song, title }.
 //           { t: 'wake', key }                         wake a resting song early (song key); answered
 //                                                      'restingAll'; students get a new 'repeats'
 //           { t: 'artShow', key }                      🖼 Show anyway: this cover shows for this teacher

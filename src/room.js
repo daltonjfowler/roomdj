@@ -112,7 +112,7 @@ import { addOpenRoom, removeOpenRoom, updateOpenRooms } from './open-rooms.js';
 import { addActivity, roomTally } from './teacher-activity.js';
 import { REPEAT_MIN_MS, REST_WRITE_MS } from '../shared/protocol.js';
 import {
-  mergeRecent, notePlayed, pruneRecent, readRecent, recentValue, restingFor, restingList,
+  mergeRecent, notePlayed, pruneRecent, readRecent, recentValue, restingFor, restingList, sameSong, songKey,
 } from '../shared/repeats.js';
 import {
   bumpFavorite, favoritesValue, hostFavorites, pinFavorite, readFavorites, recapOf, relabelHistory, removeFavorite,
@@ -981,9 +981,100 @@ export class Room extends DurableObject {
     const days = this.room.settings.cooldownDays ?? null;
     const list = restingList(await this.restMap(true), days);
     if (!this.room) return;
-    const msg = { t: 'restingAll', cooldownDays: days, list };
+    const msg = { t: 'restingAll', cooldownDays: days, list, played: this.playedThisClass() };
     if (ws) return this.send(ws, msg);
     for (const s of this.sockets()) if (s.deserializeAttachment()?.role === 'host') this.send(s, msg);
+  }
+
+  /**
+   * 🔁 Played in this class (protocol.js REPLAY): the songs this room played, newest first, one per song,
+   * for the host's Play again. `waiting`: it is already back in the queue or Needs a look.
+   */
+  playedThisClass() {
+    const room = this.room;
+    if (!room) return [];
+    const waiting = [...(room.queue ?? []), ...(room.review ?? [])];
+    const out = [];
+    for (const e of [...(room.history ?? [])].reverse()) {
+      if (e.status === 'playing' || !e.song?.id || out.some((x) => sameSong(x, e.song))) continue;
+      out.push({ id: e.song.id, title: e.song.title, artist: e.song.artist, at: e.at, status: e.status, waiting: waiting.some((q) => sameSong(q.song, e.song)) });
+    }
+    return out;
+  }
+
+  /**
+   * ▶ Play again (protocol.js REPLAY; Dalton 2026-11-16: "a glitch or accidental skip"): a song that played in
+   * this class may play once more. It stops counting as played here and its rest is lifted, then it goes
+   * through the teacher's normal suggest path (the full filter: invariant 18) and is pushed to play next.
+   * If it does not get back in (refused), it counts as played again, so students still cannot pick it.
+   */
+  async replay(ws, raw) {
+    const id = songId(raw);
+    const entry = id ? this.room.history?.findLast((e) => e.song?.id === id && e.status !== 'playing') : null;
+    if (!entry) return this.send(ws, { t: 'error', error: 'no_item', message: 'That song is not on this class\'s played list any more.' });
+    const song = entry.song;
+    const key = songKey(song);
+    const before = { played: [...this.room.played], playedKeys: [...(this.room.playedKeys ?? [])], pending: this.room.restPending?.[key] };
+    unplay(this.room, song);
+    if (key) {
+      delete this.room.restPending?.[key];
+      try {
+        const map = readRecent(await this.env.CLASS_KV?.get(this.restKey(), 'json'));
+        if (map[key]) {
+          delete map[key];
+          await this.env.CLASS_KV?.put(this.restKey(), JSON.stringify(recentValue(map)));
+        }
+        this.rest = { map, at: Date.now() };
+      } catch (e) {
+        console.error(JSON.stringify({ message: 'recent write failed', error: String(e) }));
+      }
+    }
+    await this.save();
+    await this.suggest(ws, { device: TEACHER_DEVICE }, id);
+    if (!this.room?.open) return;
+    const queued = this.room.queue.find((q) => q.song.id === id || sameSong(q.song, song));
+    if (queued && !queued.pushed) pushSong(this.room, { id: queued.id, on: true });
+    if (!queued && !this.room.review?.some((q) => sameSong(q.song, song))) {
+      // refused: it stays played in this class (its record time is not put back: a later play notes it)
+      this.room.played = before.played;
+      this.room.playedKeys = before.playedKeys;
+      if (key && before.pending) (this.room.restPending ??= {})[key] = before.pending;
+    }
+    await this.commit();
+    await this.sendRepeats();
+    await this.sendResting();
+  }
+
+  /**
+   * ⛔ Ban from search (protocol.js BAN FROM SEARCH; Dalton 2026-11-16: "allow teacher to search for songs to ban
+   * themselves"): a song from the teacher's own search, banned like the Ban button (KV banned, any version, out of
+   * the favorites). A copy waiting in the queue or Needs a look leaves too. The song playing is left alone: its
+   * own ⋯ Ban stops it. → { t: 'bannedSong', song, title }
+   */
+  async banFromSearch(ws, raw) {
+    const id = songId(raw);
+    if (!id) return this.send(ws, NO_ITEM);
+    let song;
+    try {
+      song = (await this.recentSong(id)) ?? (await lookupCatalog(id, this.env, { fetchImpl: this.relay }));
+    } catch (e) {
+      if (e instanceof CatalogError) return this.send(ws, { t: 'error', error: 'unavailable', message: e.message });
+      throw e;
+    }
+    if (!song || !this.room?.open) return this.send(ws, NO_ITEM);
+    const why = { id: 'banned' };
+    for (const q of (this.room.queue ?? []).filter((x) => sameSong(x.song, song))) {
+      const item = veto(this.room, q.id);
+      if (item) this.sendRemoved(item, why);
+    }
+    for (const q of (this.room.review ?? []).filter((x) => sameSong(x.song, song))) {
+      const item = takeReview(this.room, q.id);
+      if (item) this.sendReviewed(item, false, false, why);
+    }
+    await this.addBan(song, why);
+    await this.rejectedByTeacher(song);
+    this.send(ws, { t: 'bannedSong', song: id, title: song.title });
+    return this.commit();
   }
 
   /** Wake a resting song early: its entry leaves the record (KV and this room's pending plays). */
@@ -1942,6 +2033,10 @@ export class Room extends DurableObject {
         return this.sendResting(ws);
       case 'wake':
         return this.wake(ws, msg.key);
+      case 'replay': // ▶ Play again (protocol.js REPLAY): host only
+        return this.replay(ws, msg.id);
+      case 'banSearch': // ⛔ Ban from the teacher's search (protocol.js BAN FROM SEARCH): host only
+        return this.banFromSearch(ws, msg.song);
       case 'recap': {
         const recap = recapOf(room, Date.now(), { periodFavorite: await this.periodFavorite() });
         await this.loadArt([...recap.songs, ...recap.top5].map((x) => x.song));
