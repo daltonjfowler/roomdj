@@ -112,7 +112,12 @@
 
 /* Students dialog */
 .students { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 50vh; overflow: auto; }
-.students li { display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 10px; align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+/* a row wraps (flex), so the name always shows however many controls a student has (⭐ ⏸ credits 📚) */
+.students li { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.students li > .nick { flex: 1 1 7em; min-width: 5em; }
+.student-controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.student-controls b { font-variant-numeric: tabular-nums; }
+.student-controls select { font: inherit; padding: 6px 8px; border-radius: 10px; }
 .students .dot { width: 10px; height: 10px; border-radius: 99px; background: var(--line); }
 .students .dot.on { background: var(--ok); }
 .students .nick { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
@@ -120,7 +125,6 @@
 .dialog textarea { resize: vertical; font-family: inherit; }
 
 /* Credits: Students dialog (balance + give buttons), Settings (Starting credits), the queue tag */
-.students li:has(.student-credits) { grid-template-columns: auto minmax(0, 1fr) auto auto auto auto auto; }
 /* 📚 Back to work (protocol.js BACK TO WORK): the countdown and Let back in, only while it runs */
 .student-rest { display: inline-flex; align-items: center; gap: 6px; }
 .student-rest:empty { display: none; }

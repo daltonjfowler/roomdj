@@ -76,6 +76,7 @@ import { ART_RATE, JUMP_COST, SUGGEST_COST } from '../shared/protocol.js';
 import { ART_WAIT_MS, artFields, artJson, artKey, validArtKey } from '../shared/art.js';
 import { cachedArtVerdict, checkCover, putTeacherArtOk, teacherArtOk } from './art.js';
 import { focusMessage, focusRefusal, setFocus } from '../shared/focus.js';
+import { PASS_MAX, TIMEOUT_CLASS, addKnock, answerKnock, givePass, knockStatus, setTimeoutFor, timeoutMessage, timeoutRefusal } from '../shared/classroom.js';
 import { AUTOPLAY_TRIES, autoplayDue, autoplayPicks, autoplayShelves } from '../shared/autoplay.js';
 
 import { backToWorkMessage, backToWorkOn, clearRests, letBackIn, restRefusal, startRest } from '../shared/backtowork.js';
@@ -1180,6 +1181,7 @@ export class Room extends DurableObject {
     try {
       if (url.pathname === '/init' && request.method === 'POST') return await this.init(request);
       if (url.pathname === '/admit' && request.method === 'POST') return await this.admit(request);
+    if (url.pathname === '/knock') return await this.knockCheck(request); // 🚪 a knocking page checks back
       if (url.pathname === '/info') return (await this.live()) ? json(200, { open: true, until: this.room.until }) : json(404, NO_ROOM);
       if (url.pathname === '/search') return await this.search(request, url);
       if (url.pathname === '/songbook') return await this.songbook(request, url);
@@ -1234,6 +1236,12 @@ export class Room extends DurableObject {
     if (this.room.kicked.includes(device)) return json(403, { error: 'kicked', message: 'Your teacher removed you from this room, so you cannot join it again.' });
     this.room.admitted ??= [];
     await this.touch(); // a student typed the right code
+    // 🚪 Joining closed (shared/classroom.js): a new device only knocks; the teacher lets it in or not.
+    if (!this.admitted(device) && this.room.joinClosed) {
+      addKnock(this.room, device);
+      await this.commit();
+      return json(403, { error: 'knock', room: this.room.room, message: 'Joining is closed. Your teacher has been asked to let you in.' });
+    }
     if (!this.admitted(device)) {
       // Full: the oldest device that joined but never opened the room (no nickname, no socket) makes
       // way, so a script with the code cannot fill the room with device ids that never show up.
@@ -1247,6 +1255,25 @@ export class Room extends DurableObject {
       await this.save();
     }
     return json(200, { room: this.room.room, until: this.room.until });
+  }
+
+  /**
+   * 🚪 A page that knocked checks back (protocol.js JOIN DOOR): { status: 'in' | 'no' | 'waiting' | 'gone' }.
+   * It needs no class code: it only answers for its own device, and 'in' means it may join with the code again.
+   */
+  async knockCheck(request) {
+    if (!(await this.live())) return json(404, NO_ROOM);
+    const device = request.headers.get('x-device') ?? '';
+    if (!DEVICE_ID_PATTERN.test(device)) return json(400, { error: 'device', message: 'Reload the page and join again.' });
+    return json(200, { status: knockStatus(this.room, device) });
+  }
+
+  /** Send to every socket of one student device. */
+  sendTo(device, msg) {
+    for (const ws of this.ctx.getWebSockets()) {
+      const a = ws.deserializeAttachment();
+      if (a?.role === 'student' && a.device === device) this.send(ws, msg);
+    }
   }
 
   /** A new host token for this room; host pages still running it are told and closed (4002). */
@@ -1717,8 +1744,16 @@ export class Room extends DurableObject {
       ws.close(CLOSE.kicked, 'Removed');
       return;
     }
-    // 🎯 Focus time: nobody suggests, jumps or votes until it ends (shared/focus.js).
+    // ⏸ This student's own timeout (shared/classroom.js), then 🎯 focus time for everyone (shared/focus.js):
+    // no suggest, jump or vote until it ends, refused before anything is checked or charged.
     if (msg.t === 'suggest' || msg.t === 'jump' || msg.t === 'vote') {
+      const paused = timeoutRefusal(this.room, a.device);
+      if (paused) {
+        const refusal = { reason: 'timeout', message: timeoutMessage(paused.left), left: paused.left };
+        if (msg.t === 'vote') return this.send(ws, { t: 'error', error: 'timeout', message: refusal.message, left: paused.left, id: String(msg.id ?? '') });
+        if (msg.t === 'jump') return this.send(ws, { t: 'jumped', ok: false, id: String(msg.id ?? ''), ...refusal });
+        return this.send(ws, { t: 'suggested', ok: false, song: songId(msg.song ?? msg.trackId) ?? null, ...refusal });
+      }
       const focus = focusRefusal(this.room, a.device);
       if (focus) {
         const refusal = { reason: 'focus', message: focusMessage(focus.left), left: focus.left };
@@ -2166,6 +2201,29 @@ export class Room extends DurableObject {
       case 'focus':
         setFocus(room, msg.on === true);
         return this.commit();
+      // ⭐ ⏸ 🚪 Classroom controls (shared/classroom.js; protocol.js PASSES, TIMEOUTS, JOIN DOOR). Host only.
+      case 'pass': {
+        const device = String(msg.device ?? '');
+        const done = givePass(room, device);
+        if (!done.ok) return this.send(ws, { t: 'error', error: done.reason === 'max' ? 'pass_max' : 'device', message: done.reason === 'max' ? `A student can hold at most ${PASS_MAX} passes.` : 'No such student.' });
+        this.sendTo(device, { t: 'pass', passes: done.passes });
+        return this.commit();
+      }
+      case 'timeout': {
+        const device = String(msg.device ?? '');
+        const minutes = msg.minutes === TIMEOUT_CLASS ? TIMEOUT_CLASS : Number(msg.minutes);
+        const done = setTimeoutFor(room, device, minutes);
+        if (!done.ok) return this.send(ws, { t: 'error', error: done.reason === 'bad' ? 'bad_message' : 'device', message: done.reason === 'bad' ? 'Pick 5, 10 or 15 minutes, or the rest of class.' : 'No such student.' });
+        return this.commit();
+      }
+      case 'joinClosed':
+        room.joinClosed = msg.on === true;
+        return this.commit();
+      case 'knock': {
+        const device = String(msg.device ?? '');
+        if (!DEVICE_ID_PATTERN.test(device) || !answerKnock(room, device, msg.letIn === true)) return this.send(ws, { t: 'error', error: 'device', message: 'That device is not waiting any more.' });
+        return this.commit();
+      }
       case 'autoplay':
         return this.autoplay(ws);
       case 'keepOpen': // ⏳ Keep open, or the music started or paused (webSocketMessage noted it)

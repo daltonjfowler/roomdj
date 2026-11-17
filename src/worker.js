@@ -432,7 +432,9 @@ async function joinRoom(request, env) {
         body: JSON.stringify({ codeHash: hash, device }),
       });
       // Right code, but this device was kicked or the room is full: say so (not a wrong guess).
-      if (res.status !== 403 || (await res.clone().json().catch(() => ({}))).error !== 'code') {
+      const err = res.status === 403 ? (await res.clone().json().catch(() => ({}))).error : null;
+      if (err !== 'code') {
+        if (err === 'knock') await lock.right(); // 🚪 the right code; the room is just closed to new devices
         if (!res.ok) return res;
         admitted = await res.json();
       }
@@ -672,6 +674,9 @@ async function handleRoom(request, env, url, match) {
   if (action === '/search' || action === '/songbook') {
     return stub.fetch(`https://room${action}${url.search}`, { headers: { 'x-device': request.headers.get('x-device') ?? '' } });
   }
+  // 🚪 A knocking page checks back (protocol.js JOIN DOOR): its own device's status only. Not counted against
+  // JOIN_RATE_IP, so a few waiting devices never slow the whole school's joining.
+  if (action === '/knock') return stub.fetch('https://room/knock', { headers: { 'x-device': request.headers.get('x-device') ?? '' } });
   if (action === '/ws') return stub.fetch(new Request(`https://room/ws${url.search}`, request));
   if (action === '/youtube') {
     return stub.fetch(`https://room/youtube${url.search}`, { headers: { 'x-host-token': request.headers.get('x-host-token') ?? '' } });
@@ -751,7 +756,7 @@ async function handleApi(request, env, url) {
     if (request.method !== 'GET') return json(405, { error: 'method', message: 'Use GET.' });
     return appleToken(request, env, url);
   }
-  const room =url.pathname.match(/^\/api\/rooms\/([^/]+)(\/search|\/songbook|\/ws|\/youtube)?$/);
+  const room =url.pathname.match(/^\/api\/rooms\/([^/]+)(\/search|\/songbook|\/ws|\/youtube|\/knock)?$/);
   if (room) return handleRoom(request, env, url, room);
   return json(404, { error: 'not_found', message: 'No such API.' });
 }

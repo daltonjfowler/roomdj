@@ -42,7 +42,8 @@
           <button id="timesBtn" type="button" role="menuitem" tabindex="-1" title="When class ends (the room closes) and when cleanup starts">🕒 Change times…</button>
           <button id="lockBtn" type="button" role="menuitemcheckbox" aria-checked="false" tabindex="-1" title="Lock to stop new suggestions for now. Votes still count. Unlock any time.">🔓 Suggestions open</button>
           <button id="focusBtn" type="button" role="menuitemcheckbox" aria-checked="false" tabindex="-1" title="Pause every student's song picks and votes for 5 minutes. The music keeps playing.">🎯 Focus time (5 min)</button>
-          <button id="studentsBtn" type="button" role="menuitem" tabindex="-1" title="Who is in the room: credits, votes used, let back in, rename or kick">👥 Students <span id="studentCount" class="menu-count"></span></button>
+          <button id="joinDoorBtn" type="button" role="menuitemcheckbox" aria-checked="false" tabindex="-1" title="Close joining once your class is in: a new browser or private tab then has to knock, and you let it in or not">🚪 Joining open</button>
+          <button id="studentsBtn" type="button" role="menuitem" tabindex="-1" title="Who is in the room: passes, time outs, credits, votes used, let back in, rename or kick">👥 Students <span id="studentCount" class="menu-count"></span></button>
           <div role="separator"></div>
           <button id="closeBtn" type="button" role="menuitem" tabindex="-1" class="danger" title="End the room now: the music stops and everything in it is deleted">✕ Close room…</button>
         </div>
@@ -380,7 +381,7 @@
   <dialog id="studentsDlg" class="dialog" aria-labelledby="studentsTitle">
     <form method="dialog">
       <h2 id="studentsTitle">Students in this room</h2>
-      <p class="note">Rename sends a student back to pick a different nickname. Kick removes a student from this room; they cannot join it again. 📚 shows a student in back-to-work time; Let back in ends it now.</p>
+      <p class="note">Rename sends a student back to pick a different nickname. Kick removes a student from this room; they cannot join it again (close joining too, or they can come back in another browser). 📚 shows a student in back-to-work time; Let back in ends it now.</p>
       <!-- Credits: give buttons only while they are on (Settings, Starting credits) -->
       <div id="creditsBar" class="credits-bar" hidden>
         <label for="giveAllN">Give everyone</label>
@@ -389,6 +390,13 @@
         <button id="giveAllBtn" type="button" class="primary">🎟 Give everyone</button>
       </div>
       <p id="creditsOff" class="note" hidden>Credits are off. To use them, turn Credits on in Settings.</p>
+      <!-- 🚪 Join door (shared/classroom.js): every browser or private tab is a new device, so close joining once the class is in -->
+      <div class="credits-bar">
+        <button id="doorBtn" type="button" aria-pressed="false">🚪 Close joining</button>
+        <small id="doorNote" class="note">Joining is open: anyone with the class code gets in.</small>
+      </div>
+      <ul id="knocks" class="students" aria-label="Devices waiting to join"></ul>
+      <p class="note">⭐ Pass: that student's next song that gets in skips the line. ⏸ Time out: no suggesting or voting until it ends.</p>
       <ul id="students" class="students"></ul>
       <div class="dialog-actions"><button class="primary" value="done">Done</button></div>
     </form>

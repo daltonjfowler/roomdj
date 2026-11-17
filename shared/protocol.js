@@ -1012,6 +1012,19 @@ export const ART_RATE = 20;
 //                                                      (full filter, invariant 18; answered 'suggested')
 //                                                      and is pushed to play next. Refused: it stays played.
 //                                                      Then 'repeats' and 'restingAll' again.
+//           { t: 'pass', device }                      PASSES (shared/classroom.js): give one skip-the-line pass
+//                                                      (at most PASS_MAX); the student gets { t: 'pass', passes }.
+//                                                      Their next song that gets into the queue is jumped.
+//           { t: 'timeout', device, minutes }          TIMEOUTS: 5 | 10 | 15 | 'class' (until class ends) |
+//                                                      0 (end it). No suggest, jump or vote meanwhile (reason /
+//                                                      error 'timeout', with left ms). Snapshot you.timeoutLeft.
+//           { t: 'joinClosed', on }                    JOIN DOOR: closed = a device not admitted yet gets 403
+//                                                      { error: 'knock', room } from /api/join and is listed in
+//                                                      the host snapshot's knocks [{ device, tag, at }]; its
+//                                                      page checks GET /api/rooms/<room>/knock (header x-device;
+//                                                      { status: 'in'|'no'|'waiting'|'gone' }, never counted
+//                                                      against JOIN_RATE_IP).
+//           { t: 'knock', device, letIn }              let a knocking device in (admitted) or not (kicked).
 //           { t: 'banSearch', song }                   BAN FROM SEARCH (Dalton 2026-11-16): a song id from the
 //                                                      teacher's own search ('search'/'shelf' results) is
 //                                                      banned like the Ban button (KV banned, any version,

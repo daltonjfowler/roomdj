@@ -45,6 +45,7 @@ import { NEXT_LOCK_S, PUSH_TAG, SHELVES, byLabel } from '../../shared/protocol.j
 import { BACK_TO_WORK_MINUTES, DEFAULT_SETTINGS, DOWNVOTE_CHOICES, UPVOTE_CHOICES } from '../../shared/protocol.js';
 import { clockLeft } from '../../shared/backtowork.js';
 import { FOCUS_MINUTES } from '../../shared/focus.js';
+import { PASS_MAX, TIMEOUT_CLASS, TIMEOUT_MINUTES } from '../../shared/classroom.js';
 import { AUTOPLAY_NONE_WAIT_MS, AUTOPLAY_RETRY_MS, AUTOPLAY_TICK_MS } from '../../shared/autoplay.js';
 import { afterShow, holdForShow } from '../../shared/recap-music.js';
 import { initRecapAudio } from './recap-audio.js';
@@ -1160,6 +1161,7 @@ function render(s) {
   const online = students.filter((x) => x.online).length;
   $('#studentCount').textContent = `(${online})`;
   if ($('#studentsDlg').open) renderStudents();
+  noteKnocks(s); // 🚪 a new knock, and the door switches
 
   $('#queueCount').textContent = s.queue.length ? `(${s.queue.length})` : '';
   $('#queueEmpty').hidden = s.queue.length > 0;
@@ -1632,6 +1634,7 @@ function renderStudents() {
           <span class="nick">${esc(s.nick)}</span><small>${s.online ? 'here' : 'away'}${downHtml(s)}</small>
           <span class="student-rest">${restHtml(s)}</span>
           <span class="student-credits">${creditsHtml(s)}</span>
+          <span class="student-controls">${controlsHtml(s)}</span>
           <button type="button" data-act="rename" aria-label="${esc(`Ask ${s.nick} for a new nickname`)}">Rename</button>
           <button type="button" class="danger" data-act="kick" aria-label="${esc(`Kick ${s.nick}`)}">Kick</button>
         </li>`).join('')
@@ -1640,8 +1643,82 @@ function renderStudents() {
   const on = creditsOn();
   $('#creditsBar').hidden = !on || list.length === 0;
   $('#creditsOff').hidden = on;
+  renderDoor();
   tickRests();
 }
+
+// ---- ⭐ ⏸ 🚪 Classroom controls (shared/classroom.js; protocol.js PASSES, TIMEOUTS, JOIN DOOR) ----
+const clockAt = (ms) => new Date(Date.now() + ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+/** One student's ⭐ passes and ⏸ timeout. */
+function controlsHtml(s) {
+  const passes = s.passes ? `<b title="Skip-the-line passes">⭐ ${s.passes}</b>` : '';
+  const pass = `<button type="button" data-act="pass" aria-label="${esc(`Give ${s.nick} a skip-the-line pass`)}" title="Their next song that gets in skips the line" ${s.passes >= PASS_MAX ? 'disabled' : ''}>⭐ Pass</button>`;
+  const paused = s.timeoutLeft > 0
+    ? `<span class="rest-tag" title="Timed out: no suggesting or voting">⏸ until ${esc(clockAt(s.timeoutLeft))}</span>
+      <button type="button" data-act="untimeout" aria-label="${esc(`End ${s.nick}'s time out now`)}">End time out</button>`
+    : `<select data-act="timeout" aria-label="${esc(`Time out ${s.nick}`)}"><option value="">⏸ Time out…</option>${TIMEOUT_MINUTES.map((m) => `<option value="${m}">${m} minutes</option>`).join('')}<option value="${TIMEOUT_CLASS}">Rest of class</option></select>`;
+  return `${passes} ${pass} ${paused}`;
+}
+
+/** The door switch and the knocks (in the Students dialog), and the Room menu item. */
+function renderDoor() {
+  const closed = state?.joinClosed === true;
+  for (const id of ['#doorBtn', '#joinDoorBtn']) {
+    const b = $(id);
+    b.classList.toggle('on', closed);
+    b.setAttribute(id === '#doorBtn' ? 'aria-pressed' : 'aria-checked', String(closed));
+  }
+  $('#doorBtn').textContent = closed ? '🚪 Open joining' : '🚪 Close joining';
+  $('#joinDoorBtn').textContent = closed ? `🚪 Joining closed${state?.knocks?.length ? ` (${state.knocks.length} knocking)` : ''}` : '🚪 Joining open';
+  $('#doorNote').textContent = closed
+    ? 'Joining is closed: a new device knocks and waits for you. Students already in can leave and come back.'
+    : 'Joining is open: anyone with the class code gets in. Close it once your class is in.';
+  const knocks = state?.knocks ?? [];
+  if ($('#studentsDlg').open) {
+    keepFocus(() => {
+      $('#knocks').innerHTML = knocks.map((k) => `<li data-id="${esc(k.device)}">
+        <span class="nick">🚪 A new device (${esc(k.tag)})</span><small>knocked at ${esc(new Date(k.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))}</small>
+        <button type="button" class="primary" data-act="letIn" aria-label="${esc(`Let device ${k.tag} in`)}">Let in</button>
+        <button type="button" class="danger" data-act="turnAway" aria-label="${esc(`Do not let device ${k.tag} in`)}">No</button>
+      </li>`).join('');
+    });
+  }
+}
+let knocksSeen = 0;
+/** A new knock while the teacher is busy: say so once. Called with every state. */
+function noteKnocks(s) {
+  const n = s.knocks?.length ?? 0;
+  if (n > knocksSeen) toast(`🚪 ${n === 1 ? 'A new device wants' : `${n} new devices want`} to join. Open 🏠 Room → 👥 Students to let them in.`, 'warn', 9000);
+  knocksSeen = n;
+  renderDoor();
+}
+const toggleDoor = () => state && send({ t: 'joinClosed', on: state.joinClosed !== true });
+$('#doorBtn').addEventListener('click', toggleDoor);
+$('#joinDoorBtn').addEventListener('click', toggleDoor);
+$('#knocks').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-act="letIn"], button[data-act="turnAway"]');
+  if (!btn) return;
+  const device = btn.closest('[data-id]').dataset.id;
+  if (send({ t: 'knock', device, letIn: btn.dataset.act === 'letIn' })) btn.closest('li').remove();
+});
+$('#students').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-act="pass"], button[data-act="untimeout"]');
+  if (!btn) return;
+  const device = btn.closest('[data-id]').dataset.id;
+  const who = state?.students?.find((s) => s.device === device);
+  if (btn.dataset.act === 'pass' && send({ t: 'pass', device })) toast(`⭐ Gave ${who?.nick ?? 'that student'} a skip-the-line pass.`, 'ok');
+  if (btn.dataset.act === 'untimeout' && send({ t: 'timeout', device, minutes: 0 })) toast(`${who?.nick ?? 'That student'} can suggest and vote again.`, 'ok');
+});
+$('#students').addEventListener('change', (e) => {
+  const sel = e.target.closest('select[data-act="timeout"]');
+  if (!sel || !sel.value) return;
+  const device = sel.closest('[data-id]').dataset.id;
+  const who = state?.students?.find((s) => s.device === device);
+  const minutes = sel.value === TIMEOUT_CLASS ? TIMEOUT_CLASS : Number(sel.value);
+  if (send({ t: 'timeout', device, minutes })) toast(`⏸ ${who?.nick ?? 'That student'} is timed out ${minutes === TIMEOUT_CLASS ? 'for the rest of class' : `for ${minutes} minutes`}.`, 'ok');
+  sel.value = '';
+});
 /**
  * " · 👍 2/3 · 👎 1/3": votes a student used of the room's limits (protocol.js UPVOTE LIMIT, DOWNVOTE
  * LIMIT); each only once they used one, and only while that vote is on.

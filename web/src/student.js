@@ -80,7 +80,7 @@ const REFUSED_LABEL = {
   explicit: 'Not allowed', blocklist: 'Not allowed', banned: 'Not allowed', theme: 'Not allowed', kidzbop: 'Not allowed', played: 'Played already',
 };
 // A refusal that is "wait", not "no": the toast is amber, not red.
-const WAIT_REASONS = new Set(['limit', 'locked', 'duplicate', 'rate', 'reviewFull', 'unavailable', 'queueFull', 'credits', 'cleanup', 'too_long', 'same_artist', 'resting', 'back_to_work', 'focus']);
+const WAIT_REASONS = new Set(['limit', 'locked', 'duplicate', 'rate', 'reviewFull', 'unavailable', 'queueFull', 'credits', 'cleanup', 'too_long', 'same_artist', 'resting', 'back_to_work', 'focus', 'timeout']);
 // Max song length (shared/classtime.js): the result says so before anyone tries (the server checks too).
 const TOO_LONG = '⏱ Too long';
 const longWhy = (song) => {
@@ -389,10 +389,50 @@ $('#joinForm').addEventListener('submit', async (e) => {
     return showJoin('Could not reach RoomDJ. Check your internet and try again.', 'join');
   }
   if (r.status === 429 && data.error === 'locked' && data.retryAfter > 0) return lockFor(data.retryAfter);
+  // 🚪 Joining is closed: this device knocks and waits for the teacher (protocol.js JOIN DOOR).
+  if (r.status === 403 && data.error === 'knock' && ROOM_ID_PATTERN.test(data.room ?? '')) return knockWait(data.room, nick, data.message);
   // Wrong code, kicked, busy: the server's sentence says what to do.
   if (!r.ok || !ROOM_ID_PATTERN.test(data.room ?? '')) return showJoin(data.message || 'Could not join. Try again.');
   join(data.room, nick);
 });
+
+// 🚪 Knocking: check back every KNOCK_POLL_MS (its own route, never the school's join limit) until the
+// teacher answers or KNOCK_WAIT_MS passes.
+const KNOCK_POLL_MS = 5000;
+const KNOCK_WAIT_MS = 15 * 60_000;
+let knockTimer = 0;
+function knockWait(roomId, nick, message) {
+  clearTimeout(knockTimer);
+  const end = Date.now() + KNOCK_WAIT_MS;
+  const btn = $('#joinBtn');
+  btn.disabled = true;
+  btn.textContent = 'Waiting for your teacher…';
+  $('#joinMsg').textContent = `🚪 ${message || 'Joining is closed. Your teacher has been asked to let you in.'}`;
+  show('joinScreen');
+  const done = (text) => {
+    btn.disabled = false;
+    btn.textContent = 'Join';
+    showJoin(text);
+  };
+  const check = async () => {
+    let status = 'waiting';
+    try {
+      const r = await fetch(`/api/rooms/${roomId}/knock`, { headers: { 'x-device': deviceId() } });
+      status = r.ok ? (await r.json()).status : r.status === 404 ? 'closed' : 'waiting';
+    } catch { /* offline for a moment: keep waiting */ }
+    if (status === 'in') {
+      btn.disabled = false;
+      btn.textContent = 'Join';
+      announce('Your teacher let you in.');
+      return join(roomId, nick);
+    }
+    if (status === 'no') return done('Your teacher did not let this device in.');
+    if (status === 'closed') return done('The room is closed.');
+    if (status === 'gone' || Date.now() > end) return done('Your teacher has not answered. Ask them, then tap Join again.');
+    knockTimer = setTimeout(check, KNOCK_POLL_MS);
+  };
+  knockTimer = setTimeout(check, KNOCK_POLL_MS);
+}
 
 // Too many wrong codes: count down on the page, so nobody taps Join into the same answer.
 function lockFor(seconds) {
@@ -493,6 +533,8 @@ function onMessage(msg) {
         restRefused(msg);
       } else if (msg.reason === 'focus') {
         focusRefused(msg);
+      } else if (msg.reason === 'timeout') {
+        timeoutRefused(msg);
       } else if (msg.reason === 'review') {
         // Not a refusal: the teacher decides, and a 'reviewed' message follows.
         checking.add(msg.song);
@@ -540,6 +582,7 @@ function onMessage(msg) {
       jumping.delete(msg.id);
       if (msg.reason === 'back_to_work') restRefused(msg);
       else if (msg.reason === 'focus') focusRefused(msg);
+      else if (msg.reason === 'timeout') timeoutRefused(msg);
       else if (msg.ok) tell(`⚡ "${msg.title}" plays next!`, 'ok');
       else tell(msg.message || 'That jump did not work.', msg.reason === 'credits' || msg.reason === 'rate' ? 'warn' : 'bad', 7000);
       if (state) renderQueue(state.queue);
@@ -556,6 +599,9 @@ function onMessage(msg) {
       break;
     case 'couponResult':
       couponResult(msg);
+      break;
+    case 'pass': // ⭐ the teacher gave a skip-the-line pass (shared/classroom.js)
+      tell(`⭐ Your teacher gave you a skip-the-line pass! Your next song that gets in plays next.${msg.passes > 1 ? ` (${msg.passes} passes)` : ''}`, 'ok', 9000);
       break;
     case 'credits':
       tell(msg.why === 'set'
@@ -579,7 +625,7 @@ function onMessage(msg) {
         // A newer tab on this device took over; this one can take it back.
         showEnd('RoomDJ is open in another tab', 'This tab stopped because RoomDJ is open in another tab on this device.',
           { label: 'Use this tab instead', room });
-      } else if (['back_to_work', 'focus', 'downvotes', 'downvotes_off', 'upvotes', 'upvotes_off', 'vote_final'].includes(msg.error)) {
+      } else if (['back_to_work', 'focus', 'timeout', 'downvotes', 'downvotes_off', 'upvotes', 'upvotes_off', 'vote_final'].includes(msg.error)) {
         // A vote while resting, a 👎 over the limit (this page thought it had one left) or a 👎 while the
         // teacher has 👎 off (protocol.js DOWNVOTE MODE; the snapshot may not have arrived yet): undo it on the page.
         const undo = voteUndo.get(msg.id);
@@ -596,6 +642,7 @@ function onMessage(msg) {
         else if (msg.error === 'upvotes_off') tell(msg.message || '👍 is turned off in this class.', 'warn', 7000);
         else if (msg.error === 'vote_final') tell(msg.message || VOTE_FINAL, 'warn', 5000);
         else if (msg.error === 'focus') focusRefused(msg);
+        else if (msg.error === 'timeout') timeoutRefused(msg);
         else restRefused(msg);
       } else {
         pending.clear();
@@ -743,6 +790,10 @@ function render(s) {
   if (credits !== null) $('#creditsN').textContent = plural(credits, 'credit');
   $('#credits').classList.toggle('empty', credits === 0);
   $('#creditsJump').hidden = s.settings?.allowJump !== true; // Priority jump off: no Jump at all
+  // ⭐ Skip-the-line passes from the teacher (shared/classroom.js)
+  const passes = Number(s.you?.passes) || 0;
+  $('#passes').hidden = passes === 0;
+  if (passes) $('#passesN').textContent = `${passes} skip-the-line pass${passes === 1 ? '' : 'es'}`;
   renderCoupons(s);
 
   $('#queueCount').textContent = s.queue.length ? `(${s.queue.length})` : '';
@@ -1092,12 +1143,22 @@ let focusEnd = 0; // 🎯 Date.now() when the teacher's focus time ends (shared/
 let restShown = false;
 let restTimer = 0;
 const voteUndo = new Map(); // item id → { up, down, myVote } before this page's vote (a refused vote is undone)
-const restingNow = () => Math.max(restEnd, focusEnd) > Date.now();
+let pauseEnd = 0; // ⏸ Date.now() when this student's timeout ends (shared/classroom.js; 0: none)
+const restingNow = () => Math.max(restEnd, focusEnd, pauseEnd) > Date.now();
 
 function setRest(you, focusLeft = 0) {
   const left = Number(you?.restLeft) || 0;
   restEnd = you?.restUntil && left > 0 ? Date.now() + left : 0;
   focusEnd = Number(focusLeft) > 0 ? Date.now() + Number(focusLeft) : 0;
+  pauseEnd = Number(you?.timeoutLeft) > 0 ? Date.now() + Number(you.timeoutLeft) : 0;
+  renderRest();
+}
+/** The server said timeout (msg.left ms): the teacher paused this student. */
+function timeoutRefused(msg) {
+  const left = Number(msg.left) || 0;
+  if (left > 0) pauseEnd = Date.now() + left;
+  tell(msg.message || 'Your teacher paused you for a few minutes.', 'warn', 7000);
+  renderResults();
   renderRest();
 }
 /** The server said focus (msg.left ms): the teacher's focus time is on. */
@@ -1121,16 +1182,18 @@ function renderRest() {
   clearTimeout(restTimer);
   restTimer = 0;
   const now = Date.now();
-  const focus = focusEnd > now && focusEnd >= restEnd; // 🎯 the teacher's focus time outlasts a rest
-  const left = Math.max(restEnd, focusEnd) - now;
+  const paused = pauseEnd > now; // ⏸ this student's own timeout wins while it lasts
+  const focus = !paused && focusEnd > now && focusEnd >= restEnd; // 🎯 the teacher's focus time outlasts a rest
+  const left = (paused ? pauseEnd : Math.max(restEnd, focusEnd)) - now;
   const resting = left > 0;
   const roomEl = $('#roomScreen');
   roomEl.classList.toggle('resting', resting);
   $('#restScreen').hidden = !resting;
   if (resting) {
     const mins = Math.max(1, Math.ceil(left / 60_000));
-    $('#restTitle').textContent = focus ? '🎯 Focus time!' : '📚 Back to work!';
-    $('#restText').textContent = focus ? `Your teacher paused song picks and votes. Back in ${plural(mins, 'minute')}.`
+    $('#restTitle').textContent = paused ? '⏸ Paused by your teacher' : focus ? '🎯 Focus time!' : '📚 Back to work!';
+    $('#restText').textContent = paused ? `Song picks and votes are back in ${plural(mins, 'minute')}.`
+      : focus ? `Your teacher paused song picks and votes. Back in ${plural(mins, 'minute')}.`
       : `Your pick is in. Check back in ${plural(mins, 'minute')}.`;
     $('#restClock').textContent = clockLeft(left);
     const playing = state?.nowPlaying;

@@ -812,6 +812,17 @@ Claude account).
    bans like the Ban button (addBan + rejectedByTeacher), removes waiting copies (queue + Needs a look), leaves
    the song playing alone; the page drops every version of it from the results. Both host-only.
    test: npm run test:replay (local dev; needs TEST_AI_OFF in .dev.vars).
+48. ⭐ Passes, ⏸ Time outs, 🚪 Join door (Dalton, 2026-11-16: "a teacher can reward or ban kids"; "kids figured
+   out using edge/chrome/private tab allows them to make multiple accounts"; shared/classroom.js). A student is
+   only a random device id per browser, so every browser or private tab is a new student: the fix is the DOOR,
+   never fingerprinting. 🚪 Close joining (Room menu or Students): a device not admitted yet only knocks (403
+   'knock' from /api/join, the right code so the lockout counts it right); its page polls GET
+   /api/rooms/<room>/knock every 5 s for 15 min (NOT JOIN_RATE_IP); Let in admits it, No kicks it. Admitted
+   devices (a reload) always get back in. ⭐ Pass (max PASS_MAX): usePass jumps the student's next song that
+   gets into the queue (addSuggestion, allowReview, allowBlocked; after the teacher's pushes and earlier jumps).
+   ⏸ Time out 5/10/15/class: the student's suggest, jump and vote are refused first (before focus, back to work,
+   anything charged); the student page's rest card shows "Paused by your teacher". All host-only.
+   test: npm run test:classroom (local dev; TEST_AI_OFF + TYPED_NICKNAMES; real iTunes, so a slow search can flake).
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.

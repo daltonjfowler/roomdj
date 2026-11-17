@@ -12,7 +12,8 @@ import {
 } from '../shared/queue.js';
 
 /** Not resting (📚 back to work, protocol.js BACK TO WORK). */
-const NO_REST = { restUntil: null, restGraceUntil: null, restLeft: 0, restGraceLeft: 0 };
+// (and no ⭐ pass or ⏸ timeout, shared/classroom.js: only a student's own view has these)
+const NO_REST = { restUntil: null, restGraceUntil: null, restLeft: 0, restGraceLeft: 0, passes: 0, timeoutLeft: 0 };
 const A = 'deviceAAAAAAAAAAAAAA';
 const B = 'deviceBBBBBBBBBBBBBB';
 const C = 'deviceCCCCCCCCCCCCCC';
@@ -172,7 +173,9 @@ test('snapshot: mine/myVote/you for students, students + aiStatus + blocklist fo
   assert.equal(host.queue[0].mine, false);
   assert.deepEqual(host.settings.blocklist, ['badword']);
   assert.equal(host.aiStatus, 'ok');
-  assert.deepEqual(host.students.find((x) => x.device === A), { device: A, nick: 'Ana', online: true, credits: null, downvotes: 0, upvotes: 1, restUntil: null, restLeft: 0 });
+  assert.deepEqual(host.students.find((x) => x.device === A), { device: A, nick: 'Ana', online: true, credits: null, downvotes: 0, upvotes: 1, restUntil: null, restLeft: 0, passes: 0, timeoutLeft: 0 });
+  assert.equal(host.joinClosed, false, '🚪 joining open by default');
+  assert.deepEqual(host.knocks, []);
   assert.equal(host.students.find((x) => x.device === B).online, false);
   for (const snap of [forA, forB, host]) assert.equal(JSON.stringify(snap).includes('secret-hash'), false);
 });

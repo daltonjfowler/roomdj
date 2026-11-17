@@ -52,6 +52,7 @@ import { legacySong, songId } from './catalog.js';
 import { songKey } from './repeats.js';
 import { restView } from './backtowork.js';
 import { focusLeft } from './focus.js';
+import { deviceTag, passesOf, timeoutLeft, usePass } from './classroom.js';
 import { checksOf } from './checks.js';
 
 const PLAYED_MAX = 1000;
@@ -398,6 +399,7 @@ export function addSuggestion(state, { device, nick, song, now = Date.now(), pai
   if (state.queue.length >= QUEUE_MAX) return { ok: false, reason: 'queueFull' };
   const item = newItem(state, { device, nick, song, now });
   if (paid) item.paid = paid;
+  usePass(state, item, now); // ⭐ a skip-the-line pass (shared/classroom.js)
   state.queue.push(item);
   sortQueue(state);
   countSuggestion(state, device, song, now);
@@ -445,6 +447,7 @@ export function allowReview(state, id, now = Date.now()) {
   item.votes = {};
   delete item.checked;
   delete item.recheckAt;
+  usePass(state, item, now); // ⭐ a pass waits for the song that really gets in
   state.queue.push(item);
   sortQueue(state);
   return item;
@@ -485,6 +488,7 @@ export function allowBlocked(state, { song, device, by }, now = Date.now()) {
     return { ok: false, reason: 'duplicate' };
   }
   const item = newItem(state, { device, nick: teacher ? teacherName(state) : (state.students[device]?.nick ?? by), song, now });
+  usePass(state, item, now); // ⭐ (never the teacher's own pick)
   state.queue.push(item);
   sortQueue(state);
   countSuggestion(state, device, song, now);
@@ -839,12 +843,16 @@ export function snapshotFor(state, device, { online = new Set(), boards = 0, now
       downvotesLeft: downvotesLeft(state, device), // 👎 limit (protocol.js DOWNVOTE LIMIT); null = unlimited
       upvotesLeft: upvotesLeft(state, device), // 👍 limit (protocol.js UPVOTE LIMIT); null = unlimited or off
       ...restView(state, device, now), // 📚 back to work (shared/backtowork.js)
+      passes: passesOf(state, device), // ⭐ skip-the-line passes (shared/classroom.js)
+      timeoutLeft: timeoutLeft(state, device, now), // ⏸ ms of this student's timeout left; 0 = none
     },
   };
   if (isHost) {
     snap.students = Object.entries(state.students)
-      .map(([d, s]) => ({ device: d, nick: s.nick, online: online.has(d), credits: creditsOf(state, d), downvotes: downvotesUsed(state, d), upvotes: upvotesUsed(state, d), ...restOfStudent(state, d, now) }))
+      .map(([d, s]) => ({ device: d, nick: s.nick, online: online.has(d), credits: creditsOf(state, d), downvotes: downvotesUsed(state, d), upvotes: upvotesUsed(state, d), ...restOfStudent(state, d, now), passes: passesOf(state, d), timeoutLeft: timeoutLeft(state, d, now) }))
       .sort((a, b) => a.nick.localeCompare(b.nick));
+    snap.joinClosed = state.joinClosed === true; // 🚪 (shared/classroom.js)
+    snap.knocks = (state.knocks ?? []).map((k) => ({ device: k.device, tag: deviceTag(k.device), at: k.at }));
     snap.aiStatus = state.aiStatus ?? 'ok';
     snap.profile = state.profile?.id ?? null;
     snap.review = reviewList(state).map((item) => ({ ...itemView(item, null, rules), ...(item.checked ? { checked: item.checked } : {}) }));
