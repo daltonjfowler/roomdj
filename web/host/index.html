@@ -173,6 +173,7 @@
             <a id="adminLink" class="linkbtn" href="/admin/" hidden>Admin</a></p>
           <p class="teaching-as account-tools">
             <button id="allowedBtn" class="linkbtn" type="button" aria-haspopup="dialog">✅ Allowed songs</button>
+            <button id="sharedBansBtn" class="linkbtn" type="button" aria-haspopup="dialog">⛔ Other teachers' bans</button>
             <button id="signOutOthersBtn" class="linkbtn" type="button" hidden>🔒 Sign out my other devices</button></p>
           <!-- Free teachers: what is left today and when it resets (GET /api/teacher/usage) -->
           <p id="usageNote" class="note usage-note" hidden></p>
@@ -666,6 +667,18 @@
       <p><input id="allowedFilter" class="text" type="search" placeholder="Find a song or artist" aria-label="Find a song or artist" autocomplete="off"></p>
       <p id="allowedMsg" class="note" role="status"></p>
       <ul id="allowedList" class="blocked-list"></ul>
+      <div class="dialog-actions"><button class="primary" value="done">Done</button></div>
+    </form>
+  </dialog>
+
+  <!-- ⛔ Other teachers' bans (protocol.js SHARED BANS): counts only, never who; Ban for me copies one -->
+  <dialog id="sharedBansDlg" class="dialog wide-dialog" aria-labelledby="sharedBansTitle">
+    <form method="dialog">
+      <h2 id="sharedBansTitle">⛔ Other teachers' bans</h2>
+      <p class="note">Songs that 2 or more other RoomDJ teachers banned, most banned first. You never see who. Nothing here is blocked in your rooms unless you ban it: ⛔ Ban for me adds it to your own ban list (every version).</p>
+      <p><input id="sharedBansFilter" class="text" type="search" placeholder="Find a song or artist" aria-label="Find a song or artist" autocomplete="off"></p>
+      <p id="sharedBansMsg" class="note" role="status"></p>
+      <ul id="sharedBansList" class="blocked-list"></ul>
       <div class="dialog-actions"><button class="primary" value="done">Done</button></div>
     </form>
   </dialog>

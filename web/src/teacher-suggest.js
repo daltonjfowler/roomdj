@@ -6,6 +6,7 @@
 // queue, Played already, 😴 Resting, ⏱ Too long, 🎨 Artist waiting, Not allowed + Why?.
 
 import { $, announce, artHtml, ask, esc, keepFocus, spotifyMark, toast } from './dom.js';
+import { sharedBanTag } from './shared-bans.js';
 import { QUERY_MAX, SHELVES, shelfShown, whyText } from '../../shared/protocol.js';
 import { tooLong } from '../../shared/classtime.js';
 import { mainArtist, mainArtistName } from '../../shared/filter.js';
@@ -130,7 +131,7 @@ export function initTeacherSuggest({ send, getState }) {
         <span class="song-text"><span class="song-title">${esc(song.title)}</span>
           <span class="song-artist">${spotifyMark(song)}${esc(song.artist)}</span>
           ${song.explicit === 'cleaned' ? '<small class="note">Clean version</small>' : ''}
-          ${CHECK_NOTES[song.check] ?? ''}</span>
+          ${CHECK_NOTES[song.check] ?? ''}${sharedBanTag(song)}</span>
         <span class="item-tools">${buttonHtml(song)}<button type="button" class="danger" data-act="tban" aria-label="${esc(`Ban ${song.title} by ${song.artist}`)}" title="Never allow this song (any version) in your rooms">⛔ Ban</button></span>
       </li>`).join('');
     });

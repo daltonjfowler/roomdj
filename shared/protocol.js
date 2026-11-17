@@ -220,6 +220,16 @@ export const sessOutKey = (profileId) => `sessOut:v1:${profileId}`;
 //        song goes back to the AI check within about a minute. Nothing else changes (not a ban).
 export const APPROVED_LIST_MAX = 1000;
 
+// ---- SHARED BANS (Dalton, 2026-11-16: "How can we learn bans from other teachers"; src/shared-bans.js) ----
+// Every ban (any teacher, any app) adds that teacher to a count per song (KV bancount:v1:<banKey>; teachers as
+// short hashes, never ids or names). A HINT only: nothing is blocked by other teachers' bans.
+//   GET  /api/teacher/bans/shared → 200 { songs: [{ key, title, artist, others, mine }] }: songs banned by
+//        SHARED_BAN_MIN or more OTHER teachers, most first (mine: already on this teacher's own list). The host
+//        page marks songs with "⛔ Banned by N other teachers" by banKey (queue, Needs a look, its search).
+//   POST /api/teacher/bans/shared/ban { key } → 200 { ok: true } | 404 no_song: ⛔ Ban for me (copied into this
+//        teacher's own ban list, reason 'shared').
+export const SHARED_BAN_MIN = 2;
+
 // ---- FREE TEACHERS (Dalton, 2026-10-14: "limit per Spotify account") ----
 // A private ('own' app, OWN_PROFILE_PREFIX) teacher costs RoomDJ money only through Workers AI (new
 // songs, covers) and the shared YouTube quota / Apple key. Caps PER SPOTIFY ACCOUNT PER DAY (one

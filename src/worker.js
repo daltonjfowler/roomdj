@@ -41,6 +41,7 @@ import { teacherKvKey } from './teacher-kv.js';
 import { handleProfiles, readProfileList, requestProfile, signedIn } from './profiles.js';
 import { handleAuth, signOutOthers, teacherSession } from './auth.js';
 import { APPROVED_LIST_MAX } from '../shared/protocol.js';
+import { banForMe, sharedBans } from './shared-bans.js';
 import { kvId } from '../shared/catalog.js';
 import { FREE_CAPS, freeUsage, spendFree } from './free.js';
 import { PREWARM_ON, prewarm } from './prewarm.js';
@@ -629,6 +630,22 @@ async function handleTeacher(request, env, url) {
   if (url.pathname === '/api/teacher/approved/remove') {
     if (request.method !== 'POST') return json(405, { error: 'method', message: 'Use POST.' });
     return removeApproved(request, env);
+  }
+  // ⛔ Other teachers' bans (protocol.js SHARED BANS): counts only, a hint, and Ban for me.
+  if (url.pathname === '/api/teacher/bans/shared' || url.pathname === '/api/teacher/bans/shared/ban') {
+    if (!env.CLASS_KV) return json(503, { error: 'storage', message: 'Storage is not set up on this server.' });
+    const profile = await requestProfile(request, env);
+    if (profile instanceof Response) return profile;
+    if (url.pathname === '/api/teacher/bans/shared') {
+      if (request.method !== 'GET') return json(405, { error: 'method', message: 'Use GET.' });
+      return json(200, { songs: await sharedBans(env, profile) });
+    }
+    if (request.method !== 'POST') return json(405, { error: 'method', message: 'Use POST.' });
+    const read = await readJson(request, MAX_JOIN_BYTES);
+    if (read instanceof Response) return read;
+    if (!(await banForMe(env, profile, read.body?.key))) return json(404, { error: 'no_song', message: 'That song is not on the list any more.' });
+    browseCache = null; // browsing in this isolate sees the new ban at once
+    return json(200, { ok: true });
   }
   if (url.pathname === '/api/teacher/usage') {
     // A free teacher's caps today, per Spotify account (protocol.js FREE TEACHERS).

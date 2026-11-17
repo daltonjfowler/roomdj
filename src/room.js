@@ -76,6 +76,7 @@ import { ART_RATE, JUMP_COST, SUGGEST_COST } from '../shared/protocol.js';
 import { ART_WAIT_MS, artFields, artJson, artKey, validArtKey } from '../shared/art.js';
 import { cachedArtVerdict, checkCover, putTeacherArtOk, teacherArtOk } from './art.js';
 import { focusMessage, focusRefusal, setFocus } from '../shared/focus.js';
+import { recordBan } from './shared-bans.js';
 import { PASS_MAX, TIMEOUT_CLASS, addKnock, answerKnock, applyAutoClose, givePass, knockStatus, setJoinClosed, setTimeoutFor, timeoutMessage, timeoutRefusal } from '../shared/classroom.js';
 import { AUTOPLAY_TRIES, autoplayDue, autoplayPicks, autoplayShelves } from '../shared/autoplay.js';
 
@@ -736,6 +737,7 @@ export class Room extends DurableObject {
     if (why?.evidence) entry.note = why.evidence;
     banned.push(entry);
     await this.env.CLASS_KV?.put(this.scope('banned'), JSON.stringify(banned.slice(-BANNED_MAX)));
+    await recordBan(this.env, song, this.profile); // ⛔ other teachers learn it was banned (a count only)
     // A banned song (any version) leaves the favorites; students get their list again either way.
     const key = banKey(song);
     const gone = await this.changeFavorites((fav) => removeFavorite(fav, (e) => e.song.id === song.id || (key && banKey(e.song) === key)) > 0);

@@ -47,6 +47,7 @@ import { clockLeft } from '../../shared/backtowork.js';
 import { FOCUS_MINUTES } from '../../shared/focus.js';
 import { PASS_MAX, TIMEOUT_CLASS, TIMEOUT_MINUTES } from '../../shared/classroom.js';
 import { AUTO_CLOSE_JOIN_MINUTES } from '../../shared/protocol.js';
+import { loadSharedBans, markMine, onSharedBans, sharedBanTag } from './shared-bans.js';
 import { AUTOPLAY_NONE_WAIT_MS, AUTOPLAY_RETRY_MS, AUTOPLAY_TICK_MS } from '../../shared/autoplay.js';
 import { afterShow, holdForShow } from '../../shared/recap-music.js';
 import { initRecapAudio } from './recap-audio.js';
@@ -443,6 +444,55 @@ $('#signOutOthersBtn').addEventListener('click', async () => {
     toast('Could not reach RoomDJ. Check the internet and try again.', 'bad');
   } finally {
     btn.disabled = false;
+  }
+});
+
+// ---- ⛔ Other teachers' bans (protocol.js SHARED BANS): a hint on rows, and a list to copy from ----
+onSharedBans(() => { if (state) render(state); });
+let sharedShown = [];
+function renderSharedBans() {
+  const q = $('#sharedBansFilter').value.trim().toLowerCase();
+  const shown = q ? sharedShown.filter((s) => `${s.title} ${s.artist}`.toLowerCase().includes(q)) : sharedShown;
+  keepFocus(() => {
+    $('#sharedBansList').innerHTML = shown.length ? shown.map((s) => `<li data-key="${esc(s.key)}">
+      <div class="blocked-text">
+        <p class="song-title">${esc(s.title)} <span class="song-artist">· ${esc(s.artist)}</span></p>
+        <p class="note">Banned by ${esc(String(s.others))} other teachers${s.mine ? ' · <b>on your ban list</b>' : ''}</p>
+      </div>
+      <span class="item-tools">${s.mine ? '' : `<button type="button" class="danger" data-act="banForMe" aria-label="${esc(`Ban ${s.title} for me`)}">⛔ Ban for me</button>`}</span>
+    </li>`).join('') : `<li class="note">${sharedShown.length ? 'No song matches that.' : 'No song has been banned by 2 or more other teachers yet.'}</li>`;
+  });
+  $('#sharedBansMsg').textContent = sharedShown.length ? `${sharedShown.length} ${sharedShown.length === 1 ? 'song' : 'songs'}${q ? `, ${shown.length} shown` : ''}.` : '';
+}
+$('#sharedBansBtn').addEventListener('click', async () => {
+  $('#sharedBansFilter').value = '';
+  $('#sharedBansList').innerHTML = '<li class="note">Loading…</li>';
+  $('#sharedBansMsg').textContent = '';
+  $('#sharedBansDlg').showModal();
+  sharedShown = [...(await loadSharedBans(teacherHeaders(), { force: true }))];
+  renderSharedBans();
+});
+$('#sharedBansFilter').addEventListener('input', renderSharedBans);
+$('#sharedBansList').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-act="banForMe"]');
+  if (!btn) return;
+  const key = btn.closest('[data-key]').dataset.key;
+  const song = sharedShown.find((s) => s.key === key);
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/teacher/bans/shared/ban', { method: 'POST', headers: teacherHeaders(), body: JSON.stringify({ key }) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      btn.disabled = false;
+      return toast(data.message || 'That did not work. Try again.', 'bad');
+    }
+    if (song) song.mine = true;
+    markMine(key);
+    renderSharedBans();
+    announce(`${song?.title ?? 'That song'} is banned in your rooms.`);
+  } catch {
+    btn.disabled = false;
+    toast('Could not reach RoomDJ. Check the internet and try again.', 'bad');
   }
 });
 
@@ -1163,6 +1213,7 @@ function render(s) {
   $('#studentCount').textContent = `(${online})`;
   if ($('#studentsDlg').open) renderStudents();
   noteKnocks(s); // 🚪 a new knock, and the door switches
+  loadSharedBans(teacherHeaders()); // ⛔ other teachers' bans for the row hints (at most every 5 minutes)
 
   $('#queueCount').textContent = s.queue.length ? `(${s.queue.length})` : '';
   $('#queueEmpty').hidden = s.queue.length > 0;
@@ -1174,6 +1225,7 @@ function render(s) {
       ${artHtml(item.song, 100)}
       <span class="song-text"><span class="song-title">${esc(item.song.title)}</span>
         <span class="song-artist">${spotifyMark(item.song)}${esc(item.song.artist)}<span class="qby"> · by ${esc(byLabel(item))}</span>${item.jumped ? ` · <span class="jtag">⚡ Jumped by ${esc(item.jumped.by)}</span>` : ''}</span>
+        ${sharedBanTag(item.song)}
         ${artNote(item.song)}
         ${item.pushed ? `<span class="ptag">${PUSH_TAG}</span>` : ''}</span>
       ${scoreHtml(item, s.downvoteMode).replace(/<\/span>$/, `${ghostHtml(item)}</span>`)}
@@ -1279,6 +1331,7 @@ function renderReview(review) {
       ${artHtml(item.song, 100)}
       <span class="song-text"><span class="song-title">${esc(item.song.title)}</span>
         <span class="song-artist">${spotifyMark(item.song)}${esc(item.song.artist)} · by ${esc(byLabel(item))}</span>
+        ${sharedBanTag(item.song)}
         ${artNote(item.song)}
         <a class="review-lyrics" href="${esc(lyricsLink(item.song))}" target="_blank" rel="noopener noreferrer" aria-label="${esc(`Lyrics for ${item.song.title}: a Google search, opens in a new tab`)}">📄 Lyrics</a>
         ${item.checked === 'lyrics' ? '<span class="review-checked">📄 Judged from lyrics: still not sure</span>'

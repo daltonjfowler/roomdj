@@ -160,6 +160,8 @@
 .switch-help { display: block; margin: -4px 0 0 50px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .check input.switch, .check input.switch::before { transition: none; } }
 .jtag, .ptag { color: var(--accent); font-weight: 650; }
+/* ⛔ Other teachers' bans (protocol.js SHARED BANS): a hint on a song row, never a block */
+.shared-ban { display: block; font-size: .85em; font-weight: 650; color: var(--bad, #ef4444); }
 .song-text > .ptag { display: block; font-size: .85rem; }
 .qitem.pushed { border-color: var(--accent-line); }
 .qitem.jumped { border-color: var(--accent-line); }

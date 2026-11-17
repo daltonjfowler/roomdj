@@ -827,6 +827,15 @@ Claude account).
    joinClosedNow is true once it is due (host snapshot joinClosed / joinClosesAt; the page flips at that moment
    by its own timer); Room.admit makes it real (applyAutoClose, once). Any use of the teacher's switch
    (setJoinClosed) marks joinAutoDone, so the teacher's choice wins from then on. No alarm needed.
+49. ⛔ Other teachers' bans (Dalton, 2026-11-16: "How can we learn bans from other teachers"; protocol.js SHARED
+   BANS, src/shared-bans.js, web/src/shared-bans.js). A HINT ONLY: nothing is blocked by other teachers' bans.
+   Room.addBan → recordBan: KV bancount:v1:<banKey> { id, title, artist, teachers: [short SHA-256 of the profile
+   id; the legacy profile is always 'legacy'], at } with METADATA { n, title, artist } (keep it: the list reads
+   metadata only). Every teacher counts (Dalton's choice); shown when SHARED_BAN_MIN (2) OTHER teachers banned it
+   (own = on this teacher's ban list). Never a name or id leaves the server. Host page: "⛔ Banned by N other
+   teachers" on queue, Needs a look and search rows (by banKey, list cached 5 min); start screen "⛔ Other
+   teachers' bans" with Ban for me (copied to the teacher's own list, reason 'shared'). The counts were
+   backfilled once from every ban list on 2026-11-17.
 
 ## Commands
 `npm run stats` (READ-ONLY summary of the live site: teachers on RoomDJ's app and who signed in / is linked, free teachers and new ones per day, active sign-ins, today's free use, the chart pre-check, checked songs; Cloudflare API with Wrangler's login). Theme: nothing saved = Dark (theme-boot.js + src/theme.js; static pages use theme-boot.js too); browser tests that compare light and dark save `cq.theme = 'system'` first.
